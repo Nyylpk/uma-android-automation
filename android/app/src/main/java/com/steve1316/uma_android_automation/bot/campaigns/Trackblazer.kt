@@ -1451,7 +1451,7 @@ class Trackblazer(game: Game) : Campaign(game) {
                 MessageLog.i(
                     TAG,
                     "[TRACKBLAZER] Conserving race items for Semi-Final/Final (turns 74-75). " +
-                        "Master Hammer: $masterHammerCount, Artisan Hammer: $artisanHammerCount, Glow Sticks: $glowSticksCount.",
+                        "Hammer: ${masterHammerCount + artisanHammerCount}, Glow Sticks: $glowSticksCount.",
                 )
             } else {
                 MessageLog.i(TAG, "[TRACKBLAZER] No relevant race items in cached inventory for $grade.")
