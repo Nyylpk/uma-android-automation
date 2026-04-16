@@ -1399,7 +1399,7 @@ class Trackblazer(game: Game) : Campaign(game) {
             false
         }
 
-        // Artisan takes priority before day 73 to burn through them before the finale.
+        // Master takes priority at the finale since it provides a higher bonus (35% vs 20%).
         val hammerToUse = if (date.day < 73) {
             when {
                 canUseArtisanHammer -> "Artisan Cleat Hammer"
@@ -1415,18 +1415,12 @@ class Trackblazer(game: Game) : Campaign(game) {
         }
 
         // Glow Sticks Logic
-        val finaleRaces = listOf(
-            Pair(73, fansOnDay73),
-            Pair(74, fansOnDay74),
-            Pair(75, fansOnDay75)
-        )
-        val highFanFinaleDays = finaleRaces.count { (_, f) -> f >= 20000 }
+        // Day 73+: only use if we have enough to cover remaining finale days.
         val useGlowSticks = if (date.day >= 73) {
-            val remainingHighFanDays = finaleRaces.count { (day, f) -> day >= date.day && f >= 20000 }
-            fans >= 20000 && glowSticksCount >= remainingHighFanDays
+            val remainingFinaleDays = listOf(73, 74, 75).count { it >= date.day }
+            fans >= 20000 && glowSticksCount >= remainingFinaleDays
         } else {
-            // Only use if we have spare sticks beyond what the finale needs
-            fans >= 20000 && glowSticksCount > highFanFinaleDays
+            fans >= 20000 && glowSticksCount > 1
         }
 
         if (hammerToUse != null || useGlowSticks) {
@@ -1453,11 +1447,11 @@ class Trackblazer(game: Game) : Campaign(game) {
                 }
             }
         } else {
-            if (date.day == 73 && (masterHammerCount > 0 || artisanHammerCount > 0 || glowSticksCount > 0)) {
+            if (date.day == 73 && (masterHammerCount > 0 || glowSticksCount > 0)) {
                 MessageLog.i(
                     TAG,
                     "[TRACKBLAZER] Conserving race items for Semi-Final/Final (turns 74-75). " +
-                        "Hammer: ${masterHammerCount + artisanHammerCount}, Glow Sticks: $glowSticksCount.",
+                        "Master Hammer: $masterHammerCount, Artisan Hammer: $artisanHammerCount, Glow Sticks: $glowSticksCount.",
                 )
             } else {
                 MessageLog.i(TAG, "[TRACKBLAZER] No relevant race items in cached inventory for $grade.")
