@@ -397,7 +397,7 @@ class Training(private val game: Game, private val campaign: Campaign) {
             failureChances: List<Pair<StatName, Int>>,
             currentEnergy: Int,
             suspiciousJumpThreshold: Int = 20,
-            outlierTolerance: Int = 30
+            outlierTolerance: Int = 30,
         ): Map<StatName, Int> {
             // Wit is excluded from cross-validation as it naturally has a lower failure chance.
             val witEntry = failureChances.filter { it.first == StatName.WIT }

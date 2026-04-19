@@ -1258,12 +1258,13 @@ class Racing(private val game: Game, private val campaign: Campaign) {
     /**
      * Maps a [TrackDistance] enum to the per-distance settings key used in the frontend.
      */
-    private fun TrackDistance.toSettingsKey(): String = when (this) {
-        TrackDistance.SPRINT -> "Short"
-        TrackDistance.MILE -> "Mile"
-        TrackDistance.MEDIUM -> "Medium"
-        TrackDistance.LONG -> "Long"
-    }
+    private fun TrackDistance.toSettingsKey(): String =
+        when (this) {
+            TrackDistance.SPRINT -> "Short"
+            TrackDistance.MILE -> "Mile"
+            TrackDistance.MEDIUM -> "Medium"
+            TrackDistance.LONG -> "Long"
+        }
 
     /**
      * Resolves the strategy string to use based on current mode (blanket vs per-distance) and race context.
@@ -2254,15 +2255,16 @@ class Racing(private val game: Game, private val campaign: Campaign) {
                 RaceGrade.PRE_OP to 5,
             )
 
-        val sortedRaces = allSuitableRaces.sortedWith(
-            compareByDescending<Candidate> { it.isRival }
-                .thenByDescending {
-                    val distanceMatch = preferredDistances.isEmpty() || it.race.trackDistance in preferredDistances
-                    val surfaceMatch = preferredSurfaces.isEmpty() || it.race.trackSurface in preferredSurfaces
-                    distanceMatch && surfaceMatch
-                }
-                .thenBy { gradePriority[it.race.grade] ?: 99 }
-        )
+        val sortedRaces =
+            allSuitableRaces.sortedWith(
+                compareByDescending<Candidate> { it.isRival }
+                    .thenByDescending {
+                        val distanceMatch = preferredDistances.isEmpty() || it.race.trackDistance in preferredDistances
+                        val surfaceMatch = preferredSurfaces.isEmpty() || it.race.trackSurface in preferredSurfaces
+                        distanceMatch && surfaceMatch
+                    }
+                    .thenBy { gradePriority[it.race.grade] ?: 99 },
+            )
         val winner = sortedRaces.first()
 
         val winnerDistanceMatch = preferredDistances.isEmpty() || winner.race.trackDistance in preferredDistances

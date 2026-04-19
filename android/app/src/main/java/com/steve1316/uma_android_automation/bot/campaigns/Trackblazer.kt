@@ -1385,51 +1385,55 @@ class Trackblazer(game: Game) : Campaign(game) {
         val spareMasterHammers = (masterHammerCount - 2).coerceAtLeast(0)
 
         // Master Hammer Logic
-        val canUseMasterHammer = if (date.day < 73) {
-            // Only use spare masters beyond the 2 reserved for the finale
-            spareMasterHammers > 0 && (grade == RaceGrade.G1 || grade == RaceGrade.G2)
-        } else {
-            // Ensure we still have enough for remaining finale days.
-            val remainingFinaleDays = listOf(73, 74, 75).count { it >= date.day }
-            val hasEnough = masterHammerCount > remainingFinaleDays.coerceAtMost(masterHammerCount - 1).coerceAtLeast(0)
-            hasEnough && grade == RaceGrade.G1
-        }
+        val canUseMasterHammer =
+            if (date.day < 73) {
+                // Only use spare masters beyond the 2 reserved for the finale
+                spareMasterHammers > 0 && (grade == RaceGrade.G1 || grade == RaceGrade.G2)
+            } else {
+                // Ensure we still have enough for remaining finale days.
+                val remainingFinaleDays = listOf(73, 74, 75).count { it >= date.day }
+                val hasEnough = masterHammerCount > remainingFinaleDays.coerceAtMost(masterHammerCount - 1).coerceAtLeast(0)
+                hasEnough && grade == RaceGrade.G1
+            }
 
         // Artisan Hammer Logic
         // Grade priority: G1 > G2 > G3, with G3 only allowed if 3+ artisan hammers.
-        val canUseArtisanHammer = if (artisanHammerCount >= 3) {
-            true
-        } else if (artisanHammerCount >= 2) {
-            grade == RaceGrade.G1 || grade == RaceGrade.G2
-        } else if (artisanHammerCount == 1) {
-            grade == RaceGrade.G1
-        } else {
-            false
-        }
+        val canUseArtisanHammer =
+            if (artisanHammerCount >= 3) {
+                true
+            } else if (artisanHammerCount >= 2) {
+                grade == RaceGrade.G1 || grade == RaceGrade.G2
+            } else if (artisanHammerCount == 1) {
+                grade == RaceGrade.G1
+            } else {
+                false
+            }
 
         // Master takes priority at the finale since it provides a higher bonus (35% vs 20%).
-        val hammerToUse = if (date.day < 73) {
-            when {
-                canUseArtisanHammer -> "Artisan Cleat Hammer"
-                canUseMasterHammer -> "Master Cleat Hammer"
-                else -> null
+        val hammerToUse =
+            if (date.day < 73) {
+                when {
+                    canUseArtisanHammer -> "Artisan Cleat Hammer"
+                    canUseMasterHammer -> "Master Cleat Hammer"
+                    else -> null
+                }
+            } else {
+                when {
+                    canUseMasterHammer -> "Master Cleat Hammer"
+                    canUseArtisanHammer -> "Artisan Cleat Hammer"
+                    else -> null
+                }
             }
-        } else {
-            when {
-                canUseMasterHammer -> "Master Cleat Hammer"
-                canUseArtisanHammer -> "Artisan Cleat Hammer"
-                else -> null
-            }
-        }
 
         // Glow Sticks Logic
         // Day 73+: only use if we have enough to cover remaining finale days.
-        val useGlowSticks = if (date.day >= 73) {
-            val remainingFinaleDays = listOf(73, 74, 75).count { it >= date.day }
-            fans >= 20000 && glowSticksCount >= remainingFinaleDays
-        } else {
-            fans >= 20000 && glowSticksCount > 1
-        }
+        val useGlowSticks =
+            if (date.day >= 73) {
+                val remainingFinaleDays = listOf(73, 74, 75).count { it >= date.day }
+                fans >= 20000 && glowSticksCount >= remainingFinaleDays
+            } else {
+                fans >= 20000 && glowSticksCount > 1
+            }
 
         if (hammerToUse != null || useGlowSticks) {
             MessageLog.i(TAG, "[TRACKBLAZER] Suitable race items found in inventory (Hammer: $hammerToUse, Glow Sticks: $useGlowSticks). Opening Training Items dialog.")
