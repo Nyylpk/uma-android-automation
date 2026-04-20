@@ -1,17 +1,28 @@
 <AppUpdater>
   <update>
-    <latestVersion>5.4.8</latestVersion>
+    <latestVersion>5.4.9</latestVersion>
     <url>https://github.com/steve1316/uma-android-automation/releases</url>
     <releaseNotes>
-v5.4.8 - Changelog
+v5.4.9 - Changelog
+
+New
+---
+- Add conditional energy-based selection for post-race event options under the `Training Event Settings` page in the `Special Event Overrides` section.
+- Add options to set separate racing strategies per distance under the `Racing Settings` page.
+- Add dedicated mood display to the Remote Log Viewer.
+- Add a milestone-based stat pacing system under the `Training Settings` page so the bot evaluates training progress proportionally to the current year rather than against absolute end-game targets.
+- Adds a failure fallback mechanism to training analysis that detects and corrects potentially incorrect OCR readings.
 
 Adjustments
 ---
-- Rename `Enable Popup Check` setting to `Stop on Unexpected Popups` for clarity.
-- Skip redundant training screen exit/re-entry for `Irregular Training`.
-- Reduce effective stat cap by expected finale race gains to avoid wasting free stats.
-- Skip training analysis when energy is depleted and no charm is available.
-- Skip entering training screen for `Irregular Training` evaluation at zero energy without charm.
+- Conserve energy items (e.g., Energy Drink MAX/EX) for emergency race recovery at 3+ consecutive races.
+- Conserve at least one cupcake for potential Royal Kale Juice usage.
+- Ignore consecutive race limit on Late December turns.
+- Improves the Trackblazer scenario's Finale phase with smarter training fallbacks and a reworked item usage strategy for `Cleat Hammers`, `Glow Sticks` and `Reset Whistles`.
+
+Fixes
+---
+- Fix `Remote Log Viewer` from not updating the energy level + mood after using the `Royal Kale Juice`.
 
     </releaseNotes>
   </update>
