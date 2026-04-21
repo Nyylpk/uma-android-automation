@@ -94,9 +94,6 @@ class Training(private val game: Game, private val campaign: Campaign) {
     /** Whether to enable validation of training analysis. */
     private val enableTrainingAnalysisValidation: Boolean = SettingsHelper.getBooleanSetting("training", "enableTrainingAnalysisValidation")
 
-    /** The minimum stat gain required for using a Good-Luck Charm. */
-    private val minStatGainForCharm = SettingsHelper.getIntSetting("scenarioOverrides", "trackblazerMinStatGainForCharm", 30)
-
     /** Classic Year milestone percentage (applied to primary stat targets during Junior Year). */
     private val classicMilestonePct: Int = SettingsHelper.getIntSetting("training", "classicMilestonePercent", 33)
 
@@ -903,13 +900,14 @@ class Training(private val game: Game, private val campaign: Campaign) {
      *             - "singleTraining" (Boolean): Whether to analyze only the currently displayed training on the screen.
      *             - "ignoreFailureChance" (Boolean): Whether to bypass the failure chance threshold check.
      *             - "isIrregularEvaluation" (Boolean): Whether this analysis is for an irregular training evaluation.
+     *             - "minStatGainForCharm" (Int): Minimum stat gain to allow training with Good-Luck Charm (default 30).
+     *             - "irregularTrainingMinStatGain" (Int): Minimum stat gain for irregular training evaluation (default 30).
      */
     fun analyzeTrainings(args: Map<String, Any?> = emptyMap()) {
         needsEnergyRecovery = false
         val test = args["test"] as? Boolean ?: false
         val singleTraining = args["singleTraining"] as? Boolean ?: false
         val ignoreFailureChance = args["ignoreFailureChance"] as? Boolean ?: false
-        val isIrregularEvaluation = args["isIrregularEvaluation"] as? Boolean ?: false
 
         // Skip training analysis entirely when energy is depleted and no charm is available to offset the failure chance.
         if (!test && !ignoreFailureChance && !campaign.checkFinals() && campaign.trainee.energy <= 0) {
@@ -926,7 +924,7 @@ class Training(private val game: Game, private val campaign: Campaign) {
             MessageLog.v(TAG, "\n[TRAINING] Now starting process to analyze the training on screen.")
         } else if (cachedAnalysisResults != null) {
             MessageLog.i(TAG, "[TRAINING] Using cached training analysis results for this turn.")
-            processAnalysisResults(cachedAnalysisResults!!, ignoreFailureChance, isIrregularEvaluation, test)
+            processAnalysisResults(cachedAnalysisResults!!, ignoreFailureChance, test, args)
             return
         } else {
             MessageLog.v(TAG, "\n[TRAINING] Now starting process to analyze all 5 Trainings.")
@@ -1442,7 +1440,7 @@ class Training(private val game: Game, private val campaign: Campaign) {
                 normalizeFailureChances(analysisResults)
 
                 // Process results and populate training maps.
-                processAnalysisResults(analysisResults, ignoreFailureChance, isIrregularEvaluation, test)
+                processAnalysisResults(analysisResults, ignoreFailureChance, test, args)
 
                 // Store analysis results in cache for reuse during the same turn.
                 if (!test && !singleTraining) {
@@ -1468,10 +1466,13 @@ class Training(private val game: Game, private val campaign: Campaign) {
      *
      * @param results The list of [TrainingAnalysisResult] to process.
      * @param ignoreFailureChance Whether to ignore the failure chance check.
-     * @param isIrregularEvaluation Whether this analysis is for an irregular training evaluation.
      * @param test Whether the analysis is being performed for testing.
+     * @param args Scenario-specific parameters from [analyzeTrainings].
      */
-    private fun processAnalysisResults(results: List<TrainingAnalysisResult>, ignoreFailureChance: Boolean, isIrregularEvaluation: Boolean, test: Boolean) {
+    private fun processAnalysisResults(results: List<TrainingAnalysisResult>, ignoreFailureChance: Boolean, test: Boolean, args: Map<String, Any?> = emptyMap()) {
+        val isIrregularEvaluation = args["isIrregularEvaluation"] as? Boolean ?: false
+        val minStatGainForCharm = args["minStatGainForCharm"] as? Int ?: 30
+        val irregularTrainingMinStatGain = args["irregularTrainingMinStatGain"] as? Int ?: 30
         // Clear maps to ensure fresh results if reusing cached analysis.
         trainingMap.clear()
         skippedTrainingMap.clear()
@@ -1544,9 +1545,8 @@ class Training(private val game: Game, private val campaign: Campaign) {
             }
 
             if (!test && isIrregularEvaluation) {
-                val minIrregularGain = SettingsHelper.getIntSetting("scenarioOverrides", "trackblazerIrregularTrainingMinStatGain", 30)
-                if (mainStatGain < minIrregularGain) {
-                    MessageLog.i(TAG, "[TRAINING] Skipping ${result.name} training due to irregular training threshold ($mainStatGain < $minIrregularGain).")
+                if (mainStatGain < irregularTrainingMinStatGain) {
+                    MessageLog.i(TAG, "[TRAINING] Skipping ${result.name} training due to irregular training threshold ($mainStatGain < $irregularTrainingMinStatGain).")
 
                     // Store the skipped training for logging purposes.
                     val skippedTraining =

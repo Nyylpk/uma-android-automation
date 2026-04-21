@@ -198,6 +198,12 @@ class Trackblazer(game: Game) : Campaign(game) {
     /** Whether to enable Irregular Training in between races during Trackblazer. */
     private val enableIrregularTraining: Boolean = SettingsHelper.getBooleanSetting("scenarioOverrides", "trackblazerEnableIrregularTraining", false)
 
+    /** The minimum stat gain required for using a Good-Luck Charm to bypass failure chance. */
+    private val minCharmGain: Int = SettingsHelper.getIntSetting("scenarioOverrides", "trackblazerMinStatGainForCharm", 30)
+
+    /** The minimum stat gain threshold for irregular training evaluation. */
+    private val minIrregularGain: Int = SettingsHelper.getIntSetting("scenarioOverrides", "trackblazerIrregularTrainingMinStatGain", 30)
+
     /** Ordered list of energy items from lowest to highest gain, used for conservation priority. */
     private val energyItemConservationOrder = listOf("Energy Drink MAX", "Vita 20", "Vita 40", "Vita 65")
 
@@ -801,7 +807,7 @@ class Trackblazer(game: Game) : Campaign(game) {
 
                     val isIrregularEvaluation = true
                     val hasCharm = !bUsedCharmToday && (currentInventory["Good-Luck Charm"] ?: 0) > 0
-                    training.analyzeTrainings(mapOf("ignoreFailureChance" to hasCharm, "isIrregularEvaluation" to isIrregularEvaluation))
+                    training.analyzeTrainings(mapOf("ignoreFailureChance" to hasCharm, "isIrregularEvaluation" to isIrregularEvaluation, "minStatGainForCharm" to minCharmGain, "irregularTrainingMinStatGain" to minIrregularGain))
 
                     val bestTraining = training.recommendTraining(isIrregularEvaluation = isIrregularEvaluation)
 
@@ -1260,7 +1266,7 @@ class Trackblazer(game: Game) : Campaign(game) {
 
         // Initial Training Analysis.
         val hasCharm = date.day >= 13 && !bUsedCharmToday && (currentInventory["Good-Luck Charm"] ?: 0) > 0
-        training.analyzeTrainings(mapOf("ignoreFailureChance" to hasCharm))
+        training.analyzeTrainings(mapOf("ignoreFailureChance" to hasCharm, "minStatGainForCharm" to minCharmGain))
         var trainingSelected: StatName? = training.recommendTraining()
 
         // Finally, perform a consolidated item usage pass after the training is finalized.
@@ -1286,7 +1292,7 @@ class Trackblazer(game: Game) : Campaign(game) {
 
                         // Re-analyze after shuffle.
                         MessageLog.i(TAG, "[TRACKBLAZER] Re-analyzing trainings after Reset Whistle.")
-                        training.analyzeTrainings(mapOf("ignoreFailureChance" to hasCharm))
+                        training.analyzeTrainings(mapOf("ignoreFailureChance" to hasCharm, "minStatGainForCharm" to minCharmGain))
                         trainingSelected = training.recommendTraining(forceSelection = whistleForcesTraining)
 
                         // Perform another consolidated item usage pass if needed after shuffle.
