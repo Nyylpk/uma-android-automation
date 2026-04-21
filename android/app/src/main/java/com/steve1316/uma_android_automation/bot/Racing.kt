@@ -894,9 +894,9 @@ class Racing(private val game: Game, private val campaign: Campaign) {
             return true
         }
 
-        // For Trackblazer, we want to race as often as possible so we bypass most checks.
-        if (game.scenario == "Trackblazer") {
-            MessageLog.i(TAG, "[RACE] Trackblazer scenario detected. Bypassing smart racing and interval checks.")
+        // For scenarios that race as often as possible, bypass most checks.
+        if (campaign.shouldBypassSmartRacing()) {
+            MessageLog.i(TAG, "[RACE] Bypassing smart racing and interval checks.")
 
             // Still check for finals and summer as they are hard restrictions.
             if (campaign.checkFinals()) {

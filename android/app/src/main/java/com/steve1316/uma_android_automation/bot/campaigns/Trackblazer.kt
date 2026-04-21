@@ -449,6 +449,8 @@ class Trackblazer(game: Game) : Campaign(game) {
         return super.recoverMood(sourceBitmap, targetMood)
     }
 
+    override fun shouldBypassSmartRacing(): Boolean = true
+
     override fun getMaxRetriesPerRace(): Int = SettingsHelper.getIntSetting("scenarioOverrides", "trackblazerMaxRetriesPerRace", 1)
 
     override fun getMaxRaceRetries(): Int = 5

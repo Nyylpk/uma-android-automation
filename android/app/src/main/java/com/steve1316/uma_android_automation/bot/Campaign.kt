@@ -594,6 +594,14 @@ abstract class Campaign(game: Game) : Task(game) {
     }
 
     /**
+     * Whether to bypass smart racing and interval checks for extra race eligibility.
+     * Override this to return true for scenarios that race as often as possible.
+     *
+     * @return True to bypass smart racing checks, false to use default logic.
+     */
+    open fun shouldBypassSmartRacing(): Boolean = false
+
+    /**
      * Returns the maximum number of retries allowed per individual race.
      *
      * @return The maximum retries per race.
