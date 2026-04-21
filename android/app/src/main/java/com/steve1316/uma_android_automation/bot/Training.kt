@@ -42,7 +42,7 @@ import kotlin.math.pow
  * @property game The [Game] instance for interacting with the game state.
  * @property campaign The [Campaign] instance for accessing campaign-specific data.
  */
-class Training(private val game: Game, private val campaign: Campaign) {
+open class Training(protected val game: Game, protected val campaign: Campaign) {
     /** Map to store detected training options. */
     internal var trainingMap: MutableMap<StatName, TrainingOption> = mutableMapOf()
 
@@ -1826,15 +1826,40 @@ class Training(private val game: Game, private val campaign: Campaign) {
         }
     }
 
+        /**
+     * Returns a human-readable label for the current training scoring mode. Used for logging.
+     * Override in Training subclasses to provide scenario-specific scoring mode labels.
+     *
+     * @return The scoring mode label.
+     */
+    open fun getTrainingScoringMode(): String {
+        return if (campaign.date.bIsPreDebut || campaign.date.year == DateYear.JUNIOR) {
+            "Friendship (Pre-Debut/Junior)"
+        } else {
+            "Stat Efficiency (Year 2+)"
+        }
+    }
+
+    /**
+     * Scores a training option for recommendation. Override in Training subclasses to use custom scoring algorithms.
+     *
+     * @param config The current training configuration.
+     * @param option The training option to score.
+     * @return The computed score.
+     */
+    open fun scoreTraining(config: TrainingConfig, option: TrainingOption): Double {
+        return if (campaign.date.bIsPreDebut || campaign.date.year == DateYear.JUNIOR) {
+            scoreFriendshipTraining(option)
+        } else {
+            calculateRawTrainingScore(config, option)
+        }
+    }
+
     /**
      * Recommend the best training option based on the current scoring mode and game state.
      *
-     * This method implements a multi-stage recommendation system:
-     * 1. **Unity Cup Rule**: Prioritizes Spirit Explosion gauges for the Unity Cup scenario.
-     * 2. **Early Game Rule**: Focuses on relationship building during the Pre-Debut and Junior Year.
-     * 3. **Mid/Late Game Rule**: Uses ratio-based stat efficiency scoring for Year 2 and beyond.
-     *
      * @param forceSelection If true, the best training option will be selected even if it exceeds the failure chance threshold.
+     * @param args Scenario-specific parameters.
      * @return The name of the recommended training option, or null if no suitable option is found.
      */
     fun recommendTraining(forceSelection: Boolean = false, args: Map<String, Any?> = emptyMap()): StatName? {
@@ -1866,25 +1891,10 @@ class Training(private val game: Game, private val campaign: Campaign) {
         val skippedScores: Map<TrainingOption, Double>
         val best: TrainingOption?
 
-        if (game.scenario == "Unity Cup" && campaign.date.year < DateYear.SENIOR) {
-            // Unity Cup (Year < 3): Use Spirit Explosion Gauge priority system.
-            scoringMode = "Unity Cup (Spirit Gauge)"
-            trainingScores = trainingMap.values.associateWith { scoreUnityCupTraining(trainingConfig, it) }
-            skippedScores = skippedTrainingMap.values.associateWith { scoreUnityCupTraining(trainingConfig, it) }
-            best = trainingScores.maxByOrNull { it.value }?.key
-        } else if (campaign.date.bIsPreDebut || campaign.date.year == DateYear.JUNIOR) {
-            // Junior Year: Focus on building relationship bars.
-            scoringMode = "Friendship (Pre-Debut/Junior)"
-            trainingScores = trainingMap.values.associateWith { scoreFriendshipTraining(it) }
-            skippedScores = skippedTrainingMap.values.associateWith { scoreFriendshipTraining(it) }
-            best = trainingScores.maxByOrNull { it.value }?.key
-        } else {
-            // For Year 2+ as a fallback, use ratio-based stat efficiency scoring.
-            scoringMode = "Stat Efficiency (Year 2+)"
-            trainingScores = trainingMap.values.associateWith { calculateRawTrainingScore(trainingConfig, it) }
-            skippedScores = skippedTrainingMap.values.associateWith { calculateRawTrainingScore(trainingConfig, it) }
-            best = trainingScores.maxByOrNull { it.value }?.key
-        }
+        scoringMode = getTrainingScoringMode()
+        trainingScores = trainingMap.values.associateWith { scoreTraining(trainingConfig, it) }
+        skippedScores = skippedTrainingMap.values.associateWith { scoreTraining(trainingConfig, it) }
+        best = trainingScores.maxByOrNull { it.value }?.key
 
         // Build and log training analysis results and selection reasoning.
         val finalScoringMode = if (isIrregularEvaluation) "Trackblazer (Irregular Training)" else scoringMode

@@ -112,8 +112,8 @@ abstract class Campaign(game: Game) : Task(game) {
     /** Required instance of the Trainee class. */
     val trainee: Trainee = Trainee()
 
-    /** Required instance of the Training class. */
-    val training: Training = Training(game, this)
+    /** Required instance of the Training class. Override to provide a scenario-specific Training subclass. */
+    open val training: Training = Training(game, this)
 
     /** Required instance of the TrainingEvent class. */
     protected val trainingEvent: TrainingEvent = TrainingEvent(game, this)
