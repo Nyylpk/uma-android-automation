@@ -276,7 +276,7 @@ class Trackblazer(game: Game) : Campaign(game) {
             updateDate(isOnMainScreen = false)
 
             MessageLog.i(TAG, "[TEST] Currently on Race List screen. Calling findSuitableRace($consecutiveRaceCount)...")
-            val result = racing.findSuitableRace(mapOf("consecutiveRaceCount" to consecutiveRaceCount, "preferredDistances" to preferredDistances, "preferredSurfaces" to preferredSurfaces))
+            val result = findSuitableRace(consecutiveRaceCount, preferredDistances, preferredSurfaces)
 
             if (result != null) {
                 val (point, raceData) = result
@@ -470,12 +470,21 @@ class Trackblazer(game: Game) : Campaign(game) {
             listOf(RaceGrade.G1, RaceGrade.G2, RaceGrade.G3)
         }
 
-    @Suppress("UNCHECKED_CAST")
-    override fun findSuitableRace(racing: Racing, args: Map<String, Any?>): Pair<Point, Racing.RaceData>? {
-        val consecutiveRaceCount = args["consecutiveRaceCount"] as? Int ?: 0
-        val preferredDistances = args["preferredDistances"] as? List<TrackDistance> ?: emptyList()
-        val preferredSurfaces = args["preferredSurfaces"] as? List<TrackSurface> ?: emptyList()
-
+    /**
+     * Searches the race list for a suitable Trackblazer race based on double-star predictions and grade criteria.
+     *
+     * Junior Year: G1/G2/G3 with double predictions. Classic/Senior: Priority racing, but if consecutive race count >= 3, only G1/G2/G3.
+     *
+     * @param consecutiveRaceCount Current number of consecutive races performed.
+     * @param preferredDistances Optional list of preferred track distances for prioritization.
+     * @param preferredSurfaces Optional list of preferred track surfaces for prioritization.
+     * @return Pair of the best suitable race's location and [Racing.RaceData], or null if none found.
+     */
+    private fun findSuitableRace(
+        consecutiveRaceCount: Int,
+        preferredDistances: List<TrackDistance> = emptyList(),
+        preferredSurfaces: List<TrackSurface> = emptyList(),
+    ): Pair<Point, Racing.RaceData>? {
         val sb = StringBuilder()
         sb.appendLine("\n========== Trackblazer Race Selection Analysis ==========")
         sb.appendLine("Current Date: ${date}")
@@ -857,7 +866,7 @@ class Trackblazer(game: Game) : Campaign(game) {
                 return false
             }
 
-            val suitableRaceResult = racing.findSuitableRace(mapOf("consecutiveRaceCount" to consecutiveRaceCount, "preferredDistances" to preferredDistances, "preferredSurfaces" to preferredSurfaces))
+            val suitableRaceResult = findSuitableRace(consecutiveRaceCount, preferredDistances, preferredSurfaces)
             if (suitableRaceResult != null) {
                 val suitableRaceLocation = suitableRaceResult.first
                 val raceData = suitableRaceResult.second

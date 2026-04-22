@@ -2044,19 +2044,6 @@ class Racing(private val game: Game, private val campaign: Campaign) {
         return shouldRace
     }
 
-    /**
-     * Searches the race list for a suitable race based on scenario-specific criteria.
-     * Delegates to [Campaign.findSuitableRace]. The default Campaign implementation returns null.
-     *
-     * @param args Scenario-specific parameters for race selection.
-     * @return Pair of the best suitable race's location and [RaceData], or null if none found.
-     */
-    fun findSuitableRace(
-        args: Map<String, Any?> = emptyMap(),
-    ): Pair<Point, RaceData>? {
-        return campaign.findSuitableRace(this, args)
-    }
-
     // //////////////////////////////////////////////////////////////////////////////////////////////////
     // //////////////////////////////////////////////////////////////////////////////////////////////////
 

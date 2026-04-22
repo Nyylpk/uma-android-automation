@@ -595,16 +595,6 @@ abstract class Campaign(game: Game) : Task(game) {
     }
 
     /**
-     * Searches the race list for a suitable race based on scenario-specific criteria.
-     * Override in Campaign subclasses to provide custom race selection logic.
-     *
-     * @param racing The [Racing] instance for accessing race utilities.
-     * @param args Scenario-specific parameters for race selection.
-     * @return Pair of the best suitable race's location and race data, or null if none found.
-     */
-    open fun findSuitableRace(racing: Racing, args: Map<String, Any?> = emptyMap()): Pair<Point, Racing.RaceData>? = null
-
-    /**
      * Whether to handle a close button as a post-race popup during race retries.
      * Override this to return true for scenarios that show popups (e.g. Rival popups) after races.
      *
