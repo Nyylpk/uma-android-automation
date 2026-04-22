@@ -38,7 +38,6 @@ import com.steve1316.uma_android_automation.components.LabelRaceCriteriaMaiden
 import com.steve1316.uma_android_automation.components.LabelRaceCriteriaPreOpOrAbove
 import com.steve1316.uma_android_automation.components.LabelRaceCriteriaTrophies
 import com.steve1316.uma_android_automation.components.LabelRaceSelectionFans
-import com.steve1316.uma_android_automation.components.LabelRivalRacer
 import com.steve1316.uma_android_automation.components.LabelThereAreNoRacesToCompeteIn
 import com.steve1316.uma_android_automation.types.Aptitude
 import com.steve1316.uma_android_automation.types.BoundingBox
@@ -48,7 +47,6 @@ import com.steve1316.uma_android_automation.types.RunningStyle
 import com.steve1316.uma_android_automation.types.TrackDistance
 import com.steve1316.uma_android_automation.types.TrackSurface
 import com.steve1316.uma_android_automation.utils.CustomImageUtils.RaceDetails
-import com.steve1316.uma_android_automation.utils.ScrollList
 import net.ricecode.similarity.JaroWinklerStrategy
 import net.ricecode.similarity.StringSimilarityServiceImpl
 import org.json.JSONArray

@@ -5,10 +5,10 @@ import android.util.Log
 import com.steve1316.automation_library.utils.MessageLog
 import com.steve1316.automation_library.utils.SettingsHelper
 import com.steve1316.uma_android_automation.bot.Campaign
-import com.steve1316.uma_android_automation.bot.Racing
 import com.steve1316.uma_android_automation.bot.DialogHandlerResult
 import com.steve1316.uma_android_automation.bot.Game
 import com.steve1316.uma_android_automation.bot.MainScreenAction
+import com.steve1316.uma_android_automation.bot.Racing
 import com.steve1316.uma_android_automation.components.ButtonBack
 import com.steve1316.uma_android_automation.components.ButtonCancel
 import com.steve1316.uma_android_automation.components.ButtonClose
@@ -28,8 +28,10 @@ import com.steve1316.uma_android_automation.components.DialogInterface
 import com.steve1316.uma_android_automation.components.DialogUtils
 import com.steve1316.uma_android_automation.components.IconGoalRibbon
 import com.steve1316.uma_android_automation.components.IconRaceDayRibbon
+import com.steve1316.uma_android_automation.components.IconRaceListPredictionDoubleStar
 import com.steve1316.uma_android_automation.components.IconTrainingEventHorseshoe
 import com.steve1316.uma_android_automation.components.IconUnityCupTutorialHeader
+import com.steve1316.uma_android_automation.components.LabelRivalRacer
 import com.steve1316.uma_android_automation.components.LabelScheduledRace
 import com.steve1316.uma_android_automation.types.DateMonth
 import com.steve1316.uma_android_automation.types.DatePhase
@@ -44,8 +46,6 @@ import com.steve1316.uma_android_automation.types.TrackDistance
 import com.steve1316.uma_android_automation.types.TrackSurface
 import com.steve1316.uma_android_automation.types.TrackblazerShopList
 import com.steve1316.uma_android_automation.types.Trainee
-import com.steve1316.uma_android_automation.components.IconRaceListPredictionDoubleStar
-import com.steve1316.uma_android_automation.components.LabelRivalRacer
 import com.steve1316.uma_android_automation.utils.ScrollList
 import com.steve1316.uma_android_automation.utils.ScrollListEntry
 import org.json.JSONArray
@@ -487,7 +487,7 @@ class Trackblazer(game: Game) : Campaign(game) {
     ): Pair<Point, Racing.RaceData>? {
         val sb = StringBuilder()
         sb.appendLine("\n========== Trackblazer Race Selection Analysis ==========")
-        sb.appendLine("Current Date: ${date}")
+        sb.appendLine("Current Date: $date")
         sb.appendLine("Consecutive Race Count: $consecutiveRaceCount")
 
         data class Candidate(val point: Point, val race: Racing.RaceData, val detectedName: String, val isRival: Boolean)
