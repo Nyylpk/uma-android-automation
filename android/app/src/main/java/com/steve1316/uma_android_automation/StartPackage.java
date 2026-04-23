@@ -7,6 +7,8 @@ import com.facebook.react.bridge.NativeModule;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.uimanager.ViewManager;
 
+import com.steve1316.uma_android_automation.llm.LLMChatModule;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -24,6 +26,7 @@ public class StartPackage implements ReactPackage {
         List<NativeModule> modules = new ArrayList<>();
 
         modules.add(new StartModule(reactContext));
+        modules.add(new LLMChatModule(reactContext));
 
         return modules;
     }
