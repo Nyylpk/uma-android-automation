@@ -1,28 +1,22 @@
 <AppUpdater>
   <update>
-    <latestVersion>5.4.9</latestVersion>
+    <latestVersion>5.5.0</latestVersion>
     <url>https://github.com/steve1316/uma-android-automation/releases</url>
     <releaseNotes>
-v5.4.9 - Changelog
-
-New
----
-- Add conditional energy-based selection for post-race event options under the `Training Event Settings` page in the `Special Event Overrides` section.
-- Add options to set separate racing strategies per distance under the `Racing Settings` page.
-- Add dedicated mood display to the Remote Log Viewer.
-- Add a milestone-based stat pacing system under the `Training Settings` page so the bot evaluates training progress proportionally to the current year rather than against absolute end-game targets.
-- Adds a failure fallback mechanism to training analysis that detects and corrects potentially incorrect OCR readings.
+v5.5.0 - Changelog
 
 Adjustments
 ---
-- Conserve energy items (e.g., Energy Drink MAX/EX) for emergency race recovery at 3+ consecutive races.
-- Conserve at least one cupcake for potential Royal Kale Juice usage.
-- Ignore consecutive race limit on Late December turns.
-- Improves the Trackblazer scenario's Finale phase with smarter training fallbacks and a reworked item usage strategy for `Cleat Hammers`, `Glow Sticks` and `Reset Whistles`.
+- Update game data up to `Yaeno Muteki` (2026-04-19).
+- Stack multiple energy items toward ~100% energy instead of using only the lowest-gain item, while reserving one low-tier item for emergencies.
+- Remove the hardcoded 90-minute runtime cap so the bot can run for full career durations.
+- Refactor `Training.kt` and `Racing.kt` into a hook-based architecture so scenario-specific logic (Trackblazer, Unity Cup) lives in subclasses instead of scattered flags.
 
 Fixes
 ---
-- Fix `Remote Log Viewer` from not updating the energy level + mood after using the `Royal Kale Juice`.
+- Fix bug where the bot force-trains a stat that the analysis phase had already rejected for `low gain with charm` or `high failure chance`. It recovers energy/mood as a fallback instead.
+- Fix bug where the bot still clicks "Try Again" on lost G1/G2/G3 races in Trackblazer when `Disable Race Retries` was enabled.
+- Fix rare bug for `IllegalArgumentException: y must be >= 0` crash in `determineTurnsRemainingBeforeNextGoal()` by clamping OCR crop regions to the bitmap bounds.
 
     </releaseNotes>
   </update>
