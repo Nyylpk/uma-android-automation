@@ -1,6 +1,6 @@
 # How It Works
 
-*Last updated: 2026-04-11*
+*Last updated: 2026-04-23*
 
 A comprehensive guide to the inner workings of the app. This document explains what the bot does at each step of a campaign, how it makes decisions, and how each scenario differs.
 
@@ -353,6 +353,18 @@ During Finale turns (73–75), if the trainee's energy is too low for optimal tr
 When enabled, the bot adds bonus weight to trainings that offer skill hints, making it more likely to choose trainings where support cards are offering learnable skills.
 </details>
 
+<details>
+<summary><strong>End-of-Year Milestone Stat Targets</strong></summary>
+
+The bot supports configurable per-year stat targets (End of Junior / End of Classic Year Milestones). When enabled, training selection biases toward stats that are still short of their milestone target for the current year, helping the trainee hit each year's stat goals before the next phase.
+</details>
+
+<details>
+<summary><strong>Training Failure Fallbacks</strong></summary>
+
+When every training option is filtered out by the failure-chance or stat-cap rules, the bot follows a configurable fallback chain (e.g. rest, recover mood, or force Wit) instead of stalling on the turn. The fallback decision also respects negative statuses — for instance, with active negative conditions the forced fallback is Wit rather than Speed to avoid stat reductions from conditions like Slow Metabolism.
+</details>
+
 ### 6.4 Training Configuration Summary
 
 | Setting | Default | Effect |
@@ -408,7 +420,7 @@ When the bot decides to race:
 
 Once a race is selected:
 
-1. **Strategy Selection:** The bot selects a running strategy (Front Runner, Stalker, Betweener, or Chaser) based on the trainee's aptitudes.
+1. **Strategy Selection:** The bot selects a running strategy (Front Runner, Stalker, Betweener, or Chaser) based on the trainee's aptitudes. If **per-distance strategies** are enabled in Racing Settings, the bot resolves the strategy separately per distance bucket (Sprint, Mile, Medium, Long) against the currently detected `lastRaceDistance`, overriding the global strategy for that race.
 2. **Skip or Manual:** If the "skip" button is available, the bot skips the race animation. Otherwise, it watches and fast-forwards.
 3. **Retries:** If a race is lost and retries are enabled, the bot can retry the race (free retry available once per campaign if enabled).
 4. **Complete Career on Failure:** If a mandatory race is lost and this setting is enabled, the bot continues the campaign anyway rather than stopping.
@@ -679,29 +691,38 @@ Below is every item in the Trackblazer shop, organized by category. For each ite
 **When used:** Only when **all** of these conditions are true:
 1. Energy is at or below the energy threshold (default 40%)
 2. A **Good-Luck Charm is NOT being used this turn** (see [Charm interaction](#good-luck-charm--energy-item-interaction) below)
-3. The item is the **optimal choice** according to the greedy energy algorithm
+3. The item is part of the **optimal combination** chosen by the greedy energy algorithm
+4. Using the item would not burn the **last copy of the lowest-tier energy item** reserved for emergency race recovery (unless force-override is active)
 
 **The greedy energy algorithm (`isBestEnergyItemToUse()`):**
 1. Collect all available energy items (from inventory + items not yet scanned in this pass).
-2. Sort by gain descending (65 → 40 → 20).
-3. Greedily pick items that fit without exceeding 100% energy.
-4. If the current item was in the picked set → use it. Otherwise → skip it.
+2. **Reserve** one unit of the lowest-tier energy item in `energyItemConservationOrder` (Vita 20 → Vita 40 → Vita 65) so an emergency race recovery always has something to draw on.
+3. Sort the remaining gains descending (65 → 40 → 20).
+4. Greedily pick items whose cumulative gain stays within a **soft overshoot cap of 110%** — a small overshoot is allowed so that a larger combined gain (e.g. Vita 65 + Vita 40 = 105) is preferred over a strictly-under-100 combination (e.g. 65 + 20 = 85).
+5. **Multiple items can be used in a single turn** — every item in the picked set will be consumed when encountered during the scan. If the current item is in the picked set → use it. Otherwise → skip it.
 
-**Example:** Trainee has 35% energy with Vita 65, Vita 40, and Vita 20 available.
-- 35 + 65 = 100 → pick Vita 65. Remaining space: 0.
-- Vita 40 and Vita 20 don't fit → skip them.
-- Result: Use only Vita 65.
+**Example:** Trainee has 35% energy with Vita 65, Vita 40, and Vita 20 available (plus extra copies).
+- Vita 20 is reserved for emergency recovery.
+- 35 + 65 = 100 → pick Vita 65.
+- 100 + 40 = 140 → exceeds 110, skip.
+- Result: Use Vita 65 only.
 
-**Example:** Trainee has 50% energy with Vita 65, Vita 40, and Vita 20 available.
-- 50 + 65 = 115 → exceeds 100, skip Vita 65.
-- 50 + 40 = 90 → pick Vita 40. Remaining space: 10.
-- 90 + 20 = 110 → exceeds 100, skip Vita 20.
-- Result: Use only Vita 40.
+**Example:** Trainee has 30% energy with Vita 65, Vita 40, and Vita 20 available (plus extra copies).
+- Vita 20 is reserved.
+- 30 + 65 = 95 → pick Vita 65. Remaining headroom: 15 (up to 110).
+- 95 + 40 = 135 → exceeds 110, skip Vita 40.
+- Result: Use Vita 65 only. (Compare to the older single-item algorithm which would have picked the same item but with different reasoning.)
+
+**Example:** Trainee has 20% energy with Vita 65, Vita 40 available (multiple copies of each).
+- 20 + 65 = 85 → pick Vita 65.
+- 85 + 40 = 125 → exceeds 110, skip.
+- But a second Vita 40 could be evaluated next time: 20 + 40 + 40 = 100 fits. Depending on inventory order, the bot stacks items toward 100% rather than stopping after the first pick.
 
 **When NOT used:**
 - Energy is above the threshold (default 40%).
 - A Good-Luck Charm is being used this turn (Charm sets failure to 0%, making energy irrelevant for training — using energy items would waste them since the energy cost is deducted after training).
-- Using this item would overshoot 100% when a smaller item would be more efficient.
+- The item is the last copy of the reserved lowest-tier energy item (conserved for emergency race recovery).
+- Using this item would exceed the soft overshoot cap (110%) given the already-picked items.
 
 **Special Royal Kale Juice priority:** When energy ≤ 20%, the bot checks if Royal Kale Juice is available. If it is, all Vita items are skipped in favor of Kale Juice, since any Vita used first would be partially wasted by the Kale Juice's full restore.
 
@@ -947,7 +968,7 @@ The bot checks for this interaction before evaluating any energy item. It consid
 1. The bot confirms usage and closes the item dialog.
 2. Support cards are reshuffled across the 5 training facilities.
 3. The bot re-runs the full training analysis.
-4. If `whistleForcesTraining` is enabled (default: true) and the re-analysis still finds no suitable training, the bot **forces the best available training** even if it doesn't meet normal thresholds.
+4. If `whistleForcesTraining` is enabled (default: true) and the re-analysis still finds no suitable training, the bot **forces the best available training** even if it doesn't meet normal thresholds — **unless** the forced stat was already explicitly rejected by analysis (e.g. high failure chance, low gain while a Charm is active) or is blacklisted. In that case, the bot refuses to force-train and falls back to mood or energy recovery instead.
 5. After the whistle, a second item usage pass runs in case the new training recommendation changes which items should be used (e.g., different Ankle Weights).
 
 **When NOT used:**
@@ -1025,7 +1046,7 @@ Trackblazer tracks how many races the trainee has performed consecutively:
 
 - **Counter:** Incremented after each race. Reset to 0 when the bot rests or recovers mood.
 - **Warning at 3+:** After 3 consecutive races, the game shows a warning about potential stat penalties.
-- **Energy guard at 3+:** When the counter is ≥ 3 and energy is critically low (0–1%), racing is **blocked** regardless of the configured limit to avoid compounding the -30 stat penalty at zero energy.
+- **Energy guard at 3+:** When the counter is ≥ 3 and energy is critically low (0–1%), racing is **blocked** regardless of the configured limit to avoid compounding the -30 stat penalty at zero energy. This guard can be disabled with the `ignoreLowEnergyRacingBlock` setting for users who want the bot to keep racing even in that danger zone.
 - **Grade filtering at 3+:** When the counter is ≥ 3, the bot only accepts **G1, G2, or G3** races. Lower-grade races (OP, Pre-OP) are skipped to avoid wasting the consecutive race penalty on low-value races.
 - **Hard limit (default 5):** The bot stops racing entirely when the consecutive count reaches the configured limit (plus 1), unless it's the final turn.
 - **OCR tracking:** The bot reads the consecutive race count from the warning dialog via OCR to stay synchronized with the game.
@@ -1051,7 +1072,7 @@ Irregular Training is an optional feature that evaluates whether a high-value tr
 
 ### 11.7 Race Selection
 
-Trackblazer uses a specialized race selection algorithm (`findSuitableTrackblazerRace()`) that scans the entire race list:
+Trackblazer uses a specialized race selection algorithm (`findSuitableRace()`, formerly `findSuitableTrackblazerRace()` — renamed and exposed via a generic `Campaign` hook so future scenarios can plug into the same flow) that scans the entire race list:
 
 1. **Scan the full list:** Uses `ScrollList` to paginate through all available races across multiple pages.
 2. **Identify candidates:** For each race, the bot looks for **double-star prediction icons** (`IconRaceListPredictionDoubleStar`) indicating favorable matchups.
@@ -1062,6 +1083,10 @@ Trackblazer uses a specialized race selection algorithm (`findSuitableTrackblaze
    - Filter by grade based on the current consecutive race count (see [11.5](#115-consecutive-race-system))
 4. **Selection priority:**
    - **Rival races first** (these offer bonus rewards)
+   - Among non-rival candidates, races matching the configured **preferred distance** and/or **preferred surface** (Scenario Overrides UI) are preferred over ones that don't
    - Then by **grade:** G1 > G2 > G3 > OP > Pre-OP
 5. **Second pass:** After selecting the winner, the bot scrolls back through the list to find the winner's current screen position and taps it.
 6. **Fallback:** If `ScrollList` creation fails, the bot falls back to single-page detection.
+
+> [!NOTE]
+> The bot also tracks `lastRaceDistance` so that per-distance running strategies (see [Section 7.4](#74-race-execution)) can be resolved against the race that was actually selected.
