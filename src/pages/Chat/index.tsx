@@ -70,8 +70,10 @@ const Chat = () => {
         })
         try {
             const raw = (await NativeModules.LLMChatModule.chat(q, 4)) as ChatResult
+            console.log("[Chat] native response:", JSON.stringify(raw, null, 2))
             setResult(raw)
-        } catch {
+        } catch (err) {
+            console.log("[Chat] native error:", err)
             setResult(null)
         } finally {
             setIsSearching(false)
