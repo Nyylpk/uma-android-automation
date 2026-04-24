@@ -166,20 +166,26 @@ function chunkMarkdown(markdown: string, source: string): Chunk[] {
             bodyLines = []
             return
         }
-        const words = text.split(/\s+/)
+        // Word-offset chunking that preserves the original whitespace (newlines, blank lines, code fence
+        // indentation) inside each chunk. Splitting on /\s+/ and rejoining with " " would destroy markdown
+        // structure — tables, bullet lists, and fenced code would render as one line of noise in the UI.
+        const wordMatches = [...text.matchAll(/\S+/g)]
         const heading = headingStack.filter(Boolean).join(" › ") || source
-        // Split into chunks of TARGET_CHUNK_TOKENS words with CHUNK_OVERLAP_TOKENS overlap.
         const step = TARGET_CHUNK_TOKENS - CHUNK_OVERLAP_TOKENS
-        for (let i = 0; i < words.length; i += step) {
-            const slice = words.slice(i, i + TARGET_CHUNK_TOKENS)
-            if (slice.length === 0) break
+        for (let i = 0; i < wordMatches.length; i += step) {
+            const startIdx = wordMatches[i].index!
+            const lastWordAbs = Math.min(i + TARGET_CHUNK_TOKENS - 1, wordMatches.length - 1)
+            const lastWord = wordMatches[lastWordAbs]
+            const endIdx = lastWord.index! + lastWord[0].length
+            const chunkText = text.slice(startIdx, endIdx).trim()
+            if (chunkText.length === 0) break
             chunks.push({
                 id: `${source}#${flushIdx}-${i}`,
                 source,
                 heading,
-                text: slice.join(" "),
+                text: chunkText,
             })
-            if (i + TARGET_CHUNK_TOKENS >= words.length) break
+            if (i + TARGET_CHUNK_TOKENS >= wordMatches.length) break
         }
         flushIdx += 1
         bodyLines = []

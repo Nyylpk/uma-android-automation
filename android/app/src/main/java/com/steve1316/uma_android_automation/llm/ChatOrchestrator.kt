@@ -186,18 +186,32 @@ class ChatOrchestrator(private val context: Context) {
             val sorted = group.sortedBy { c ->
                 c.id.substringAfterLast('#').substringAfter('-').toIntOrNull() ?: 0
             }
-            sorted.withIndex().joinToString(" ") { (i, c) ->
-                if (i == 0) c.text
-                else {
-                    val words = c.text.split(Regex("\\s+"))
-                    if (words.size <= CHUNK_OVERLAP_WORDS) "" else words.drop(CHUNK_OVERLAP_WORDS).joinToString(" ")
-                }
+            sorted.withIndex().joinToString("\n") { (i, c) ->
+                if (i == 0) c.text else dropLeadingWords(c.text, CHUNK_OVERLAP_WORDS)
             }.trim()
         }.filter { it.isNotEmpty() }
 
         val combined = parts.joinToString("\n\n")
         return if (combined.length <= SECTION_EXPANSION_CHAR_CAP) combined
         else combined.take(SECTION_EXPANSION_CHAR_CAP).substringBeforeLast(' ') + "…"
+    }
+
+    /**
+     * Skip past the first [n] whitespace-delimited words in [text] and return the remainder with its original
+     * whitespace (including newlines) intact. Used to strip the 40-word overlap between adjacent chunks without
+     * destroying markdown structure (tables, bullet lists, fenced code) embedded in the chunk body.
+     */
+    private fun dropLeadingWords(text: String, n: Int): String {
+        var consumed = 0
+        var i = 0
+        val len = text.length
+        while (i < len && text[i].isWhitespace()) i++
+        while (consumed < n && i < len) {
+            while (i < len && !text[i].isWhitespace()) i++
+            consumed += 1
+            while (i < len && text[i].isWhitespace()) i++
+        }
+        return text.substring(i)
     }
 
     private fun buildPrompt(query: String, citations: List<DocIndex.Result>): String {
