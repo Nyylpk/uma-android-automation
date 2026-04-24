@@ -128,7 +128,7 @@ class LLMChatModule(private val reactContext: ReactApplicationContext) : ReactCo
      * Resolves immediately once the download has been enqueued.
      */
     @ReactMethod
-    fun downloadModel(url: String, promise: Promise) {
+    fun downloadModel(url: String, authToken: String?, promise: Promise) {
         val existing = downloadJob
         if (existing != null && existing.isActive) {
             promise.reject("E_ALREADY_DOWNLOADING", "A model download is already in progress.")
@@ -136,7 +136,7 @@ class LLMChatModule(private val reactContext: ReactApplicationContext) : ReactCo
         }
         downloadJob = scope.launch {
             try {
-                orchestrator.modelDownloader().download(url).collect { state ->
+                orchestrator.modelDownloader().download(url, authToken).collect { state ->
                     emitDownloadState(state)
                 }
             } catch (e: Exception) {

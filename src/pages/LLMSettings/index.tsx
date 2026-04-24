@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { View, ScrollView, StyleSheet, Text, NativeModules, NativeEventEmitter, Alert } from "react-native"
+import { View, ScrollView, StyleSheet, Text, TextInput, NativeModules, NativeEventEmitter, Alert, Linking } from "react-native"
 import { useTheme } from "../../context/ThemeContext"
 import CustomButton from "../../components/CustomButton"
 import CustomCheckbox from "../../components/CustomCheckbox"
@@ -42,6 +42,7 @@ const LLMSettings = () => {
     const [status, setStatus] = useState<ServiceStatus | null>(null)
     const [downloadState, setDownloadState] = useState<DownloadState | null>(null)
     const [preferNano, setPreferNano] = useState(true)
+    const [hfToken, setHfToken] = useState("")
 
     const refreshStatus = useCallback(async () => {
         try {
@@ -67,14 +68,14 @@ const LLMSettings = () => {
     const handleDownload = useCallback(() => {
         Alert.alert(
             "Download chat model?",
-            "This downloads ~530 MB over Wi-Fi. The model enables natural-language answers on top of the always-on retrieve-only search. You can delete it later to reclaim space.",
+            "This downloads ~530 MB over Wi-Fi. The Gemma 3 1B model is gated on Hugging Face — you must accept Google's Gemma license on the model page and paste a read-access token below before downloading.",
             [
                 { text: "Cancel", style: "cancel" },
                 {
                     text: "Download",
                     onPress: async () => {
                         try {
-                            await NativeModules.LLMChatModule.downloadModel(DEFAULT_MODEL_URL)
+                            await NativeModules.LLMChatModule.downloadModel(DEFAULT_MODEL_URL, hfToken.trim() || null)
                         } catch (e: any) {
                             Alert.alert("Download failed to start", e?.message ?? "Unknown error")
                         }
@@ -82,7 +83,7 @@ const LLMSettings = () => {
                 },
             ]
         )
-    }, [])
+    }, [hfToken])
 
     const handleCancel = useCallback(async () => {
         await NativeModules.LLMChatModule.cancelDownload()
@@ -149,6 +150,17 @@ const LLMSettings = () => {
                 sectionLabel: { fontSize: 13, fontWeight: "600", color: colors.foreground, marginBottom: 6 },
                 statusRow: { color: colors.foreground, marginBottom: 4 },
                 hint: { fontSize: 11, color: colors.mutedForeground, marginTop: 4 },
+                link: { fontSize: 11, color: colors.primary, marginTop: 4, textDecorationLine: "underline" },
+                tokenInput: {
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    borderRadius: 6,
+                    paddingHorizontal: 10,
+                    paddingVertical: 8,
+                    color: colors.foreground,
+                    backgroundColor: colors.card,
+                    marginTop: 6,
+                },
                 buttonRow: { flexDirection: "row", gap: 8, marginTop: 8 },
             }),
         [colors]
@@ -171,6 +183,29 @@ const LLMSettings = () => {
                     <Text style={styles.statusRow}>
                         {status?.mediaPipeDownloaded ? `Downloaded (${(status.mediaPipeSizeBytes / 1024 / 1024).toFixed(0)} MB)` : "Not downloaded"}
                     </Text>
+                    {!status?.mediaPipeDownloaded && (
+                        <>
+                            <Text style={styles.hint}>
+                                Gemma 3 1B is gated. Accept the license on the Hugging Face model page, then create a read-access token and paste it below.
+                            </Text>
+                            <Text style={styles.link} onPress={() => Linking.openURL("https://huggingface.co/litert-community/Gemma3-1B-IT")}>
+                                Open model page
+                            </Text>
+                            <Text style={styles.link} onPress={() => Linking.openURL("https://huggingface.co/settings/tokens")}>
+                                Create token
+                            </Text>
+                            <TextInput
+                                style={styles.tokenInput}
+                                value={hfToken}
+                                onChangeText={setHfToken}
+                                placeholder="hf_... (Hugging Face read token)"
+                                placeholderTextColor={colors.mutedForeground}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                secureTextEntry
+                            />
+                        </>
+                    )}
                     {progressText && <Text style={styles.hint}>{progressText}</Text>}
                     <View style={styles.buttonRow}>
                         {!status?.mediaPipeDownloaded && !isDownloading && (

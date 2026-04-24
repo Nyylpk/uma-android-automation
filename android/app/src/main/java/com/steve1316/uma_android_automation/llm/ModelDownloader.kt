@@ -70,7 +70,7 @@ class ModelDownloader(private val context: Context) {
      * @param url HTTPS URL of the model file.
      * @return Cold [Flow] that begins the download when collected.
      */
-    fun download(url: String): Flow<State> = flow {
+    fun download(url: String, authToken: String? = null): Flow<State> = flow {
         if (modelFile.exists()) modelFile.delete()
         val request = DownloadManager.Request(Uri.parse(url))
             .setTitle("Uma Chat Model")
@@ -78,6 +78,7 @@ class ModelDownloader(private val context: Context) {
             .setDestinationUri(Uri.fromFile(modelFile))
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .setAllowedOverMetered(false)
+        if (!authToken.isNullOrBlank()) request.addRequestHeader("Authorization", "Bearer ${authToken.trim()}")
         val id = dm.enqueue(request)
         Log.i(TAG, "download:: enqueued id=$id url=$url")
         emit(State.Pending)
