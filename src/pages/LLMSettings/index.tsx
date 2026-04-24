@@ -14,6 +14,7 @@ const MODEL_URL_SETTING = { category: "chat", key: "modelUrl" } as const
  * NOT included in settings exports — a token is a user-specific secret and must never leak into a shared JSON.
  */
 const HF_TOKEN_SETTING = { category: "chat", key: "hfToken" } as const
+const ACTIVE_MODEL_SETTING = { category: "chat", key: "activeModelFilename" } as const
 
 /** Known LiteRT community `.task` models sorted by ascending size. All are HF-gated; requires a Read token. */
 const MODEL_PRESETS: Array<{ label: string; detail: string; url: string }> = [
@@ -56,6 +57,12 @@ interface DownloadState {
     error?: string
 }
 
+interface DownloadedModel {
+    filename: string
+    sizeBytes: number
+    lastModifiedMillis: number
+}
+
 /**
  * LLM Settings page.
  *
@@ -70,27 +77,87 @@ const LLMSettings = () => {
     const [preferNano, setPreferNano] = useState(true)
     const [hfToken, setHfToken] = useState("")
     const [modelUrl, setModelUrl] = useState(DEFAULT_MODEL_URL)
+    const [downloadedModels, setDownloadedModels] = useState<DownloadedModel[]>([])
+    const [activeModelFilename, setActiveModelFilename] = useState<string | null>(null)
 
-    // Load persisted model URL + HF token on mount. Token lives outside BotStateContext so it is never exported.
+    const refreshStatus = useCallback(async () => {
+        try {
+            const s: ServiceStatus = await NativeModules.LLMChatModule.getServiceStatus()
+            setStatus(s)
+        } catch {
+            setStatus(null)
+        }
+    }, [])
+
+    const refreshModels = useCallback(async () => {
+        try {
+            const list: DownloadedModel[] = await NativeModules.LLMChatModule.listModels()
+            setDownloadedModels(list)
+        } catch {
+            setDownloadedModels([])
+        }
+    }, [])
+
+    // Load persisted model URL + HF token + active model selection on mount. Token lives outside BotStateContext so
+    // it is never exported.
     useEffect(() => {
         let cancelled = false
         ;(async () => {
             try {
-                const [url, token] = await Promise.all([
+                const [url, token, active] = await Promise.all([
                     databaseManager.loadSetting(MODEL_URL_SETTING.category, MODEL_URL_SETTING.key),
                     databaseManager.loadSetting(HF_TOKEN_SETTING.category, HF_TOKEN_SETTING.key),
+                    databaseManager.loadSetting(ACTIVE_MODEL_SETTING.category, ACTIVE_MODEL_SETTING.key),
                 ])
                 if (cancelled) return
                 if (typeof url === "string" && url.length > 0) setModelUrl(url)
                 if (typeof token === "string" && token.length > 0) setHfToken(token)
+                if (typeof active === "string" && active.length > 0) {
+                    setActiveModelFilename(active)
+                    NativeModules.LLMChatModule.setActiveModel(active)
+                }
             } catch {
                 // First run or DB not initialized — keep defaults.
             }
+            refreshModels()
         })()
         return () => {
             cancelled = true
         }
-    }, [])
+    }, [refreshModels])
+
+    const handleSelectActiveModel = useCallback(
+        (filename: string) => {
+            setActiveModelFilename(filename)
+            NativeModules.LLMChatModule.setActiveModel(filename)
+            databaseManager.saveSetting(ACTIVE_MODEL_SETTING.category, ACTIVE_MODEL_SETTING.key, filename, true).catch(() => undefined)
+            refreshStatus()
+        },
+        [refreshStatus]
+    )
+
+    const handleDeleteModelFile = useCallback(
+        (filename: string) => {
+            Alert.alert("Delete this model?", `Removes ${filename} (~${(downloadedModels.find((m) => m.filename === filename)?.sizeBytes ?? 0) / 1024 / 1024 | 0} MB) from disk.`, [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        await NativeModules.LLMChatModule.deleteModelFile(filename)
+                        if (activeModelFilename === filename) {
+                            setActiveModelFilename(null)
+                            NativeModules.LLMChatModule.setActiveModel("")
+                            databaseManager.saveSetting(ACTIVE_MODEL_SETTING.category, ACTIVE_MODEL_SETTING.key, "", true).catch(() => undefined)
+                        }
+                        await refreshModels()
+                        await refreshStatus()
+                    },
+                },
+            ])
+        },
+        [activeModelFilename, downloadedModels, refreshModels, refreshStatus]
+    )
 
     const persistHfToken = useCallback((value: string) => {
         setHfToken(value)
@@ -102,14 +169,6 @@ const LLMSettings = () => {
         databaseManager.saveSetting(MODEL_URL_SETTING.category, MODEL_URL_SETTING.key, url, true).catch(() => undefined)
     }, [])
 
-    const refreshStatus = useCallback(async () => {
-        try {
-            const s: ServiceStatus = await NativeModules.LLMChatModule.getServiceStatus()
-            setStatus(s)
-        } catch {
-            setStatus(null)
-        }
-    }, [])
 
     useEffect(() => {
         refreshStatus()
@@ -118,10 +177,11 @@ const LLMSettings = () => {
             setDownloadState(state)
             if (state.status === "complete" || state.status === "failed" || state.status === "error") {
                 refreshStatus()
+                refreshModels()
             }
         })
         return () => sub.remove()
-    }, [refreshStatus])
+    }, [refreshStatus, refreshModels])
 
     const handleDownload = useCallback(() => {
         Alert.alert(
@@ -233,6 +293,32 @@ const LLMSettings = () => {
                 presetCardSelected: { borderColor: colors.primary, borderWidth: 2 },
                 presetLabel: { color: colors.foreground, fontSize: 13, fontWeight: "600" },
                 presetDetail: { color: colors.mutedForeground, fontSize: 11, marginTop: 2 },
+                modelRow: {
+                    flexDirection: "row" as const,
+                    alignItems: "center" as const,
+                    justifyContent: "space-between" as const,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    borderRadius: 6,
+                    paddingHorizontal: 10,
+                    paddingVertical: 8,
+                    marginTop: 6,
+                    backgroundColor: colors.card,
+                },
+                modelRowActive: { borderColor: colors.primary, borderWidth: 2 },
+                modelInfo: { flex: 1, marginRight: 8 },
+                modelFilename: { color: colors.foreground, fontSize: 13, fontWeight: "600" as const },
+                modelMeta: { color: colors.mutedForeground, fontSize: 11, marginTop: 2 },
+                modelActions: { flexDirection: "row" as const, gap: 6 },
+                modelActionButton: {
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    borderRadius: 4,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                },
+                modelActionText: { color: colors.foreground, fontSize: 12 },
+                modelActionActiveText: { color: colors.primary, fontSize: 12, fontWeight: "600" as const },
                 buttonRow: { flexDirection: "row", gap: 8, marginTop: 8 },
             }),
         [colors]
@@ -253,14 +339,15 @@ const LLMSettings = () => {
                 <View style={styles.section}>
                     <Text style={styles.sectionLabel}>MediaPipe Chat Model</Text>
                     <Text style={styles.statusRow}>
-                        {status?.mediaPipeDownloaded ? `Downloaded (${(status.mediaPipeSizeBytes / 1024 / 1024).toFixed(0)} MB)` : "Not downloaded"}
+                        {downloadedModels.length > 0
+                            ? `${downloadedModels.length} model${downloadedModels.length === 1 ? "" : "s"} downloaded · active: ${activeModelFilename ?? downloadedModels[0].filename}`
+                            : "Not downloaded"}
                     </Text>
-                    {!status?.mediaPipeDownloaded && (
-                        <>
-                            <Text style={styles.hint}>
-                                All models are gated on Hugging Face. Accept the license on the model's page, then create a read-access token and paste it below. Bigger models summarize better
-                                but need more RAM and download time.
-                            </Text>
+                    <>
+                        <Text style={styles.hint}>
+                            All models are gated on Hugging Face. Accept the license on the model's page, then create a read-access token and paste it below. Bigger models summarize better but
+                            need more RAM and download time.
+                        </Text>
                             {MODEL_PRESETS.map((p) => {
                                 const selected = modelUrl === p.url
                                 return (
@@ -295,13 +382,12 @@ const LLMSettings = () => {
                                 autoCapitalize="none"
                                 autoCorrect={false}
                             />
-                        </>
-                    )}
+                    </>
                     {progressText && <Text style={styles.hint}>{progressText}</Text>}
                     <View style={styles.buttonRow}>
-                        {!status?.mediaPipeDownloaded && !isDownloading && (
+                        {!isDownloading && (
                             <CustomButton variant="primary" onPress={handleDownload}>
-                                Download (~530 MB)
+                                {downloadedModels.length > 0 ? "Download another model" : "Download"}
                             </CustomButton>
                         )}
                         {isDownloading && (
@@ -309,13 +395,42 @@ const LLMSettings = () => {
                                 Cancel
                             </CustomButton>
                         )}
-                        {status?.mediaPipeDownloaded && !isDownloading && (
-                            <CustomButton variant="destructive" onPress={handleDelete}>
-                                Delete model
-                            </CustomButton>
-                        )}
                     </View>
                 </View>
+
+                {downloadedModels.length > 0 && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionLabel}>Downloaded Models</Text>
+                        <Text style={styles.hint}>Tap Use to switch the active chat model. Keep multiple variants so you can A/B without re-downloading.</Text>
+                        {downloadedModels.map((m) => {
+                            const isActive = (activeModelFilename ?? downloadedModels[0]?.filename) === m.filename
+                            return (
+                                <View key={m.filename} style={[styles.modelRow, isActive && styles.modelRowActive]}>
+                                    <View style={styles.modelInfo}>
+                                        <Text style={styles.modelFilename} numberOfLines={1}>
+                                            {m.filename}
+                                        </Text>
+                                        <Text style={styles.modelMeta}>{(m.sizeBytes / 1024 / 1024).toFixed(0)} MB</Text>
+                                    </View>
+                                    <View style={styles.modelActions}>
+                                        {isActive ? (
+                                            <View style={styles.modelActionButton}>
+                                                <Text style={styles.modelActionActiveText}>Active</Text>
+                                            </View>
+                                        ) : (
+                                            <Pressable style={styles.modelActionButton} onPress={() => handleSelectActiveModel(m.filename)}>
+                                                <Text style={styles.modelActionText}>Use</Text>
+                                            </Pressable>
+                                        )}
+                                        <Pressable style={styles.modelActionButton} onPress={() => handleDeleteModelFile(m.filename)}>
+                                            <Text style={styles.modelActionText}>Delete</Text>
+                                        </Pressable>
+                                    </View>
+                                </View>
+                            )
+                        })}
+                    </View>
+                )}
 
                 <View style={styles.section}>
                     <Text style={styles.sectionLabel}>Active Path</Text>

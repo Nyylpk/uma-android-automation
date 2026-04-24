@@ -44,17 +44,27 @@ class ModelDownloader(private val context: Context) {
     /** Resolve the destination [File] for [filename] inside the model directory. */
     fun fileFor(filename: String): File = File(baseDir, filename)
 
-    /**
-     * Return the most recently modified `.task` file currently on disk — the one the orchestrator should hand to
-     * MediaPipe. Decouples runtime model choice from any specific hardcoded filename so the user can swap variants
-     * from LLM Settings without a native rebuild.
-     */
-    fun currentModelFile(): File? =
+    /** List every `.task` model file present on-device, most recently modified first. */
+    fun listModels(): List<File> =
         baseDir.listFiles { f -> f.isFile && f.name.endsWith(".task") && f.length() > 0 }
-            ?.maxByOrNull { it.lastModified() }
+            ?.sortedByDescending { it.lastModified() }
+            ?: emptyList()
+
+    /**
+     * Return the preferred active model file. If [preferredFilename] matches a downloaded file, that one is used;
+     * otherwise the most recently modified `.task` is returned so a fresh install-and-download flow still works
+     * without an explicit selection step.
+     */
+    fun currentModelFile(preferredFilename: String? = null): File? {
+        if (!preferredFilename.isNullOrBlank()) {
+            val preferred = fileFor(preferredFilename)
+            if (preferred.isFile && preferred.length() > 0) return preferred
+        }
+        return listModels().firstOrNull()
+    }
 
     /** @return true if at least one non-empty `.task` model file is present on-device. */
-    fun isDownloaded(): Boolean = currentModelFile() != null
+    fun isDownloaded(): Boolean = listModels().isNotEmpty()
 
     /**
      * One state emission from [download]. Consumers switch UI between indeterminate / progress / error / complete.
@@ -81,9 +91,10 @@ class ModelDownloader(private val context: Context) {
      * @return Cold [Flow] that begins the download when collected.
      */
     fun download(url: String, filename: String, authToken: String? = null): Flow<State> = flow {
-        // Remove any previously-downloaded model to reclaim space before starting the new fetch.
-        delete()
         val dest = fileFor(filename)
+        // Only replace this specific filename if it already exists; other downloaded models stay on-device so the
+        // user can keep multiple variants and swap between them from LLM Settings.
+        if (dest.exists()) dest.delete()
         val request = DownloadManager.Request(Uri.parse(url))
             .setTitle("Uma Chat Model")
             .setDescription("Downloading the on-device chatbot model.")
@@ -122,8 +133,14 @@ class ModelDownloader(private val context: Context) {
         return any
     }
 
-    /** @return Current size in bytes of the active model file, or 0 if none is present. */
-    fun size(): Long = currentModelFile()?.length() ?: 0
+    /** Remove a specific model file from disk. @return true if the file existed and was deleted. */
+    fun deleteByName(filename: String): Boolean {
+        val f = fileFor(filename)
+        return f.isFile && f.delete()
+    }
+
+    /** @return Current size in bytes of the preferred active model file, or 0 if none is present. */
+    fun size(preferredFilename: String? = null): Long = currentModelFile(preferredFilename)?.length() ?: 0
 
     private fun query(id: Long): State? {
         val q = DownloadManager.Query().setFilterById(id)

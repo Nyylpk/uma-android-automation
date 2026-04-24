@@ -164,11 +164,47 @@ class LLMChatModule(private val reactContext: ReactApplicationContext) : ReactCo
         promise.resolve(null)
     }
 
-    /** Delete the downloaded model from disk. */
+    /** Delete every downloaded model from disk. Legacy "bulk clear" entry point. */
     @ReactMethod
     fun deleteModel(promise: Promise) {
         val deleted = orchestrator.modelDownloader().delete()
         promise.resolve(deleted)
+    }
+
+    /** Delete a specific downloaded model by filename. */
+    @ReactMethod
+    fun deleteModelFile(filename: String, promise: Promise) {
+        val deleted = orchestrator.modelDownloader().deleteByName(filename)
+        promise.resolve(deleted)
+    }
+
+    /** Resolves with an array of `{ filename, sizeBytes, lastModifiedMillis }` for every downloaded model. */
+    @ReactMethod
+    fun listModels(promise: Promise) {
+        try {
+            val models = orchestrator.modelDownloader().listModels()
+            val array = Arguments.createArray()
+            for (f in models) {
+                val map = Arguments.createMap()
+                map.putString("filename", f.name)
+                map.putDouble("sizeBytes", f.length().toDouble())
+                map.putDouble("lastModifiedMillis", f.lastModified().toDouble())
+                array.pushMap(map)
+            }
+            promise.resolve(array)
+        } catch (e: Exception) {
+            Log.e(TAG, "listModels:: failed: ${e.message}", e)
+            promise.reject("E_LIST_FAILED", e.message, e)
+        }
+    }
+
+    /**
+     * Select which downloaded model the orchestrator uses. Empty string clears the selection, reverting to
+     * "most recently modified".
+     */
+    @ReactMethod
+    fun setActiveModel(filename: String) {
+        orchestrator.activeModelFilename = filename.trim().ifEmpty { null }
     }
 
     // --------------------------------------------------------------------------------------------------

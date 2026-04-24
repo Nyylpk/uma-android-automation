@@ -29,6 +29,10 @@ class ChatOrchestrator(private val context: Context) {
     /** Whether the bot should prefer Gemini Nano when available; toggled from the LLM Settings page. */
     @Volatile var preferNano: Boolean = true
 
+    /** User-chosen active model filename. When null the orchestrator falls back to the most recently modified
+     *  `.task` file in the model directory. Set from LLM Settings when the user has multiple models downloaded. */
+    @Volatile var activeModelFilename: String? = null
+
     companion object {
         private const val TAG = "${SharedData.loggerTag}ChatOrchestrator"
         private const val INDEX_PATH = "llm/doc_index.bin"
@@ -143,7 +147,7 @@ class ChatOrchestrator(private val context: Context) {
         val nanoCode = nano.checkStatus()
         val downloaded = downloader.isDownloaded()
         val picked = pickService()?.first ?: "none"
-        return ServiceStatus(nanoCode, downloaded, downloader.size(), picked)
+        return ServiceStatus(nanoCode, downloaded, downloader.size(activeModelFilename), picked)
     }
 
     /** Downloader instance exposed for bridge methods that manage model files. */
@@ -280,7 +284,7 @@ class ChatOrchestrator(private val context: Context) {
     }
 
     private fun ensureMediaPipe(): MediaPipeLLMService? {
-        val file = downloader.currentModelFile() ?: return null
+        val file = downloader.currentModelFile(activeModelFilename) ?: return null
         mediapipe?.let { if (it.modelPath == file.absolutePath) return it else it.close() }
         synchronized(this) {
             val existing = mediapipe
