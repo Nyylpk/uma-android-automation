@@ -38,6 +38,12 @@ class ChatOrchestrator(private val context: Context) {
 
         /** Lowered from the verifier's default 0.4 because summary-style answers paraphrase and naturally have less exact token overlap with the source chunks. */
         private const val GROUNDING_THRESHOLD = 0.3f
+
+        /** Must match CHUNK_OVERLAP_TOKENS in scripts/build-doc-index.ts — number of words each sliding-window chunk shares with the previous one. */
+        private const val CHUNK_OVERLAP_WORDS = 40
+
+        /** Cap on the expanded section text handed to the user in retrieve-only mode. Prevents a "full How It Works chapter" from flooding the UI. */
+        private const val SECTION_EXPANSION_CHAR_CAP = 6000
     }
 
     /**
@@ -93,7 +99,7 @@ class ChatOrchestrator(private val context: Context) {
 
         val service = pickService()
         if (service == null) {
-            return ChatResult(citations.first().chunk.text, citations, ChatMode.RetrieveOnly)
+            return ChatResult(expandSection(citations.first().chunk), citations, ChatMode.RetrieveOnly)
         }
 
         val prompt = buildPrompt(query, citations)
@@ -109,7 +115,7 @@ class ChatOrchestrator(private val context: Context) {
         } else {
             Log.w(TAG, "chat:: verifier rejected answer (overlap=$overlap); falling back to retrieve-only")
             ChatResult(
-                citations.first().chunk.text,
+                expandSection(citations.first().chunk),
                 citations,
                 ChatMode.VerifierFallback(service.first, overlap, answer),
             )
@@ -150,6 +156,49 @@ class ChatOrchestrator(private val context: Context) {
     }
 
     // --------------------------------------------------------------------------------------------------
+
+    /**
+     * Reassemble the full section text around [top] from the index.
+     *
+     * The indexer splits each markdown section into ~200-word sliding windows with 40-word overlap (see
+     * scripts/build-doc-index.ts). Returning just the top-matched window gives the user a fragment; they asked for
+     * the whole section. This collects every chunk sharing [top]'s heading (or a sub-heading of it), groups by the
+     * indexer's flush group (the number before the '-' in the id), drops the 40-word overlap from each
+     * non-first chunk in a group to reconstruct the original prose, then joins groups with a blank line.
+     *
+     * @param top The top-ranked chunk that retrieval produced.
+     * @return The reconstructed section text, capped at [SECTION_EXPANSION_CHAR_CAP] characters. Falls back to
+     *   [top]'s own text when the index isn't loaded or no sibling chunks share its heading.
+     */
+    private fun expandSection(top: DocIndex.Chunk): String {
+        val idx = index ?: return top.text
+        val prefix = top.heading
+        val matches = idx.chunks.filter { c ->
+            c.source == top.source && (c.heading == prefix || c.heading.startsWith("$prefix › "))
+        }
+        if (matches.size <= 1) return top.text
+
+        val byFlush = matches.groupBy { c ->
+            c.id.substringAfterLast('#').substringBefore('-').toIntOrNull() ?: 0
+        }.toSortedMap()
+
+        val parts = byFlush.values.map { group ->
+            val sorted = group.sortedBy { c ->
+                c.id.substringAfterLast('#').substringAfter('-').toIntOrNull() ?: 0
+            }
+            sorted.withIndex().joinToString(" ") { (i, c) ->
+                if (i == 0) c.text
+                else {
+                    val words = c.text.split(Regex("\\s+"))
+                    if (words.size <= CHUNK_OVERLAP_WORDS) "" else words.drop(CHUNK_OVERLAP_WORDS).joinToString(" ")
+                }
+            }.trim()
+        }.filter { it.isNotEmpty() }
+
+        val combined = parts.joinToString("\n\n")
+        return if (combined.length <= SECTION_EXPANSION_CHAR_CAP) combined
+        else combined.take(SECTION_EXPANSION_CHAR_CAP).substringBeforeLast(' ') + "…"
+    }
 
     private fun buildPrompt(query: String, citations: List<DocIndex.Result>): String {
         // Separator-delimited excerpts rather than a "[i] heading: text" layout — small models (Gemma 3 1B) tend to
