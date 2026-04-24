@@ -66,9 +66,8 @@ const Chat = () => {
         () =>
             StyleSheet.create({
                 root: { flex: 1, margin: 10, backgroundColor: colors.background },
-                inputRow: { flexDirection: "row", gap: 8, marginVertical: 10 },
+                inputColumn: { gap: 8, marginVertical: 10 },
                 input: {
-                    flex: 1,
                     borderWidth: 1,
                     borderColor: colors.border,
                     borderRadius: 6,
@@ -76,6 +75,9 @@ const Chat = () => {
                     paddingVertical: 8,
                     color: colors.foreground,
                     backgroundColor: colors.card,
+                    minHeight: 96,
+                    maxHeight: 200,
+                    textAlignVertical: "top",
                 },
                 answerCard: {
                     borderWidth: 1,
@@ -110,15 +112,15 @@ const Chat = () => {
             <PageHeader title="Ask the Docs" />
             <Text style={styles.disclaimer}>Answers are grounded in README.md, HOW_IT_WORKS.md, and in-app option descriptions. Fully offline.</Text>
 
-            <View style={styles.inputRow}>
+            <View style={styles.inputColumn}>
                 <TextInput
                     style={styles.input}
                     value={query}
                     onChangeText={setQuery}
                     placeholder="Ask a question about the app..."
                     placeholderTextColor={colors.mutedForeground}
-                    onSubmitEditing={handleSearch}
-                    returnKeyType="search"
+                    multiline
+                    textAlignVertical="top"
                     editable={!isSearching}
                 />
                 <CustomButton variant="primary" onPress={handleSearch} isLoading={isSearching} disabled={isSearching || query.trim().length === 0}>
