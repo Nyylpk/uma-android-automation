@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { View, ScrollView, StyleSheet, Text, TextInput, NativeModules, NativeEventEmitter, Alert, Linking, Pressable } from "react-native"
-import { Check } from "lucide-react-native"
+import { Check, Trash2 } from "lucide-react-native"
 import { useTheme } from "../../context/ThemeContext"
 import CustomButton from "../../components/CustomButton"
 import PageHeader from "../../components/PageHeader"
@@ -389,8 +389,13 @@ const LLMSettings = () => {
                                                 <Text style={styles.modelActionText}>Use</Text>
                                             </Pressable>
                                         )}
-                                        <Pressable style={styles.modelActionButton} onPress={() => handleDeleteModelFile(m.filename)}>
-                                            <Text style={styles.modelActionText}>Delete</Text>
+                                        <Pressable
+                                            style={styles.modelActionButton}
+                                            onPress={() => handleDeleteModelFile(m.filename)}
+                                            accessibilityLabel={`Delete ${m.filename}`}
+                                            accessibilityRole="button"
+                                        >
+                                            <Trash2 size={14} color={colors.foreground} />
                                         </Pressable>
                                     </View>
                                 </View>
