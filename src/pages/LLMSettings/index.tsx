@@ -25,9 +25,14 @@ const MODEL_PRESETS: Array<{ label: string; detail: string; url: string }> = [
         url: "https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/Gemma3-1B-IT_multi-prefill-seq_q4_ekv2048.task",
     },
     {
-        label: "Gemma 3n E2B (3.14 GB, best available on Android)",
+        label: "Gemma 3n E2B (3.14 GB, balanced)",
         detail: "Purpose-built for on-device; much better summaries than 1B. Needs ~4 GB free RAM and a fast phone.",
         url: "https://huggingface.co/google/gemma-3n-E2B-it-litert-preview/resolve/main/gemma-3n-E2B-it-int4.task",
+    },
+    {
+        label: "Gemma 3n E4B (4.41 GB, highest quality)",
+        detail: "~5B effective params, noticeably better summaries than E2B. Needs ~6 GB free RAM; slow on mid-range phones.",
+        url: "https://huggingface.co/google/gemma-3n-E4B-it-litert-preview/resolve/main/gemma-3n-E4B-it-int4.task",
     },
 ]
 
