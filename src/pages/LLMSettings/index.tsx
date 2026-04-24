@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { View, ScrollView, StyleSheet, Text, TextInput, NativeModules, NativeEventEmitter, Alert, Linking, Pressable } from "react-native"
+import { Check } from "lucide-react-native"
 import { useTheme } from "../../context/ThemeContext"
 import CustomButton from "../../components/CustomButton"
 import PageHeader from "../../components/PageHeader"
@@ -287,6 +288,7 @@ const LLMSettings = () => {
                 },
                 modelActionText: { color: colors.foreground, fontSize: 12 },
                 modelActionActiveText: { color: colors.primary, fontSize: 12, fontWeight: "600" as const },
+                activeBadge: { flexDirection: "row" as const, alignItems: "center" as const, gap: 4, paddingHorizontal: 4 },
                 buttonRow: { flexDirection: "row", gap: 8, marginTop: 8 },
             }),
         [colors]
@@ -378,7 +380,8 @@ const LLMSettings = () => {
                                     </View>
                                     <View style={styles.modelActions}>
                                         {isActive ? (
-                                            <View style={styles.modelActionButton}>
+                                            <View style={styles.activeBadge}>
+                                                <Check size={14} color={colors.primary} />
                                                 <Text style={styles.modelActionActiveText}>Active</Text>
                                             </View>
                                         ) : (
