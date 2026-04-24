@@ -75,7 +75,8 @@ const LLMSettings = () => {
                     text: "Download",
                     onPress: async () => {
                         try {
-                            await NativeModules.LLMChatModule.downloadModel(DEFAULT_MODEL_URL, hfToken.trim() || null)
+                            NativeModules.LLMChatModule.setAuthToken(hfToken.trim())
+                            await NativeModules.LLMChatModule.downloadModel(DEFAULT_MODEL_URL)
                         } catch (e: any) {
                             Alert.alert("Download failed to start", e?.message ?? "Unknown error")
                         }

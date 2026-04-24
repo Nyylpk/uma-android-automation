@@ -25,6 +25,7 @@ class LLMChatModule(private val reactContext: ReactApplicationContext) : ReactCo
     private val scope = CoroutineScope(Dispatchers.Default)
 
     @Volatile private var downloadJob: Job? = null
+    @Volatile private var authToken: String? = null
 
     companion object {
         private const val TAG = "${SharedData.loggerTag}LLMChatModule"
@@ -128,15 +129,16 @@ class LLMChatModule(private val reactContext: ReactApplicationContext) : ReactCo
      * Resolves immediately once the download has been enqueued.
      */
     @ReactMethod
-    fun downloadModel(url: String, authToken: String?, promise: Promise) {
+    fun downloadModel(url: String, promise: Promise) {
         val existing = downloadJob
         if (existing != null && existing.isActive) {
             promise.reject("E_ALREADY_DOWNLOADING", "A model download is already in progress.")
             return
         }
+        val token = authToken
         downloadJob = scope.launch {
             try {
-                orchestrator.modelDownloader().download(url, authToken).collect { state ->
+                orchestrator.modelDownloader().download(url, token).collect { state ->
                     emitDownloadState(state)
                 }
             } catch (e: Exception) {
@@ -145,6 +147,12 @@ class LLMChatModule(private val reactContext: ReactApplicationContext) : ReactCo
             }
         }
         promise.resolve(null)
+    }
+
+    /** Store an optional Bearer token applied to the next [downloadModel] call. Pass empty to clear. */
+    @ReactMethod
+    fun setAuthToken(token: String) {
+        authToken = token.trim().ifEmpty { null }
     }
 
     /** Cancel the in-progress download, if any. */
