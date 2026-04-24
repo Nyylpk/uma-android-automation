@@ -9,6 +9,11 @@ import InfoContainer from "../../components/InfoContainer"
 import { databaseManager } from "../../lib/database"
 
 const MODEL_URL_SETTING = { category: "chat", key: "modelUrl" } as const
+/**
+ * Hugging Face access token persistence key. Lives under the "chat" category, not BotStateContext, so it is
+ * NOT included in settings exports — a token is a user-specific secret and must never leak into a shared JSON.
+ */
+const HF_TOKEN_SETTING = { category: "chat", key: "hfToken" } as const
 
 /** Known LiteRT community `.task` models sorted by ascending size. All are HF-gated; requires a Read token. */
 const MODEL_PRESETS: Array<{ label: string; detail: string; url: string }> = [
@@ -66,20 +71,30 @@ const LLMSettings = () => {
     const [hfToken, setHfToken] = useState("")
     const [modelUrl, setModelUrl] = useState(DEFAULT_MODEL_URL)
 
-    // Load persisted model URL on mount.
+    // Load persisted model URL + HF token on mount. Token lives outside BotStateContext so it is never exported.
     useEffect(() => {
         let cancelled = false
         ;(async () => {
             try {
-                const stored = await databaseManager.loadSetting(MODEL_URL_SETTING.category, MODEL_URL_SETTING.key)
-                if (!cancelled && typeof stored === "string" && stored.length > 0) setModelUrl(stored)
+                const [url, token] = await Promise.all([
+                    databaseManager.loadSetting(MODEL_URL_SETTING.category, MODEL_URL_SETTING.key),
+                    databaseManager.loadSetting(HF_TOKEN_SETTING.category, HF_TOKEN_SETTING.key),
+                ])
+                if (cancelled) return
+                if (typeof url === "string" && url.length > 0) setModelUrl(url)
+                if (typeof token === "string" && token.length > 0) setHfToken(token)
             } catch {
-                // First run or DB not initialized — keep default.
+                // First run or DB not initialized — keep defaults.
             }
         })()
         return () => {
             cancelled = true
         }
+    }, [])
+
+    const persistHfToken = useCallback((value: string) => {
+        setHfToken(value)
+        databaseManager.saveSetting(HF_TOKEN_SETTING.category, HF_TOKEN_SETTING.key, value, true).catch(() => undefined)
     }, [])
 
     const persistModelUrl = useCallback((url: string) => {
@@ -263,7 +278,7 @@ const LLMSettings = () => {
                             <TextInput
                                 style={styles.tokenInput}
                                 value={hfToken}
-                                onChangeText={setHfToken}
+                                onChangeText={persistHfToken}
                                 placeholder="hf_... (Hugging Face read token)"
                                 placeholderTextColor={colors.mutedForeground}
                                 autoCapitalize="none"
