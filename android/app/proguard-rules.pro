@@ -11,4 +11,7 @@
 -keep class com.swmansion.reanimated.** { *; }
 -keep class com.facebook.react.turbomodule.** { *; }
 
+# llama.rn — needed so R8 doesn't strip the JSI binding classes.
+-keep class com.rnllama.** { *; }
+
 # Add any project specific keep options here:

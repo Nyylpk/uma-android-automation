@@ -2,6 +2,15 @@
     "expo": {
         "name": "Uma Android Automation",
         "slug": "uma-android-automation",
-        "platforms": ["android"]
+        "platforms": ["android"],
+        "plugins": [
+            [
+                "llama.rn",
+                {
+                    "forceCxx20": true,
+                    "enableOpenCL": true
+                }
+            ]
+        ]
     }
 }
