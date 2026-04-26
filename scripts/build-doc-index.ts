@@ -11,16 +11,20 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import * as ort from "onnxruntime-node"
+import { chunkKotlinFile, findKotlinFiles } from "./lib/kotlinChunker"
 
 const REPO_ROOT = path.resolve(__dirname, "..")
 const ASSET_DIR = path.join(REPO_ROOT, "android/app/src/main/assets/llm")
+const KOTLIN_SRC_DIR = path.join(REPO_ROOT, "android/app/src/main/java/com/steve1316/uma_android_automation")
 const MODEL_PATH = path.join(ASSET_DIR, "minilm-l6-v2-int8.onnx")
 const VOCAB_PATH = path.join(ASSET_DIR, "minilm-l6-v2-vocab.txt")
 const OUTPUT_PATH = path.join(ASSET_DIR, "doc_index.bin")
 const HASH_PATH = path.join(ASSET_DIR, "doc_index.sources.sha256")
 
 const MAGIC = "UMADOCIX"
-const VERSION = 1
+const VERSION = 2
+const KIND_DOC = 0x01
+const KIND_CODE = 0x02
 const EMBEDDING_DIM = 384
 const MAX_SEQ_LEN = 128
 const TARGET_CHUNK_TOKENS = 200
@@ -31,6 +35,7 @@ interface Chunk {
     source: string
     heading: string
     text: string
+    kind: "doc" | "code"
 }
 
 // ----------------------------------------------------------------------------
@@ -184,6 +189,7 @@ function chunkMarkdown(markdown: string, source: string): Chunk[] {
                 source,
                 heading,
                 text: chunkText,
+                kind: "doc",
             })
             if (i + TARGET_CHUNK_TOKENS >= wordMatches.length) break
         }
@@ -224,6 +230,7 @@ function chunkSearchConfig(tsSource: string): Chunk[] {
             source: "searchConfig.ts",
             heading: title,
             text: `${title}: ${description}`,
+            kind: "doc",
         })
         idx += 1
     }
@@ -295,6 +302,7 @@ function writeIndex(chunks: Chunk[], embeddings: Float32Array[]): Buffer {
         parts.push(u16LE(source.length), source)
         parts.push(u16LE(heading.length), heading)
         parts.push(u32LE(text.length), text)
+        parts.push(Buffer.from([c.kind === "code" ? KIND_CODE : KIND_DOC]))
         const emb = Buffer.alloc(EMBEDDING_DIM * 4)
         for (let d = 0; d < EMBEDDING_DIM; d++) emb.writeFloatLE(embeddings[i][d], d * 4)
         parts.push(emb)
@@ -333,7 +341,8 @@ async function main() {
     const readme = path.join(REPO_ROOT, "README.md")
     const howItWorks = path.join(REPO_ROOT, "HOW_IT_WORKS.md")
     const searchConfig = path.join(REPO_ROOT, "src/data/searchConfig.ts")
-    const sources = [readme, howItWorks, searchConfig]
+    const kotlinFiles = findKotlinFiles(KOTLIN_SRC_DIR)
+    const sources = [readme, howItWorks, searchConfig, ...kotlinFiles]
     for (const s of sources) if (!fs.existsSync(s)) throw new Error(`missing source: ${s}`)
 
     const currentHash = await sourceHash(sources)
@@ -350,7 +359,13 @@ async function main() {
     chunks.push(...chunkMarkdown(fs.readFileSync(readme, "utf8"), "README.md"))
     chunks.push(...chunkMarkdown(fs.readFileSync(howItWorks, "utf8"), "HOW_IT_WORKS.md"))
     chunks.push(...chunkSearchConfig(fs.readFileSync(searchConfig, "utf8")))
-    console.log(`  ${chunks.length} chunks`)
+    const docCount = chunks.length
+    for (const f of kotlinFiles) {
+        for (const k of chunkKotlinFile(f)) {
+            chunks.push({ id: k.id, source: k.source, heading: k.heading, text: k.text, kind: "code" })
+        }
+    }
+    console.log(`  ${chunks.length} chunks (doc=${docCount}, code=${chunks.length - docCount}, ${kotlinFiles.length} .kt files)`)
 
     console.log("Embedding chunks...")
     const embeddings = await embedAll(chunks)

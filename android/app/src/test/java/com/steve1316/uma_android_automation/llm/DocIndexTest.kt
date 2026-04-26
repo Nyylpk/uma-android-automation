@@ -27,7 +27,7 @@ class DocIndexTest {
         val out = ByteArrayOutputStream()
         val d = DataOutputStream(out)
         d.write("UMADOCIX".toByteArray(Charsets.UTF_8))
-        writeU32LE(d, 1)
+        writeU32LE(d, 2)
         writeU32LE(d, chunks.size)
         writeU32LE(d, dim)
         for ((meta, text, emb) in chunks) {
@@ -40,6 +40,7 @@ class DocIndexTest {
             writeU16LE(d, sourceBytes.size); d.write(sourceBytes)
             writeU16LE(d, headingBytes.size); d.write(headingBytes)
             writeU32LE(d, textBytes.size); d.write(textBytes)
+            d.writeByte(0x01) // kind = doc (test fixtures)
             val bb = ByteBuffer.allocate(dim * 4).order(ByteOrder.LITTLE_ENDIAN)
             for (x in emb) bb.putFloat(x)
             d.write(bb.array())

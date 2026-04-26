@@ -30,7 +30,7 @@ function encodeIndex(chunks: FixtureChunk[], dim: number): Uint8Array {
 
 	const headerVer = new ArrayBuffer(12)
 	const headerView = new DataView(headerVer)
-	headerView.setUint32(0, 1, true) // version
+	headerView.setUint32(0, 2, true) // version
 	headerView.setUint32(4, chunks.length, true) // count
 	headerView.setUint32(8, dim, true) // dim
 	parts.push(new Uint8Array(headerVer))
@@ -41,7 +41,8 @@ function encodeIndex(chunks: FixtureChunk[], dim: number): Uint8Array {
 		const headBytes = enc.encode(c.heading)
 		const textBytes = enc.encode(c.text)
 
-		const lenBuf = new ArrayBuffer(2 + idBytes.length + 2 + srcBytes.length + 2 + headBytes.length + 4 + textBytes.length)
+		const totalLen = 2 + idBytes.length + 2 + srcBytes.length + 2 + headBytes.length + 4 + textBytes.length + 1
+		const lenBuf = new ArrayBuffer(totalLen)
 		const lenView = new DataView(lenBuf)
 		const lenArr = new Uint8Array(lenBuf)
 		let off = 0
@@ -60,6 +61,8 @@ function encodeIndex(chunks: FixtureChunk[], dim: number): Uint8Array {
 		lenView.setUint32(off, textBytes.length, true)
 		off += 4
 		lenArr.set(textBytes, off)
+		off += textBytes.length
+		lenView.setUint8(off, 0x01) // kind = doc (test fixtures)
 		parts.push(lenArr)
 
 		const embBuf = new ArrayBuffer(dim * 4)

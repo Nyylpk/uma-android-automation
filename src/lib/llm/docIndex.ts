@@ -15,7 +15,11 @@
  */
 
 const MAGIC = "UMADOCIX"
-const VERSION = 1
+const VERSION = 2
+
+export type ChunkKind = "doc" | "code"
+const KIND_DOC = 0x01
+const KIND_CODE = 0x02
 
 /** A single retrievable piece of documentation. */
 export interface Chunk {
@@ -27,6 +31,8 @@ export interface Chunk {
 	heading: string
 	/** Raw chunk text shown verbatim when this chunk is cited. */
 	text: string
+	/** Whether this chunk came from documentation prose or from source code. */
+	kind: ChunkKind
 	/** L2-normalized embedding of `text`. */
 	embedding: Float32Array
 }
@@ -104,12 +110,16 @@ export class DocIndex {
 			const text = decoder.decode(data.subarray(off, off + textLen))
 			off += textLen
 
+			const kindByte = view.getUint8(off)
+			off += 1
+			const kind: ChunkKind = kindByte === KIND_CODE ? "code" : "doc"
+
 			const embedding = new Float32Array(dim)
 			for (let d = 0; d < dim; d++) {
 				embedding[d] = view.getFloat32(off, true)
 				off += 4
 			}
-			chunks[i] = { id, source, heading, text, embedding }
+			chunks[i] = { id, source, heading, text, kind, embedding }
 		}
 		return new DocIndex(chunks, dim)
 	}

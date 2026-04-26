@@ -37,7 +37,17 @@ class DocIndex(val chunks: List<Chunk>, val dim: Int) {
      * @property text Raw chunk text shown verbatim when this chunk is cited.
      * @property embedding L2-normalized embedding of [text].
      */
-    data class Chunk(val id: String, val source: String, val heading: String, val text: String, val embedding: FloatArray)
+    /** Chunk source: documentation prose (markdown / searchConfig) or Kotlin source code. */
+    enum class Kind { DOC, CODE }
+
+    data class Chunk(
+        val id: String,
+        val source: String,
+        val heading: String,
+        val text: String,
+        val kind: Kind,
+        val embedding: FloatArray,
+    )
 
     /**
      * One retrieval result.
@@ -70,7 +80,9 @@ class DocIndex(val chunks: List<Chunk>, val dim: Int) {
     companion object {
         private const val TAG = "${SharedData.loggerTag}DocIndex"
         private const val MAGIC = "UMADOCIX"
-        private const val VERSION = 1
+        private const val VERSION = 2
+        private const val KIND_DOC: Byte = 0x01
+        private const val KIND_CODE: Byte = 0x02
 
         /**
          * Parse a [DocIndex] from a binary stream produced by the build-time indexer.
@@ -95,11 +107,13 @@ class DocIndex(val chunks: List<Chunk>, val dim: Int) {
                 val source = readString(input, readU16LE(input))
                 val heading = readString(input, readU16LE(input))
                 val text = readString(input, readU32LE(input))
+                val kindByte = input.readByte()
+                val kind = if (kindByte == KIND_CODE) Kind.CODE else Kind.DOC
                 val emb = FloatArray(dim)
                 val embBuf = ByteArray(dim * 4).also { input.readFully(it) }
                 val bb = ByteBuffer.wrap(embBuf).order(ByteOrder.LITTLE_ENDIAN)
                 for (d in 0 until dim) emb[d] = bb.float
-                chunks.add(Chunk(id, source, heading, text, emb))
+                chunks.add(Chunk(id, source, heading, text, kind, emb))
             }
             return DocIndex(chunks, dim)
         }
