@@ -266,57 +266,37 @@ const Chat = () => {
         [colors]
     )
 
-    const markdownRules: RenderRules = useMemo(
-        () => ({
-            table: (node, children, _parent, s: any) => (
-                <View key={node.key} style={s._VIEW_SAFE_table}>
-                    {children}
-                </View>
-            ),
-            thead: (node, children, _parent, s: any) => (
-                <View key={node.key} style={s._VIEW_SAFE_thead}>
-                    {children}
-                </View>
-            ),
-            tbody: (node, children, _parent, s: any) => (
-                <View key={node.key} style={s._VIEW_SAFE_tbody}>
-                    {children}
-                </View>
-            ),
-            tr: (node, children, _parent, s: any) => (
-                <View key={node.key} style={s._VIEW_SAFE_tr}>
-                    {children}
-                </View>
-            ),
-            th: (node, children, _parent, s: any) => (
-                <View key={node.key} style={s._VIEW_SAFE_th}>
-                    {children}
-                </View>
-            ),
-            td: (node, children, _parent, s: any) => (
-                <View key={node.key} style={s._VIEW_SAFE_td}>
-                    {children}
-                </View>
-            ),
-        }),
-        []
-    )
+    // react-native-markdown-renderer 4 ships native table/list rendering and adds keys to inline children,
+    // so no custom rules are needed.
+    const markdownRules: RenderRules = useMemo(() => ({}), [])
 
     const markdownStyles = useMemo(
         () => ({
-            body: { color: colors.foreground, fontSize: 15, lineHeight: 22 },
+            // react-native-markdown-renderer style keys — `text` is the inline text container that sets
+            // foreground color for everything that doesn't otherwise inherit a color.
+            text: { color: colors.foreground, fontSize: 15, lineHeight: 22 },
             heading1: { color: colors.foreground, fontWeight: "700" as const, fontSize: 20, marginTop: 10, marginBottom: 6 },
             heading2: { color: colors.foreground, fontWeight: "700" as const, fontSize: 17, marginTop: 10, marginBottom: 6 },
             heading3: { color: colors.foreground, fontWeight: "600" as const, fontSize: 15, marginTop: 8, marginBottom: 4 },
             strong: { color: colors.foreground, fontWeight: "700" as const },
             em: { color: colors.foreground, fontStyle: "italic" as const },
-            paragraph: { color: colors.foreground, marginTop: 0, marginBottom: 8 },
-            bullet_list: { color: colors.foreground },
-            ordered_list: { color: colors.foreground },
-            list_item: { color: colors.foreground },
-            code_inline: { color: colors.foreground, backgroundColor: colors.muted, borderRadius: 4, paddingHorizontal: 4, fontFamily: "monospace" as const },
-            code_block: { color: colors.foreground, backgroundColor: colors.muted, borderRadius: 6, padding: 8, fontFamily: "monospace" as const },
-            fence: { color: colors.foreground, backgroundColor: colors.muted, borderRadius: 6, padding: 8, fontFamily: "monospace" as const },
+            paragraph: { marginTop: 0, marginBottom: 8 },
+            codeInline: {
+                color: colors.foreground,
+                backgroundColor: colors.muted,
+                borderRadius: 4,
+                paddingHorizontal: 4,
+                fontFamily: "monospace" as const,
+            },
+            codeBlock: {
+                color: colors.foreground,
+                backgroundColor: colors.muted,
+                borderRadius: 6,
+                padding: 8,
+                fontFamily: "monospace" as const,
+            },
+            listUnorderedItemText: { color: colors.foreground },
+            listOrderedItemText: { color: colors.foreground },
             blockquote: {
                 color: colors.mutedForeground,
                 backgroundColor: colors.muted,
@@ -329,9 +309,10 @@ const Chat = () => {
             hr: { backgroundColor: colors.border, height: 1, marginVertical: 8 },
             link: { color: colors.primary, textDecorationLine: "underline" as const },
             table: { borderColor: colors.border, borderWidth: 1, borderRadius: 4, marginVertical: 6 },
-            thead: { backgroundColor: colors.muted },
-            th: { color: colors.foreground, fontWeight: "700" as const, padding: 6 },
-            td: { color: colors.foreground, padding: 6 },
+            tableHeader: { backgroundColor: colors.muted },
+            tableHeaderCell: { color: colors.foreground, fontWeight: "700" as const, padding: 6 },
+            tableRow: { borderColor: colors.border },
+            tableRowCell: { color: colors.foreground, padding: 6 },
         }),
         [colors]
     )
