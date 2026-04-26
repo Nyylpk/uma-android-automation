@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { View, ScrollView, StyleSheet, TextInput, Text, NativeModules, Pressable } from "react-native"
-import Markdown, { RenderRules } from "react-native-markdown-display"
+import Markdown, { RenderRules } from "react-native-markdown-renderer"
 import { useTheme } from "../../context/ThemeContext"
 import CustomButton from "../../components/CustomButton"
 import PageHeader from "../../components/PageHeader"
@@ -268,67 +268,32 @@ const Chat = () => {
 
     const markdownRules: RenderRules = useMemo(
         () => ({
-            // react-native-markdown-display's default inline rules omit `key` on their returned elements,
-            // so when a paragraph contains multiple inline pieces React warns about unkeyed list children.
-            // Override the common inline rules with the same logic but with `key={node.key}` set.
-            text: (node, _children, _parent, s, inherited = {}) => (
-                <Text key={node.key} style={[inherited, s.text]}>
-                    {node.content}
-                </Text>
-            ),
-            softbreak: (node) => <Text key={node.key}>{"\n"}</Text>,
-            hardbreak: (node) => <Text key={node.key}>{"\n"}</Text>,
-            textgroup: (node, children, _parent, s) => (
-                <Text key={node.key} style={s.textgroup}>
-                    {children}
-                </Text>
-            ),
-            strong: (node, children, _parent, s) => (
-                <Text key={node.key} style={s.strong}>
-                    {children}
-                </Text>
-            ),
-            em: (node, children, _parent, s) => (
-                <Text key={node.key} style={s.em}>
-                    {children}
-                </Text>
-            ),
-            s: (node, children, _parent, s) => (
-                <Text key={node.key} style={s.s}>
-                    {children}
-                </Text>
-            ),
-            code_inline: (node, _children, _parent, s) => (
-                <Text key={node.key} style={s.code_inline}>
-                    {node.content}
-                </Text>
-            ),
-            table: (node, children, _parent, s) => (
+            table: (node, children, _parent, s: any) => (
                 <View key={node.key} style={s._VIEW_SAFE_table}>
                     {children}
                 </View>
             ),
-            thead: (node, children, _parent, s) => (
+            thead: (node, children, _parent, s: any) => (
                 <View key={node.key} style={s._VIEW_SAFE_thead}>
                     {children}
                 </View>
             ),
-            tbody: (node, children, _parent, s) => (
+            tbody: (node, children, _parent, s: any) => (
                 <View key={node.key} style={s._VIEW_SAFE_tbody}>
                     {children}
                 </View>
             ),
-            tr: (node, children, _parent, s) => (
+            tr: (node, children, _parent, s: any) => (
                 <View key={node.key} style={s._VIEW_SAFE_tr}>
                     {children}
                 </View>
             ),
-            th: (node, children, _parent, s) => (
+            th: (node, children, _parent, s: any) => (
                 <View key={node.key} style={s._VIEW_SAFE_th}>
                     {children}
                 </View>
             ),
-            td: (node, children, _parent, s) => (
+            td: (node, children, _parent, s: any) => (
                 <View key={node.key} style={s._VIEW_SAFE_td}>
                     {children}
                 </View>
