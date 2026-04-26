@@ -390,7 +390,6 @@ const LLMSettings = () => {
                                 placeholderTextColor={colors.mutedForeground}
                                 autoCapitalize="none"
                                 autoCorrect={false}
-                                secureTextEntry
                             />
                             <TextInput
                                 style={styles.tokenInput}
