@@ -8,6 +8,7 @@ import PageHeader from "../../components/PageHeader"
 import WarningContainer from "../../components/WarningContainer"
 import InfoContainer from "../../components/InfoContainer"
 import { databaseManager } from "../../lib/database"
+import { DEFAULTS as TUNING_DEFAULTS, saveTuning } from "../../lib/chat/chatSettings"
 
 const MODEL_URL_SETTING = { category: "chat", key: "modelUrl" } as const
 /**
@@ -85,10 +86,9 @@ const LLMSettings = () => {
     const [modelUrl, setModelUrl] = useState(DEFAULT_MODEL_URL)
     const [downloadedModels, setDownloadedModels] = useState<DownloadedModel[]>([])
     const [activeModelFilename, setActiveModelFilename] = useState<string | null>(null)
-    const [maxOutputTokens, setMaxOutputTokens] = useState<number>(768)
-    const [llmCitationCharCap, setLlmCitationCharCap] = useState<number>(2200)
-    const [modelContextWindow, setModelContextWindow] = useState<number>(4096)
-    const [tuningDefaults, setTuningDefaults] = useState<{ maxOutputTokens: number; llmCitationCharCap: number; modelContextWindow: number } | null>(null)
+    const [maxOutputTokens, setMaxOutputTokens] = useState<number>(TUNING_DEFAULTS.maxOutputTokens)
+    const [llmCitationCharCap, setLlmCitationCharCap] = useState<number>(TUNING_DEFAULTS.llmCitationCharCap)
+    const [modelContextWindow, setModelContextWindow] = useState<number>(TUNING_DEFAULTS.modelContextWindow)
 
     const refreshStatus = useCallback(async () => {
         try {
@@ -129,28 +129,10 @@ const LLMSettings = () => {
                     setActiveModelFilename(active)
                     NativeModules.LLMChatModule.setActiveModel(active)
                 }
-                // Pull current values + defaults from native, then overlay any persisted overrides.
-                try {
-                    const native = await NativeModules.LLMChatModule.getGenerationTuning()
-                    if (!cancelled) {
-                        setTuningDefaults({
-                            maxOutputTokens: native.defaultMaxOutputTokens,
-                            llmCitationCharCap: native.defaultLlmCitationCharCap,
-                            modelContextWindow: native.defaultModelContextWindow,
-                        })
-                        const moT = typeof maxOut === "number" ? maxOut : native.maxOutputTokens
-                        const cap = typeof citationCap === "number" ? citationCap : native.llmCitationCharCap
-                        const ctx = typeof ctxWindow === "number" ? ctxWindow : native.modelContextWindow
-                        setMaxOutputTokens(moT)
-                        setLlmCitationCharCap(cap)
-                        setModelContextWindow(ctx)
-                        // Push persisted overrides back into native so the orchestrator picks them up.
-                        if (typeof maxOut === "number") NativeModules.LLMChatModule.setMaxOutputTokens(moT)
-                        if (typeof citationCap === "number") NativeModules.LLMChatModule.setLlmCitationCharCap(cap)
-                        if (typeof ctxWindow === "number") NativeModules.LLMChatModule.setModelContextWindow(ctx)
-                    }
-                } catch {
-                    // Native module unavailable — keep React defaults.
+                if (!cancelled) {
+                    if (typeof maxOut === "number") setMaxOutputTokens(maxOut)
+                    if (typeof citationCap === "number") setLlmCitationCharCap(citationCap)
+                    if (typeof ctxWindow === "number") setModelContextWindow(ctxWindow)
                 }
             } catch {
                 // First run or DB not initialized — keep defaults.
@@ -195,31 +177,27 @@ const LLMSettings = () => {
         [activeModelFilename, downloadedModels, refreshModels, refreshStatus]
     )
 
-    /** Commit a tuning value to native, persist to DB, and update the local React state. */
+    /** Commit a tuning value to SQLite. The Chat page reads these values JS-side on each chat call. */
     const commitMaxOutputTokens = useCallback((value: number) => {
         setMaxOutputTokens(value)
-        NativeModules.LLMChatModule.setMaxOutputTokens(value)
-        databaseManager.saveSetting(MAX_OUTPUT_TOKENS_SETTING.category, MAX_OUTPUT_TOKENS_SETTING.key, value, true).catch(() => undefined)
+        saveTuning("maxOutputTokens", value)
     }, [])
 
     const commitLlmCitationCharCap = useCallback((value: number) => {
         setLlmCitationCharCap(value)
-        NativeModules.LLMChatModule.setLlmCitationCharCap(value)
-        databaseManager.saveSetting(CITATION_CHAR_CAP_SETTING.category, CITATION_CHAR_CAP_SETTING.key, value, true).catch(() => undefined)
+        saveTuning("llmCitationCharCap", value)
     }, [])
 
     const commitModelContextWindow = useCallback((value: number) => {
         setModelContextWindow(value)
-        NativeModules.LLMChatModule.setModelContextWindow(value)
-        databaseManager.saveSetting(MODEL_CONTEXT_WINDOW_SETTING.category, MODEL_CONTEXT_WINDOW_SETTING.key, value, true).catch(() => undefined)
+        saveTuning("modelContextWindow", value)
     }, [])
 
     const handleResetTuning = useCallback(() => {
-        if (!tuningDefaults) return
-        commitMaxOutputTokens(tuningDefaults.maxOutputTokens)
-        commitLlmCitationCharCap(tuningDefaults.llmCitationCharCap)
-        commitModelContextWindow(tuningDefaults.modelContextWindow)
-    }, [tuningDefaults, commitMaxOutputTokens, commitLlmCitationCharCap, commitModelContextWindow])
+        commitMaxOutputTokens(TUNING_DEFAULTS.maxOutputTokens)
+        commitLlmCitationCharCap(TUNING_DEFAULTS.llmCitationCharCap)
+        commitModelContextWindow(TUNING_DEFAULTS.modelContextWindow)
+    }, [commitMaxOutputTokens, commitLlmCitationCharCap, commitModelContextWindow])
 
     /** Warn when the active model's filename advertises a baked-in KV cache smaller than the requested context window
      *  — only relevant for Gemma `_ekvN.task` files where N caps the engine. */
@@ -495,11 +473,9 @@ const LLMSettings = () => {
                 <View style={styles.section}>
                     <View style={styles.tuningHeader}>
                         <Text style={styles.sectionLabel}>Generation Tuning</Text>
-                        {tuningDefaults && (
-                            <Pressable onPress={handleResetTuning} style={styles.linkRow}>
-                                <Text style={styles.link}>Reset to defaults</Text>
-                            </Pressable>
-                        )}
+                        <Pressable onPress={handleResetTuning} style={styles.linkRow}>
+                            <Text style={styles.link}>Reset to defaults</Text>
+                        </Pressable>
                     </View>
                     <Text style={styles.hint}>
                         Bigger numbers = longer, slower answers. Changes apply to the next chat call. Engine context window changes reload the loaded model.

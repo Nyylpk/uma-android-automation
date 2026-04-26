@@ -5,10 +5,15 @@ import { useTheme } from "../../context/ThemeContext"
 import CustomButton from "../../components/CustomButton"
 import PageHeader from "../../components/PageHeader"
 import { databaseManager } from "../../lib/database"
+import * as llamaRunner from "../../lib/chat/llamaRunner"
+import * as verifier from "../../lib/chat/groundingVerifier"
+import { loadChatTuning, trimToCap, type ChatTuning } from "../../lib/chat/chatSettings"
 
 const HISTORY_CATEGORY = "chat"
 const HISTORY_KEY = "questionHistory"
 const HISTORY_MAX = 20
+const ACTIVE_MODEL_KEY = { category: "chat", key: "activeModelFilename" } as const
+const TOP_K = 4
 
 interface DocResult {
     id: string
@@ -16,42 +21,56 @@ interface DocResult {
     heading: string
     text: string
     score: number
+    expandedText: string
 }
+
+interface DownloadedModel {
+    filename: string
+    path: string
+    sizeBytes: number
+    lastModifiedMillis: number
+}
+
+type ChatMode = "generated" | "retrieveOnly" | "verifierFallback"
 
 interface ChatResult {
     answer: string
-    mode: "generated" | "retrieveOnly" | "verifierFallback"
-    service?: string
+    mode: ChatMode
     overlap?: number
     rejectedAnswer?: string
     citations: DocResult[]
 }
 
-/**
- * Ask-the-docs chat page.
- *
- * Calls [LLMChatModule.chat] which runs the full RAG pipeline: retrieve → (optionally) generate → verify. The UI
- * badges each answer with its provenance so users can tell at a glance whether the text is verbatim from the docs,
- * paraphrased by an on-device model, or a fallback after the verifier rejected a suspect answer.
- */
+const SYSTEM_INSTRUCTIONS =
+    "You are a friendly documentation guide for an Android automation app. Using only the excerpts provided in this conversation, write a detailed, well-structured explanation that answers the user's question.\n\n" +
+    "Rules:\n" +
+    "- Paraphrase in your own words. Do NOT copy sentences verbatim from the excerpts.\n" +
+    "- Aim for 4–10 sentences depending on how much the excerpts cover. Use multiple short paragraphs and bullet lists where they aid clarity.\n" +
+    "- Do NOT prefix output with \"Answer:\" or repeat the question.\n" +
+    "- Only use facts that appear in the excerpts. Do not invent features, numbers, button names, or behavior.\n" +
+    '- If the excerpts do not answer the question, reply with exactly: NOT_IN_DOCS'
+
 const Chat = () => {
     const { colors } = useTheme()
     const [query, setQuery] = useState("")
     const [result, setResult] = useState<ChatResult | null>(null)
+    const [partialAnswer, setPartialAnswer] = useState("")
     const [isSearching, setIsSearching] = useState(false)
     const [searched, setSearched] = useState(false)
     const [history, setHistory] = useState<string[]>([])
+    const [tuning, setTuning] = useState<ChatTuning | null>(null)
 
-    // Load persisted question history on mount.
     useEffect(() => {
         let cancelled = false
         ;(async () => {
             try {
                 const stored = await databaseManager.loadSetting(HISTORY_CATEGORY, HISTORY_KEY)
                 if (!cancelled && Array.isArray(stored)) setHistory(stored.filter((x): x is string => typeof x === "string"))
-            } catch {
-                // Fresh install or DB not ready yet — start with an empty history.
-            }
+            } catch {}
+            try {
+                const t = await loadChatTuning()
+                if (!cancelled) setTuning(t)
+            } catch {}
         })()
         return () => {
             cancelled = true
@@ -60,26 +79,81 @@ const Chat = () => {
 
     const handleSearch = useCallback(async () => {
         const q = query.trim()
-        if (!q) return
+        if (!q || !tuning) return
         setIsSearching(true)
         setSearched(true)
+        setPartialAnswer("")
+        setResult(null)
         // Prepend to history, dedupe, cap.
         setHistory((prev) => {
             const next = [q, ...prev.filter((x) => x !== q)].slice(0, HISTORY_MAX)
             databaseManager.saveSetting(HISTORY_CATEGORY, HISTORY_KEY, next, true).catch(() => undefined)
             return next
         })
+
         try {
-            const raw = (await NativeModules.LLMChatModule.chat(q, 4)) as ChatResult
-            console.log("[Chat] native response:", JSON.stringify(raw, null, 2))
-            setResult(raw)
+            const citations = (await NativeModules.LLMChatModule.searchDocs(q, TOP_K)) as DocResult[]
+            console.log("[Chat] retrieval:", citations.length, "chunks", citations.map((c) => `${c.source}#${c.id} (${(c.score * 100).toFixed(0)}%)`))
+
+            if (citations.length === 0) {
+                setResult({ answer: "No matching documentation found.", mode: "retrieveOnly", citations: [] })
+                return
+            }
+
+            // Pick a downloaded GGUF model. If none, retrieve-only fallback.
+            const modelPath = await pickModelPath()
+            if (!modelPath) {
+                setResult({ answer: citations[0].expandedText, mode: "retrieveOnly", citations })
+                return
+            }
+
+            await llamaRunner.ensureContext(modelPath, { nCtx: tuning.modelContextWindow })
+
+            // Build prompt: system instructions + per-citation excerpts in the system message; question in the user message.
+            const trimmed = citations.map((c) => trimToCap(c.expandedText, tuning.llmCitationCharCap))
+            const contextBlock = trimmed.join("\n\n---\n\n")
+            const messages = [
+                { role: "system" as const, content: `${SYSTEM_INSTRUCTIONS}\n\nExcerpts (separated by ---):\n\n${contextBlock}` },
+                { role: "user" as const, content: q },
+            ]
+
+            const generated = (
+                await llamaRunner.chat(
+                    {
+                        messages,
+                        maxTokens: tuning.maxOutputTokens,
+                        temperature: 0.35,
+                    },
+                    (tok) => setPartialAnswer((prev) => prev + tok)
+                )
+            ).trim()
+
+            if (!generated || generated.toUpperCase() === "NOT_IN_DOCS") {
+                setResult({ answer: citations[0].expandedText, mode: "retrieveOnly", citations })
+                return
+            }
+
+            const overlap = verifier.overlap(generated, trimmed)
+            console.log("[Chat] verifier overlap:", overlap.toFixed(3))
+            if (overlap >= verifier.SUMMARY_THRESHOLD) {
+                setResult({ answer: generated, mode: "generated", overlap, citations })
+            } else {
+                setResult({
+                    answer: citations[0].expandedText,
+                    mode: "verifierFallback",
+                    overlap,
+                    rejectedAnswer: generated,
+                    citations,
+                })
+            }
         } catch (err) {
-            console.log("[Chat] native error:", err)
+            console.log("[Chat] error:", err)
             setResult(null)
         } finally {
             setIsSearching(false)
+            setPartialAnswer("")
         }
-    }, [query])
+    }, [query, tuning])
 
     const handleHistoryTap = useCallback((q: string) => {
         setQuery(q)
@@ -94,7 +168,7 @@ const Chat = () => {
         if (!result) return null
         switch (result.mode) {
             case "generated":
-                return `Generated via ${result.service ?? "model"} · grounding ${Math.round((result.overlap ?? 0) * 100)}%`
+                return `Generated · grounding ${Math.round((result.overlap ?? 0) * 100)}%`
             case "retrieveOnly":
                 return "Verbatim from docs (no model)"
             case "verifierFallback":
@@ -140,7 +214,6 @@ const Chat = () => {
                 resultHeading: { fontWeight: "600", color: colors.foreground, marginBottom: 4 },
                 resultMeta: { fontSize: 11, color: colors.mutedForeground, marginBottom: 6 },
                 emptyText: { color: colors.mutedForeground, textAlign: "center", marginTop: 20, paddingHorizontal: 20 },
-                markdownLink: { color: colors.primary, textDecorationLine: "underline" as const },
                 disclaimer: { fontSize: 11, color: colors.mutedForeground, marginTop: 4, marginBottom: 8, fontStyle: "italic" },
                 historyHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 12, marginBottom: 6 },
                 historyTitle: { fontSize: 12, fontWeight: "600", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 0.5 },
@@ -157,41 +230,40 @@ const Chat = () => {
                 },
                 historyChipText: { color: colors.foreground, fontSize: 12 },
                 historyChipRow: { flexDirection: "row", flexWrap: "wrap" },
+                streamingNotice: { fontSize: 11, color: colors.mutedForeground, marginBottom: 4, fontStyle: "italic" },
             }),
         [colors]
     )
 
-    // Custom render rules for markdown elements whose default renderers in `react-native-markdown-display` don't
-    // propagate a `key` to child rows/cells — React warns about missing keys on every table render without this.
     const markdownRules: RenderRules = useMemo(
         () => ({
-            table: (node, children, _parent, styles) => (
-                <View key={node.key} style={styles._VIEW_SAFE_table}>
+            table: (node, children, _parent, s) => (
+                <View key={node.key} style={s._VIEW_SAFE_table}>
                     {children}
                 </View>
             ),
-            thead: (node, children, _parent, styles) => (
-                <View key={node.key} style={styles._VIEW_SAFE_thead}>
+            thead: (node, children, _parent, s) => (
+                <View key={node.key} style={s._VIEW_SAFE_thead}>
                     {children}
                 </View>
             ),
-            tbody: (node, children, _parent, styles) => (
-                <View key={node.key} style={styles._VIEW_SAFE_tbody}>
+            tbody: (node, children, _parent, s) => (
+                <View key={node.key} style={s._VIEW_SAFE_tbody}>
                     {children}
                 </View>
             ),
-            tr: (node, children, _parent, styles) => (
-                <View key={node.key} style={styles._VIEW_SAFE_tr}>
+            tr: (node, children, _parent, s) => (
+                <View key={node.key} style={s._VIEW_SAFE_tr}>
                     {children}
                 </View>
             ),
-            th: (node, children, _parent, styles) => (
-                <View key={node.key} style={styles._VIEW_SAFE_th}>
+            th: (node, children, _parent, s) => (
+                <View key={node.key} style={s._VIEW_SAFE_th}>
                     {children}
                 </View>
             ),
-            td: (node, children, _parent, styles) => (
-                <View key={node.key} style={styles._VIEW_SAFE_td}>
+            td: (node, children, _parent, s) => (
+                <View key={node.key} style={s._VIEW_SAFE_td}>
                     {children}
                 </View>
             ),
@@ -199,8 +271,6 @@ const Chat = () => {
         []
     )
 
-    // Shared Markdown rule styles. `react-native-markdown-display` colors elements via this `rules`-like map; we
-    // map each tag to a themed RN style so light/dark mode stay consistent with the rest of the app.
     const markdownStyles = useMemo(
         () => ({
             body: { color: colors.foreground, fontSize: 15, lineHeight: 22 },
@@ -213,27 +283,9 @@ const Chat = () => {
             bullet_list: { color: colors.foreground },
             ordered_list: { color: colors.foreground },
             list_item: { color: colors.foreground },
-            code_inline: {
-                color: colors.foreground,
-                backgroundColor: colors.muted,
-                borderRadius: 4,
-                paddingHorizontal: 4,
-                fontFamily: "monospace" as const,
-            },
-            code_block: {
-                color: colors.foreground,
-                backgroundColor: colors.muted,
-                borderRadius: 6,
-                padding: 8,
-                fontFamily: "monospace" as const,
-            },
-            fence: {
-                color: colors.foreground,
-                backgroundColor: colors.muted,
-                borderRadius: 6,
-                padding: 8,
-                fontFamily: "monospace" as const,
-            },
+            code_inline: { color: colors.foreground, backgroundColor: colors.muted, borderRadius: 4, paddingHorizontal: 4, fontFamily: "monospace" as const },
+            code_block: { color: colors.foreground, backgroundColor: colors.muted, borderRadius: 6, padding: 8, fontFamily: "monospace" as const },
+            fence: { color: colors.foreground, backgroundColor: colors.muted, borderRadius: 6, padding: 8, fontFamily: "monospace" as const },
             blockquote: {
                 color: colors.mutedForeground,
                 backgroundColor: colors.muted,
@@ -269,7 +321,7 @@ const Chat = () => {
                     textAlignVertical="top"
                     editable={!isSearching}
                 />
-                <CustomButton variant="primary" onPress={handleSearch} isLoading={isSearching} disabled={isSearching || query.trim().length === 0}>
+                <CustomButton variant="primary" onPress={handleSearch} isLoading={isSearching} disabled={isSearching || query.trim().length === 0 || !tuning}>
                     Ask
                 </CustomButton>
             </View>
@@ -295,10 +347,21 @@ const Chat = () => {
                     </>
                 )}
 
+                {isSearching && partialAnswer.length > 0 && (
+                    <View style={styles.answerCard}>
+                        <Text style={styles.streamingNotice}>Generating…</Text>
+                        <Markdown style={markdownStyles as any} rules={markdownRules}>
+                            {partialAnswer}
+                        </Markdown>
+                    </View>
+                )}
+
                 {result && (
                     <>
                         <View style={styles.answerCard}>
-                            <Markdown style={markdownStyles as any} rules={markdownRules}>{result.answer}</Markdown>
+                            <Markdown style={markdownStyles as any} rules={markdownRules}>
+                                {result.answer}
+                            </Markdown>
                             {modeLabel && <Text style={styles.modeLabel}>{modeLabel}</Text>}
                         </View>
                         {result.citations.length > 0 && <Text style={styles.sectionLabel}>Sources</Text>}
@@ -308,7 +371,9 @@ const Chat = () => {
                                 <Text style={styles.resultMeta}>
                                     {r.source} · similarity {(r.score * 100).toFixed(0)}%
                                 </Text>
-                                <Markdown style={markdownStyles as any} rules={markdownRules}>{r.text}</Markdown>
+                                <Markdown style={markdownStyles as any} rules={markdownRules}>
+                                    {r.text}
+                                </Markdown>
                             </View>
                         ))}
                     </>
@@ -317,6 +382,25 @@ const Chat = () => {
             </ScrollView>
         </View>
     )
+}
+
+/**
+ * Resolve which downloaded GGUF model to feed to llama.rn. Honors the user's "Active" selection from LLM Settings;
+ * falls back to the most recently modified model if no explicit selection is set.
+ */
+async function pickModelPath(): Promise<string | null> {
+    try {
+        const models: DownloadedModel[] = await NativeModules.LLMChatModule.listModels()
+        if (!models || models.length === 0) return null
+        const active = await databaseManager.loadSetting(ACTIVE_MODEL_KEY.category, ACTIVE_MODEL_KEY.key)
+        if (typeof active === "string" && active.length > 0) {
+            const matched = models.find((m) => m.filename === active)
+            if (matched) return matched.path
+        }
+        return models[0].path
+    } catch {
+        return null
+    }
 }
 
 export default Chat
