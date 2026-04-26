@@ -75,6 +75,10 @@ yarn-error.log
 !.yarn/versions
 android/app/src/main/assets/index.android.bundle
 
+# llama.rn copies Qualcomm Hexagon DSP libraries here on every Gradle build via its `syncRNLlamaHtpAssets` task
+# (see node_modules/llama.rn/android/build.gradle).
+android/app/src/main/assets/ggml-hexagon/
+
 android/app/src/main/raw/
 
 # Expo
