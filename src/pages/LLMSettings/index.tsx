@@ -21,36 +21,37 @@ const MAX_OUTPUT_TOKENS_SETTING = { category: "chat", key: "maxOutputTokens" } a
 const CITATION_CHAR_CAP_SETTING = { category: "chat", key: "llmCitationCharCap" } as const
 const MODEL_CONTEXT_WINDOW_SETTING = { category: "chat", key: "modelContextWindow" } as const
 
-/** Known LiteRT community `.task` models. Sizes and filenames verified against the Hugging Face tree views. All
- *  are gated — requires a HF read token with the Gemma license accepted. */
+/** Known Qwen 2.5 Instruct GGUF models for llama.rn. All Q4_K_M quants — the size/quality sweet spot. Sizes
+ *  verified against the official Qwen Hugging Face repos. These repos are public (no HF token required). */
 const MODEL_PRESETS: Array<{ label: string; detail: string; url: string }> = [
     {
-        label: "Gemma 3 1B (555 MB, fast, weak summaries)",
+        label: "Qwen 2.5 0.5B Instruct (491 MB, fast, weak summaries)",
         detail: "Smallest option. Runs on almost any phone, but paraphrasing quality is limited.",
-        url: "https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/Gemma3-1B-IT_multi-prefill-seq_q4_ekv2048.task",
+        url: "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf",
     },
     {
-        label: "Gemma 3n E2B (3.14 GB, balanced)",
-        detail: "Purpose-built for on-device; much better summaries than 1B. Needs ~4 GB free RAM and a fast phone.",
-        url: "https://huggingface.co/google/gemma-3n-E2B-it-litert-preview/resolve/main/gemma-3n-E2B-it-int4.task",
+        label: "Qwen 2.5 1.5B Instruct (1.12 GB, balanced)",
+        detail: "Notably better summaries than 0.5B. Needs ~2 GB free RAM; runs comfortably on most phones.",
+        url: "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf",
     },
     {
-        label: "Gemma 3n E4B (4.41 GB, highest quality)",
-        detail: "~5B effective params, noticeably better summaries than E2B. Needs ~6 GB free RAM; slow on mid-range phones.",
-        url: "https://huggingface.co/google/gemma-3n-E4B-it-litert-preview/resolve/main/gemma-3n-E4B-it-int4.task",
+        label: "Qwen 2.5 3B Instruct (2.1 GB, highest quality)",
+        detail: "Best summarization quality at this size tier. Needs ~4 GB free RAM and a recent phone for acceptable speed.",
+        url: "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf",
     },
 ]
 
 const DEFAULT_MODEL_URL = MODEL_PRESETS[0].url
 
 /**
- * Derive the local `.task` filename the downloader will use for [url]. Mirrors `filenameFromUrl` in
+ * Derive the local model filename the downloader will use for [url]. Mirrors `filenameFromUrl` in
  * [LLMChatModule.kt] so the UI can check whether a preset is already downloaded before offering the button.
  */
 const filenameFromUrl = (url: string): string => {
     const noQuery = url.split("?")[0].split("#")[0]
     const last = noQuery.substring(noQuery.lastIndexOf("/") + 1).trim()
-    return last.endsWith(".task") ? last : "chat-model.task"
+    const isModel = last.toLowerCase().endsWith(".gguf") || last.toLowerCase().endsWith(".task")
+    return last.length > 0 && isModel ? last : "chat-model.gguf"
 }
 
 interface ServiceStatus {
@@ -75,8 +76,9 @@ interface DownloadedModel {
 /**
  * LLM Settings page.
  *
- * Manages the on-device documentation chatbot's generative model: download/cancel/delete MediaPipe `.task` files
- * and pick which downloaded model is active. Retrieve-only search is always available regardless of what happens here.
+ * Manages the on-device documentation chatbot's generative model: download/cancel/delete `.gguf` files (used
+ * by llama.rn) and pick which downloaded model is active. Retrieve-only search is always available regardless
+ * of what happens here.
  */
 const LLMSettings = () => {
     const { colors } = useTheme()
@@ -200,7 +202,8 @@ const LLMSettings = () => {
     }, [commitMaxOutputTokens, commitLlmCitationCharCap, commitModelContextWindow])
 
     /** Warn when the active model's filename advertises a baked-in KV cache smaller than the requested context window
-     *  — only relevant for Gemma `_ekvN.task` files where N caps the engine. */
+     *  — only relevant for legacy Gemma `_ekvN.task` files; modern GGUF models advertise their context window
+     *  in metadata and llama.rn honors `n_ctx` directly. */
     const ekvCapWarning = useMemo(() => {
         const active = activeModelFilename ?? downloadedModels[0]?.filename
         if (!active) return null
@@ -375,8 +378,8 @@ const LLMSettings = () => {
                     </Text>
                     <>
                         <Text style={styles.hint}>
-                            All models are gated on Hugging Face. Accept the license on the model's page, then create a read-access token and paste it below. Bigger models summarize better but
-                            need more RAM and download time.
+                            The Qwen presets are public — you don't need a Hugging Face token. Bigger models summarize better but need more RAM and download time. The token field below is only
+                            needed if you paste a custom URL pointing to a gated repo (e.g. Llama or Gemma).
                         </Text>
                             {MODEL_PRESETS.map((p) => {
                                 const selected = modelUrl === p.url
@@ -399,7 +402,7 @@ const LLMSettings = () => {
                                 style={styles.tokenInput}
                                 value={hfToken}
                                 onChangeText={persistHfToken}
-                                placeholder="hf_... (Hugging Face read token)"
+                                placeholder="hf_... (only for gated custom URLs)"
                                 placeholderTextColor={colors.mutedForeground}
                                 autoCapitalize="none"
                                 autoCorrect={false}
@@ -409,7 +412,7 @@ const LLMSettings = () => {
                                 style={styles.tokenInput}
                                 value={modelUrl}
                                 onChangeText={persistModelUrl}
-                                placeholder="Model .task URL"
+                                placeholder="Model .gguf URL"
                                 placeholderTextColor={colors.mutedForeground}
                                 autoCapitalize="none"
                                 autoCorrect={false}
