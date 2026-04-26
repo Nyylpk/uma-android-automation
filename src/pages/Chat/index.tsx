@@ -266,10 +266,6 @@ const Chat = () => {
         [colors]
     )
 
-    // react-native-markdown-renderer 4 ships native table/list rendering and adds keys to inline children,
-    // so no custom rules are needed.
-    const markdownRules: RenderRules = useMemo(() => ({}), [])
-
     const markdownStyles = useMemo(
         () => ({
             // react-native-markdown-renderer style keys — `text` is the inline text container that sets
@@ -295,8 +291,12 @@ const Chat = () => {
                 padding: 8,
                 fontFamily: "monospace" as const,
             },
-            listUnorderedItemText: { color: colors.foreground },
-            listOrderedItemText: { color: colors.foreground },
+            listUnorderedItem: { flexDirection: "row" as const, alignItems: "flex-start" as const, marginBottom: 4 },
+            listOrderedItem: { flexDirection: "row" as const, alignItems: "flex-start" as const, marginBottom: 4 },
+            listUnorderedItemIcon: { color: colors.foreground, marginLeft: 4, marginRight: 8, lineHeight: 22 },
+            listOrderedItemIcon: { color: colors.foreground, marginLeft: 4, marginRight: 8, lineHeight: 22 },
+            listUnorderedItemText: { flex: 1, color: colors.foreground, fontSize: 15, lineHeight: 22, flexWrap: "wrap" as const },
+            listOrderedItemText: { flex: 1, color: colors.foreground, fontSize: 15, lineHeight: 22, flexWrap: "wrap" as const },
             blockquote: {
                 color: colors.mutedForeground,
                 backgroundColor: colors.muted,
@@ -364,7 +364,7 @@ const Chat = () => {
                         <Text style={styles.streamingNotice}>
                             Generating… {streamingTokens} tok{streamingTokensPerSec > 0 ? ` · ${streamingTokensPerSec.toFixed(1)} tok/s` : ""}
                         </Text>
-                        <Markdown style={markdownStyles as any} rules={markdownRules}>
+                        <Markdown style={markdownStyles as any}>
                             {partialAnswer}
                         </Markdown>
                     </View>
@@ -373,7 +373,7 @@ const Chat = () => {
                 {result && (
                     <>
                         <View style={styles.answerCard}>
-                            <Markdown style={markdownStyles as any} rules={markdownRules}>
+                            <Markdown style={markdownStyles as any}>
                                 {result.answer}
                             </Markdown>
                             {modeLabel && <Text style={styles.modeLabel}>{modeLabel}</Text>}
@@ -393,7 +393,7 @@ const Chat = () => {
                                 {r.kind === "code" ? (
                                     <Text style={styles.codeBlock}>{r.text}</Text>
                                 ) : (
-                                    <Markdown style={markdownStyles as any} rules={markdownRules}>
+                                    <Markdown style={markdownStyles as any}>
                                         {r.text}
                                     </Markdown>
                                 )}
