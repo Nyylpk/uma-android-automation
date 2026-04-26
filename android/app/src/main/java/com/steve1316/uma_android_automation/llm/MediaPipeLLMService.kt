@@ -26,7 +26,7 @@ import java.io.File
 class MediaPipeLLMService(
     private val context: Context,
     val modelPath: String,
-    private val maxTokens: Int = 2048,
+    private val maxTokens: Int = 4096,
 ) : LLMService {
     @Volatile private var engine: LlmInference? = null
     private val engineLock = Any()

@@ -33,7 +33,7 @@ class ChatOrchestrator(private val context: Context) {
         private const val TAG = "${SharedData.loggerTag}ChatOrchestrator"
         private const val INDEX_PATH = "llm/doc_index.bin"
         private const val MAX_CONTEXT_CHUNKS = 4
-        private const val MAX_OUTPUT_TOKENS = 384
+        private const val MAX_OUTPUT_TOKENS = 768
         private const val TEMPERATURE = 0.35f
 
         /** Lowered from the verifier's default 0.4 because summary-style answers paraphrase and naturally have less exact token overlap with the source chunks. */
@@ -45,9 +45,9 @@ class ChatOrchestrator(private val context: Context) {
         /** Cap on the expanded section text handed to the user in retrieve-only mode. Prevents a "full How It Works chapter" from flooding the UI. */
         private const val SECTION_EXPANSION_CHAR_CAP = 6000
 
-        /** Per-citation cap when expanding sections for the LLM prompt. Keeps four expanded citations within
-         *  Gemma 3's 2048-token context when combined with the system scaffolding and reserved output budget. */
-        private const val LLM_CITATION_CHAR_CAP = 1500
+        /** Per-citation cap when expanding sections for the LLM prompt. Sized for the new 4096-token KV cache:
+         *  4 citations × 2200 chars ≈ 2200 tokens of context + ~200 token scaffold + 768 output tokens ≈ 3200. */
+        private const val LLM_CITATION_CHAR_CAP = 2200
     }
 
     /**
@@ -228,14 +228,14 @@ class ChatOrchestrator(private val context: Context) {
 
             $contextBlock
 
-            Using only the excerpts above, write a natural, conversational 2–5 sentence answer to this question:
+            Using only the excerpts above, write a detailed, well-structured explanation that answers this question:
 
             $query
 
             Rules you must follow:
             - Paraphrase in your own words. Do NOT copy sentences verbatim from the excerpts.
-            - Do NOT prefix lines with headings, numbers, bullets, "Answer:", or "---".
-            - Write a single flowing paragraph.
+            - Aim for 4–10 sentences depending on how much the excerpts cover. Use multiple short paragraphs and bullet lists when they aid clarity.
+            - Do NOT prefix output with "Answer:" or repeat the question.
             - Only use facts that appear in the excerpts. Do not invent features, numbers, button names, or behavior.
             - If the excerpts do not answer the question, reply with exactly: NOT_IN_DOCS
         """.trimIndent()
