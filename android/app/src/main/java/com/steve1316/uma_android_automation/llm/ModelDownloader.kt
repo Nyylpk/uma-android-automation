@@ -12,9 +12,9 @@ import kotlinx.coroutines.flow.flow
 import java.io.File
 
 /**
- * Fetches the generative model file (e.g. Gemma 3 1B `.task` ~529 MB) from a remote URL into app-private storage
- * using Android [DownloadManager], so the APK stays lean and the download shows up in the system notification
- * shade with cancel and pause support.
+ * Fetches the generative model file (e.g. Qwen 2.5 1.5B Instruct `.gguf` ~1.1 GB) from a remote URL into
+ * app-private storage using Android [DownloadManager], so the APK stays lean and the download shows up in the
+ * system notification shade with cancel and pause support.
  *
  * Downloads land at [modelFile] under `context.getExternalFilesDir("llm")`, which is app-private — no storage
  * permission required. Delete via [delete] when the user wants to reclaim space.
@@ -31,7 +31,7 @@ class ModelDownloader(private val context: Context) {
     }
 
     /**
-     * Base directory for `.task` model files.
+     * Base directory for `.gguf` model files.
      *
      * Uses app-private external storage (`getExternalFilesDir`) rather than `filesDir` because DownloadManager runs
      * in a separate system process and cannot write into `/data/data/<pkg>/` ("Unsupported path" error). Still
@@ -44,15 +44,15 @@ class ModelDownloader(private val context: Context) {
     /** Resolve the destination [File] for [filename] inside the model directory. */
     fun fileFor(filename: String): File = File(baseDir, filename)
 
-    /** List every `.task` model file present on-device, most recently modified first. */
+    /** List every `.gguf` model file present on-device, most recently modified first. */
     fun listModels(): List<File> =
-        baseDir.listFiles { f -> f.isFile && f.name.endsWith(".task") && f.length() > 0 }
+        baseDir.listFiles { f -> f.isFile && f.name.endsWith(".gguf", ignoreCase = true) && f.length() > 0 }
             ?.sortedByDescending { it.lastModified() }
             ?: emptyList()
 
     /**
      * Return the preferred active model file. If [preferredFilename] matches a downloaded file, that one is used;
-     * otherwise the most recently modified `.task` is returned so a fresh install-and-download flow still works
+     * otherwise the most recently modified `.gguf` is returned so a fresh install-and-download flow still works
      * without an explicit selection step.
      */
     fun currentModelFile(preferredFilename: String? = null): File? {
@@ -63,7 +63,7 @@ class ModelDownloader(private val context: Context) {
         return listModels().firstOrNull()
     }
 
-    /** @return true if at least one non-empty `.task` model file is present on-device. */
+    /** @return true if at least one non-empty `.gguf` model file is present on-device. */
     fun isDownloaded(): Boolean = listModels().isNotEmpty()
 
     /**
@@ -125,9 +125,9 @@ class ModelDownloader(private val context: Context) {
         }
     }
 
-    /** Remove every `.task` model file from disk. @return true if at least one file was deleted. */
+    /** Remove every `.gguf` model file from disk. @return true if at least one file was deleted. */
     fun delete(): Boolean {
-        val files = baseDir.listFiles { f -> f.isFile && f.name.endsWith(".task") } ?: return false
+        val files = baseDir.listFiles { f -> f.isFile && f.name.endsWith(".gguf", ignoreCase = true) } ?: return false
         var any = false
         for (f in files) if (f.delete()) any = true
         return any

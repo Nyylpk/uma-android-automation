@@ -54,12 +54,6 @@ const filenameFromUrl = (url: string): string => {
     return last.length > 0 && isModel ? last : "chat-model.gguf"
 }
 
-interface ServiceStatus {
-    mediaPipeDownloaded: boolean
-    mediaPipeSizeBytes: number
-    activeService: string
-}
-
 interface DownloadState {
     status: "pending" | "running" | "paused" | "complete" | "failed" | "error"
     bytesDownloaded: number
@@ -82,7 +76,6 @@ interface DownloadedModel {
  */
 const LLMSettings = () => {
     const { colors } = useTheme()
-    const [status, setStatus] = useState<ServiceStatus | null>(null)
     const [downloadState, setDownloadState] = useState<DownloadState | null>(null)
     const [hfToken, setHfToken] = useState("")
     const [modelUrl, setModelUrl] = useState(DEFAULT_MODEL_URL)
@@ -91,15 +84,6 @@ const LLMSettings = () => {
     const [maxOutputTokens, setMaxOutputTokens] = useState<number>(TUNING_DEFAULTS.maxOutputTokens)
     const [llmCitationCharCap, setLlmCitationCharCap] = useState<number>(TUNING_DEFAULTS.llmCitationCharCap)
     const [modelContextWindow, setModelContextWindow] = useState<number>(TUNING_DEFAULTS.modelContextWindow)
-
-    const refreshStatus = useCallback(async () => {
-        try {
-            const s: ServiceStatus = await NativeModules.LLMChatModule.getServiceStatus()
-            setStatus(s)
-        } catch {
-            setStatus(null)
-        }
-    }, [])
 
     const refreshModels = useCallback(async () => {
         try {
@@ -151,9 +135,8 @@ const LLMSettings = () => {
             setActiveModelFilename(filename)
             NativeModules.LLMChatModule.setActiveModel(filename)
             databaseManager.saveSetting(ACTIVE_MODEL_SETTING.category, ACTIVE_MODEL_SETTING.key, filename, true).catch(() => undefined)
-            refreshStatus()
         },
-        [refreshStatus]
+        []
     )
 
     const handleDeleteModelFile = useCallback(
@@ -171,12 +154,11 @@ const LLMSettings = () => {
                             databaseManager.saveSetting(ACTIVE_MODEL_SETTING.category, ACTIVE_MODEL_SETTING.key, "", true).catch(() => undefined)
                         }
                         await refreshModels()
-                        await refreshStatus()
                     },
                 },
             ])
         },
-        [activeModelFilename, downloadedModels, refreshModels, refreshStatus]
+        [activeModelFilename, downloadedModels, refreshModels]
     )
 
     /** Commit a tuning value to SQLite. The Chat page reads these values JS-side on each chat call. */
@@ -225,17 +207,15 @@ const LLMSettings = () => {
 
 
     useEffect(() => {
-        refreshStatus()
         const emitter = new NativeEventEmitter(NativeModules.LLMChatModule)
         const sub = emitter.addListener("LLMChatModule.DownloadState", (state: DownloadState) => {
             setDownloadState(state)
             if (state.status === "complete" || state.status === "failed" || state.status === "error") {
-                refreshStatus()
                 refreshModels()
             }
         })
         return () => sub.remove()
-    }, [refreshStatus, refreshModels])
+    }, [refreshModels])
 
     const handleDownload = useCallback(() => {
         const preset = MODEL_PRESETS.find((p) => p.url === modelUrl)
@@ -265,18 +245,22 @@ const LLMSettings = () => {
     }, [])
 
     const handleDelete = useCallback(() => {
-        Alert.alert("Delete chat model?", "This frees ~530 MB. You can re-download it later.", [
+        const totalMB = Math.round(downloadedModels.reduce((acc, m) => acc + m.sizeBytes, 0) / 1024 / 1024)
+        Alert.alert("Delete every downloaded chat model?", `Frees ~${totalMB} MB across ${downloadedModels.length} file${downloadedModels.length === 1 ? "" : "s"}.`, [
             { text: "Cancel", style: "cancel" },
             {
                 text: "Delete",
                 style: "destructive",
                 onPress: async () => {
                     await NativeModules.LLMChatModule.deleteModel()
-                    await refreshStatus()
+                    setActiveModelFilename(null)
+                    NativeModules.LLMChatModule.setActiveModel("")
+                    databaseManager.saveSetting(ACTIVE_MODEL_SETTING.category, ACTIVE_MODEL_SETTING.key, "", true).catch(() => undefined)
+                    await refreshModels()
                 },
             },
         ])
-    }, [refreshStatus])
+    }, [downloadedModels, refreshModels])
 
     const isDownloading = downloadState?.status === "running" || downloadState?.status === "pending" || downloadState?.status === "paused"
 
@@ -370,7 +354,7 @@ const LLMSettings = () => {
                 <InfoContainer>Retrieve-only search always works. The options below add optional natural-language answers backed by an on-device model.</InfoContainer>
 
                 <View style={styles.section}>
-                    <Text style={styles.sectionLabel}>MediaPipe Chat Model</Text>
+                    <Text style={styles.sectionLabel}>Chat Model (llama.cpp / GGUF)</Text>
                     <Text style={styles.statusRow}>
                         {downloadedModels.length > 0
                             ? `${downloadedModels.length} model${downloadedModels.length === 1 ? "" : "s"} downloaded · active: ${activeModelFilename ?? downloadedModels[0].filename}`
