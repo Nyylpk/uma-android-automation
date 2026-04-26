@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { View, ScrollView, StyleSheet, TextInput, Text, NativeModules, Pressable } from "react-native"
-import Markdown, { RenderRules } from "react-native-markdown-renderer"
+import { useMarkdown, type MarkedStyles } from "react-native-marked"
+import type { UserTheme } from "react-native-marked/dist/typescript/theme/types"
 import { useTheme } from "../../context/ThemeContext"
 import CustomButton from "../../components/CustomButton"
 import PageHeader from "../../components/PageHeader"
@@ -266,37 +267,34 @@ const Chat = () => {
         [colors]
     )
 
-    const markdownStyles = useMemo(
+    const markedTheme = useMemo<UserTheme>(
         () => ({
-            // react-native-markdown-renderer style keys — `text` is the inline text container that sets
-            // foreground color for everything that doesn't otherwise inherit a color.
+            colors: {
+                text: colors.foreground,
+                code: colors.foreground,
+                link: colors.primary,
+                border: colors.border,
+            },
+        }),
+        [colors]
+    )
+
+    const markedStyles = useMemo<MarkedStyles>(
+        () => ({
             text: { color: colors.foreground, fontSize: 15, lineHeight: 22 },
-            heading1: { color: colors.foreground, fontWeight: "700" as const, fontSize: 20, marginTop: 10, marginBottom: 6 },
-            heading2: { color: colors.foreground, fontWeight: "700" as const, fontSize: 17, marginTop: 10, marginBottom: 6 },
-            heading3: { color: colors.foreground, fontWeight: "600" as const, fontSize: 15, marginTop: 8, marginBottom: 4 },
-            strong: { color: colors.foreground, fontWeight: "700" as const },
-            em: { color: colors.foreground, fontStyle: "italic" as const },
-            paragraph: { marginTop: 0, marginBottom: 8, flexDirection: "row" as const, flexWrap: "wrap" as const },
-            codeInline: {
-                color: colors.foreground,
-                backgroundColor: colors.muted,
-                borderRadius: 4,
-                paddingHorizontal: 4,
-                fontFamily: "monospace" as const,
-            },
-            codeBlock: {
-                color: colors.foreground,
-                backgroundColor: colors.muted,
-                borderRadius: 6,
-                padding: 8,
-                fontFamily: "monospace" as const,
-            },
-            list: { marginBottom: 8 },
-            listItem: { flex: 1, flexWrap: "wrap" as const },
-            listUnorderedItemIcon: { color: colors.foreground, marginRight: 8, lineHeight: 22, fontSize: 15 },
-            listOrderedItemIcon: { color: colors.foreground, marginRight: 8, lineHeight: 22, fontSize: 15 },
+            paragraph: { marginTop: 0, marginBottom: 8, paddingHorizontal: 0 },
+            strong: { color: colors.foreground, fontWeight: "700" },
+            em: { color: colors.foreground, fontStyle: "italic" },
+            link: { color: colors.primary, textDecorationLine: "underline" },
+            h1: { color: colors.foreground, fontWeight: "700", fontSize: 20, marginTop: 10, marginBottom: 6 },
+            h2: { color: colors.foreground, fontWeight: "700", fontSize: 17, marginTop: 10, marginBottom: 6 },
+            h3: { color: colors.foreground, fontWeight: "600", fontSize: 15, marginTop: 8, marginBottom: 4 },
+            h4: { color: colors.foreground, fontWeight: "600", fontSize: 14, marginTop: 6, marginBottom: 4 },
+            h5: { color: colors.foreground, fontWeight: "600", fontSize: 13, marginTop: 4, marginBottom: 2 },
+            h6: { color: colors.foreground, fontWeight: "600", fontSize: 13, marginTop: 4, marginBottom: 2 },
+            codespan: { color: colors.foreground, backgroundColor: colors.muted, borderRadius: 4, paddingHorizontal: 4, fontFamily: "monospace" },
+            code: { backgroundColor: colors.muted, borderRadius: 6, padding: 8, marginVertical: 4 },
             blockquote: {
-                color: colors.mutedForeground,
                 backgroundColor: colors.muted,
                 borderLeftColor: colors.border,
                 borderLeftWidth: 3,
@@ -304,13 +302,12 @@ const Chat = () => {
                 paddingVertical: 4,
                 marginVertical: 4,
             },
+            list: { marginBottom: 8 },
+            li: { color: colors.foreground, fontSize: 15, lineHeight: 22 },
             hr: { backgroundColor: colors.border, height: 1, marginVertical: 8 },
-            link: { color: colors.primary, textDecorationLine: "underline" as const },
             table: { borderColor: colors.border, borderWidth: 1, borderRadius: 4, marginVertical: 6 },
-            tableHeader: { backgroundColor: colors.muted },
-            tableHeaderCell: { color: colors.foreground, fontWeight: "700" as const, padding: 6 },
             tableRow: { borderColor: colors.border },
-            tableRowCell: { color: colors.foreground, padding: 6 },
+            tableCell: { padding: 6 },
         }),
         [colors]
     )
@@ -362,18 +359,18 @@ const Chat = () => {
                         <Text style={styles.streamingNotice}>
                             Generating… {streamingTokens} tok{streamingTokensPerSec > 0 ? ` · ${streamingTokensPerSec.toFixed(1)} tok/s` : ""}
                         </Text>
-                        <Markdown style={markdownStyles as any}>
+                        <MarkdownView theme={markedTheme} mdStyles={markedStyles}>
                             {partialAnswer}
-                        </Markdown>
+                        </MarkdownView>
                     </View>
                 )}
 
                 {result && (
                     <>
                         <View style={styles.answerCard}>
-                            <Markdown style={markdownStyles as any}>
+                            <MarkdownView theme={markedTheme} mdStyles={markedStyles}>
                                 {result.answer}
-                            </Markdown>
+                            </MarkdownView>
                             {modeLabel && <Text style={styles.modeLabel}>{modeLabel}</Text>}
                             {result.stats && (
                                 <Text style={styles.modeLabel}>
@@ -391,9 +388,9 @@ const Chat = () => {
                                 {r.kind === "code" ? (
                                     <Text style={styles.codeBlock}>{r.text}</Text>
                                 ) : (
-                                    <Markdown style={markdownStyles as any}>
+                                    <MarkdownView theme={markedTheme} mdStyles={markedStyles}>
                                         {r.text}
-                                    </Markdown>
+                                    </MarkdownView>
                                 )}
                             </View>
                         ))}
@@ -410,6 +407,11 @@ const Chat = () => {
  * falls back to the most recently modified model if no explicit selection is set.
  */
 /** Code citations show as `Racing.kt::findSuitableRace`; doc citations keep their hierarchical heading. */
+function MarkdownView({ children, theme, mdStyles }: { children: string; theme: UserTheme; mdStyles: MarkedStyles }) {
+    const elements = useMarkdown(children, { theme, styles: mdStyles })
+    return <View>{elements as any}</View>
+}
+
 function citationHeading(r: DocResult): string {
     if (r.kind !== "code") return r.heading
     const lastSep = r.heading.lastIndexOf(" › ")
