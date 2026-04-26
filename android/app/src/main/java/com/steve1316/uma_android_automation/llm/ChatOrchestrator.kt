@@ -71,10 +71,16 @@ class ChatOrchestrator(private val context: Context) {
      * overlap from each non-first chunk, and joins. Returns [top]'s own text when no siblings exist.
      */
     private fun expandSection(top: DocIndex.Chunk): String {
+        // Code chunks are already self-contained at function/class granularity — no surrounding-section
+        // reassembly to do. Return the chunk text verbatim (it already includes the leading KDoc).
+        if (top.kind == DocIndex.Kind.CODE) return top.text
+
         val idx = index ?: return top.text
         val prefix = top.heading
         val matches = idx.chunks.filter { c ->
-            c.source == top.source && (c.heading == prefix || c.heading.startsWith("$prefix › "))
+            c.kind == DocIndex.Kind.DOC &&
+                c.source == top.source &&
+                (c.heading == prefix || c.heading.startsWith("$prefix › "))
         }
         if (matches.size <= 1) return top.text
 

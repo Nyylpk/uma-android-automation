@@ -64,6 +64,7 @@ class LLMChatModule(private val reactContext: ReactApplicationContext) : ReactCo
                     map.putString("text", r.chunk.text)
                     map.putDouble("score", r.score.toDouble())
                     map.putString("expandedText", r.expandedText)
+                    map.putString("kind", if (r.chunk.kind == DocIndex.Kind.CODE) "code" else "doc")
                     array.pushMap(map)
                 }
                 promise.resolve(array)
