@@ -443,8 +443,22 @@ const Chat = () => {
  *  hard-break (two spaces) so consecutive items become separate visual lines inside one paragraph instead of
  *  being collapsed by markdown's whitespace folding. Avoids the entire RN flex-marker layout class of bugs at
  *  the cost of nested-block-content inside list items, which the chatbot rarely produces. */
-function flattenLists(md: string): string {
+/** Fold GitHub-flavored HTML tags found in source-doc markdown into plain markdown equivalents that
+ *  react-native-marked can render. <details>/<summary> become a bold summary line followed by the body
+ *  (no collapse affordance — a non-goal for the chatbot UI). <strong>/<b> become bold markdown and <em>/<i>
+ *  become italic markdown so the marked tokenizer styles them instead of dumping raw text. */
+function foldHtmlTags(md: string): string {
     return md
+        .replace(/<details[^>]*>\s*<summary[^>]*>([\s\S]*?)<\/summary>([\s\S]*?)<\/details>/gi, (_, summary: string, body: string) => `**${summary.trim()}**\n\n${body.trim()}`)
+        .replace(/<\/?summary[^>]*>/gi, "")
+        .replace(/<\/?details[^>]*>/gi, "")
+        .replace(/<(?:strong|b)[^>]*>([\s\S]*?)<\/(?:strong|b)>/gi, "**$1**")
+        .replace(/<(?:em|i)[^>]*>([\s\S]*?)<\/(?:em|i)>/gi, "*$1*")
+        .replace(/<br\s*\/?>/gi, "  \n")
+}
+
+function flattenLists(md: string): string {
+    return foldHtmlTags(md)
         .split("\n")
         .map((line) => {
             const u = line.match(/^(\s*)[-*+]\s+(.*)$/)
