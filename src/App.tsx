@@ -2,6 +2,7 @@ import { NavigationContainer } from "@react-navigation/native"
 import { createDrawerNavigator } from "@react-navigation/drawer"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { useCallback } from "react"
+import { LogBox } from "react-native"
 import { PortalHost } from "@rn-primitives/portal"
 import { StatusBar } from "expo-status-bar"
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context"
@@ -35,6 +36,11 @@ export const Tag = "UAA"
 
 const Drawer = createDrawerNavigator()
 const Stack = createNativeStackNavigator()
+
+// Suppress deprecation warning from nativewind's transitive dependency
+// (react-native-css-interop registers RN's deprecated SafeAreaView via cssInterop).
+// Our own code uses SafeAreaView from react-native-safe-area-context.
+LogBox.ignoreLogs(["SafeAreaView has been deprecated"])
 
 /**
  * Stack navigator for Settings and all sub-pages.
