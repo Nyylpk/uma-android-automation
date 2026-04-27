@@ -51,6 +51,7 @@ This project is purely for educational purposes to learn about Android automatio
 - [x] Training Event customization per event for fine-grained control over choices.
 - [x] Load and manage profiles for the Training Settings to easily swap between different builds.
 - [x] A multitude of settings to configure including setting preferred stat targets per distance.
+- [x] Optional **Ask the Docs** on-device chatbot. Answers questions about the app grounded in `README.md`, `HOW_IT_WORKS.md`, in-app option descriptions, and the Kotlin source code via MiniLM embeddings + a downloaded GGUF model running fully offline through `llama.rn`. Hidden behind an opt-in toggle on the LLM Settings page; once enabled the page reveals model download, active-model selection (also switchable on the fly from the chat page itself), and generation tuning (max output tokens, per-citation context cap, model context window).
 
 # Instructions
 
@@ -155,3 +156,7 @@ This project is separated into a React Native frontend configured via Expo and a
 10. [Ktor - For the Remote Log Viewer](https://ktor.io/)
 11. [YOLOv8 - Object detection](https://github.com/ultralytics/ultralytics)
 12. [ONNX Runtime - Lightweight engine for executing the YOLOv8 model](https://onnxruntime.ai/)
+13. [llama.rn - On-device GGUF LLM inference for the Ask the Docs chatbot](https://github.com/mybigday/llama.rn)
+14. [sentence-transformers/all-MiniLM-L6-v2 - Embedding model powering retrieval over the docs and Kotlin source](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
+15. [Qwen 2.5 Instruct GGUF - Default chat model presets for the Ask the Docs chatbot](https://huggingface.co/Qwen)
+16. [react-native-marked - Renders the chatbot's Markdown answers and citations](https://github.com/gmsgowtham/react-native-marked)
