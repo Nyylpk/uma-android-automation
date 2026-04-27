@@ -1,6 +1,6 @@
 # How It Works
 
-*Last updated: 2026-04-23*
+*Last updated: 2026-04-27*
 
 A comprehensive guide to the inner workings of the app. This document explains what the bot does at each step of a campaign, how it makes decisions, and how each scenario differs.
 
@@ -17,6 +17,7 @@ A comprehensive guide to the inner workings of the app. This document explains w
 - [9. Scenario: URA Finale](#9-scenario-ura-finale)
 - [10. Scenario: Unity Cup](#10-scenario-unity-cup)
 - [11. Scenario: Trackblazer](#11-scenario-trackblazer)
+- [12. Ask the Docs Chatbot](#12-ask-the-docs-chatbot)
 
 ---
 
@@ -1090,3 +1091,104 @@ Trackblazer uses a specialized race selection algorithm (`findSuitableRace()`, f
 
 > [!NOTE]
 > The bot also tracks `lastRaceDistance` so that per-distance running strategies (see [Section 7.4](#74-race-execution)) can be resolved against the race that was actually selected.
+
+---
+
+## 12. Ask the Docs Chatbot
+
+An optional, fully offline documentation assistant that answers questions about the app. The pipeline is **retrieval-augmented**: a small embedding model finds the most relevant excerpts from the app's own docs and source code, and a downloaded GGUF chat model paraphrases them. The bot never reaches the network at runtime — every model and index ships locally.
+
+### 12.1 Overview & guarantees
+
+- **Opt-in.** Hidden until the user enables `Enable Ask the Docs feature` on the LLM Settings page. The toggle lives at `chat.enableAskTheDocs` in `BotStateContext` and gates both the drawer entry and the rest of the LLM Settings page.
+- **Retrieve-only fallback.** Even with no chat model downloaded — or when generation is rejected by the verifier — the user still gets a verbatim excerpt from the most-similar doc chunk. The feature degrades to "search" rather than failing.
+- **Three answer modes** surfaced as a label under each answer:
+    - `generated` — LLM paraphrase that passed the grounding check.
+    - `verifierFallback` — LLM produced an answer with too little overlap with the excerpts; the verbatim top citation is shown instead.
+    - `retrieveOnly` — no model loaded, or the model returned the `NOT_IN_DOCS` sentinel.
+
+```
+question
+   │
+   ▼
+(JS) Chat → bridge → searchDocs(q, 4)
+   │
+   ▼
+DocIndex top-k by cosine similarity
+   │
+   ▼
+ChatOrchestrator.expandSection() reassembles full sections
+   │
+   ├── no active model ─────────────────────────► retrieveOnly (verbatim)
+   │
+   ▼
+llama.rn generates an answer
+   │
+   ├── output == "NOT_IN_DOCS" ─────────────────► retrieveOnly (verbatim)
+   │
+   ▼
+groundingVerifier.overlap()
+   │
+   ├── overlap ≥ SUMMARY_THRESHOLD (0.3) ───────► generated (cite)
+   └── overlap <  SUMMARY_THRESHOLD ────────────► verifierFallback (verbatim)
+```
+
+### 12.2 Corpus & indexing
+
+The corpus is built **at compile time** by [scripts/build-doc-index.ts](scripts/build-doc-index.ts) and shipped as a binary asset that the app loads on first chat call. Sources covered:
+
+- `README.md` and `HOW_IT_WORKS.md` (this file).
+- The static option descriptions from [src/data/searchConfig.ts](src/data/searchConfig.ts) — same strings used by the in-app settings search.
+- The Kotlin source under [android/app/src/main/java/com/steve1316/uma_android_automation/](android/app/src/main/java/com/steve1316/uma_android_automation/), so questions about implementation are grounded in the actual code rather than docs only.
+
+The script splits each source into roughly section-sized **chunks** (each chunk keeps its `source` and hierarchical `heading` so citations stay readable), embeds them, and writes the binary index consumed by [DocIndex.kt](android/app/src/main/java/com/steve1316/uma_android_automation/llm/DocIndex.kt). The index format stores chunk metadata followed by a contiguous block of L2-normalized 384-dim float vectors — small enough to load fully into memory.
+
+### 12.3 Embedding pipeline
+
+The embedder is `sentence-transformers/all-MiniLM-L6-v2` running through **ONNX Runtime for Android**. The corpus build script and [EmbeddingService.kt](android/app/src/main/java/com/steve1316/uma_android_automation/llm/EmbeddingService.kt) use the same model so query and document vectors live in the same space.
+
+- **Tokenization** is BERT-style WordPiece, implemented in pure Kotlin in [WordPieceTokenizer.kt](android/app/src/main/java/com/steve1316/uma_android_automation/llm/WordPieceTokenizer.kt) (no JNI dependency on a native tokenizer). It does basic Unicode normalization + accent stripping, then greedy longest-match against the WordPiece vocab, with `[CLS]`/`[SEP]` framing and zero-padding to a fixed length.
+- **Pooling.** The model returns one vector per token; `EmbeddingService.meanPoolAndNormalize()` masks padding, mean-pools across real tokens, then L2-normalizes. After normalization, **dot product equals cosine similarity**, which lets retrieval skip the divide step entirely.
+- **Lazy init.** Both `EmbeddingService` and `DocIndex` are loaded once and cached using double-checked locking, so the first chat call pays the load cost and every subsequent call is cheap.
+
+### 12.4 Retrieval
+
+[ChatOrchestrator.kt](android/app/src/main/java/com/steve1316/uma_android_automation/llm/ChatOrchestrator.kt) is the single entry point used by the React Native bridge:
+
+1. Embed the query with `EmbeddingService`.
+2. Call `DocIndex.search(vector, k)`. With `TOP_K = 4` (see [src/pages/Chat/index.tsx](src/pages/Chat/index.tsx)) the chat page asks for four chunks; the search itself is a linear scan of normalized vectors — fast enough on-device given the small corpus.
+3. For each hit, `ChatOrchestrator.expandSection()` walks neighboring chunks of the same section heading and reassembles a larger excerpt (capped at `EXPANSION_CHAR_CAP`) so the LLM sees coherent prose instead of the truncated chunk window the indexer produced.
+
+Each result carries `source`, `heading`, `text` (raw chunk), `expandedText` (reassembled section), `score`, and a `kind` of `"doc"` or `"code"` — code citations render with Kotlin syntax highlighting and a `File.kt::member` heading; doc citations render as Markdown.
+
+### 12.5 Generation (optional)
+
+When a downloaded GGUF is present, [llamaRunner.ts](src/lib/chat/llamaRunner.ts) loads it through `llama.rn` and the [LLMChatModule.kt](android/app/src/main/java/com/steve1316/uma_android_automation/llm/LLMChatModule.kt) bridge. The system prompt:
+
+- Forbids verbatim copying — the model must paraphrase.
+- Caps target length at 4–10 sentences and forbids any `Answer:` prefix.
+- Tells the model to emit the literal sentinel `NOT_IN_DOCS` when the excerpts don't contain the answer. The Chat page treats that sentinel as a signal to drop into retrieve-only mode rather than show a hallucinated reply.
+
+Three knobs from [chatSettings.ts](src/lib/chat/chatSettings.ts) tune the generation step:
+
+- `maxOutputTokens` — hard cap on the answer length.
+- `llmCitationCharCap` — how much of each expanded citation is fed in. Larger cap → more material to summarize from; smaller cap → faster, fits more citations into the model's context window.
+- `modelContextWindow` — the engine KV-cache size (`n_ctx`). Changing it reloads the loaded model on the next chat call.
+
+### 12.6 Grounding verifier & failure modes
+
+Generated answers are not trusted blindly. [src/lib/chat/groundingVerifier.ts](src/lib/chat/groundingVerifier.ts) computes a token-overlap score between the generated answer and the (trimmed) citation excerpts:
+
+- `overlap >= SUMMARY_THRESHOLD` (0.3) → answer is accepted as `generated`. The Chat page also surfaces `grounding NN%` in the mode label so the user can judge confidence.
+- `overlap <  SUMMARY_THRESHOLD` → the generated text is discarded; the verbatim top citation is shown as `verifierFallback`. The rejected answer is kept on the result object for diagnostics but not displayed.
+
+This is deliberately conservative: if the model wandered off the docs, the user gets the source text instead of a confident-sounding fabrication.
+
+### 12.7 Model lifecycle
+
+Chat models are GGUF files downloaded at runtime by [ModelDownloader.kt](android/app/src/main/java/com/steve1316/uma_android_automation/llm/ModelDownloader.kt) using Android's system `DownloadManager`. The downloader exposes `pending → running → paused → complete | failed | error` state subtypes that the LLM Settings page subscribes to via a `NativeEventEmitter` for live progress.
+
+- **Storage.** Files land in app-private storage and are listed by `LLMChatModule.listModels()`.
+- **Active model.** The user's choice persists under `ACTIVE_MODEL_SETTING` (chat category, key `activeModelFilename`). It can be switched from the LLM Settings page **and** from the selector at the top of the Ask the Docs page — both go through the same write path so the change survives app restart.
+- **Race protection.** Because `EmbeddingService` and `DocIndex` are lazily initialized, downloading a chat model while a query is in flight can't corrupt embedding state — generation simply falls back to `retrieveOnly` for that one call and the next call picks up the newly active model.
+- **Deletion.** Per-file or bulk delete is offered from the Downloaded Models list; deleting the active file clears `ACTIVE_MODEL_SETTING` so the next chat call cleanly drops to retrieve-only.
