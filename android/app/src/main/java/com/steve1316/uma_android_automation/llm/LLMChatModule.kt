@@ -109,16 +109,23 @@ class LLMChatModule(private val reactContext: ReactApplicationContext) : ReactCo
      */
     @ReactMethod
     fun downloadModel(url: String, promise: Promise) {
+        // Reject overlapping downloads up front - DownloadManager would happily run two but the JS UI assumes
+        // a single in-flight job, and we'd risk losing the [downloadJob] reference for the older one.
         val existing = downloadJob
         if (existing != null && existing.isActive) {
             promise.reject("E_ALREADY_DOWNLOADING", "A model download is already in progress.")
             return
         }
+
+        // Snapshot the auth token at launch time so a later [setAuthToken] call doesn't reach into this
+        // already-running coroutine and change the auth header mid-download.
         val token = authToken
         val filename = filenameFromUrl(url)
         downloadJob =
             scope.launch {
                 try {
+                    // Forward each State emission to JS. Errors thrown out of the Flow (cancellation aside)
+                    // are surfaced as a synthetic "error" event so the UI can recover instead of hanging.
                     orchestrator.modelDownloader().download(url, filename, token).collect { state ->
                         emitDownloadState(state)
                     }
@@ -221,9 +228,14 @@ class LLMChatModule(private val reactContext: ReactApplicationContext) : ReactCo
      * @return The chosen local filename ending in `.gguf` or `.task`.
      */
     private fun filenameFromUrl(url: String): String {
+        // Strip query string and fragment first so something like `model.gguf?token=...` still parses to `model.gguf` rather than the raw URL tail.
         val noQuery = url.substringBefore('?').substringBefore('#')
         val last = noQuery.substringAfterLast('/', missingDelimiterValue = "").trim()
+
+        // Only accept the URL's basename when it actually looks like a model file. This guards against odd
+        // redirect tails that would otherwise persist as garbage filenames on disk.
         val isModel = last.endsWith(".gguf", ignoreCase = true) || last.endsWith(".task", ignoreCase = true)
+
         return if (last.isNotEmpty() && isModel) last else "chat-model.gguf"
     }
 
