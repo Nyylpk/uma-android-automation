@@ -9,6 +9,7 @@ import com.steve1316.uma_android_automation.bot.DialogHandlerResult
 import com.steve1316.uma_android_automation.bot.Game
 import com.steve1316.uma_android_automation.bot.MainScreenAction
 import com.steve1316.uma_android_automation.bot.Racing
+import com.steve1316.uma_android_automation.bot.SelectionSource
 import com.steve1316.uma_android_automation.components.ButtonBack
 import com.steve1316.uma_android_automation.components.ButtonCancel
 import com.steve1316.uma_android_automation.components.ButtonClose
@@ -1051,6 +1052,9 @@ class Trackblazer(game: Game) : Campaign(game) {
                     )
 
                     val bestTraining = training.recommendTraining(args = mapOf("isIrregularEvaluation" to true, "irregularTrainingMinStatGain" to minIrregularGain))
+                    if (bestTraining != null && training.lastSelectionSource != SelectionSource.ANALYSIS) {
+                        MessageLog.i(TAG, "[TRACKBLAZER] Pre-screen evaluation used fallback (${training.lastSelectionSource}): $bestTraining.")
+                    }
 
                     if (bestTraining != null) {
                         // Stay on the training screen in order to perform the training.
@@ -1479,6 +1483,9 @@ class Trackblazer(game: Game) : Campaign(game) {
         if (bIsIrregularTraining) {
             MessageLog.i(TAG, "[TRACKBLAZER] Using existing irregular training analysis (already on Training screen).")
             val trainingSelected: StatName? = training.recommendTraining(args = mapOf("isIrregularEvaluation" to true, "irregularTrainingMinStatGain" to minIrregularGain))
+            if (trainingSelected != null && training.lastSelectionSource != SelectionSource.ANALYSIS) {
+                MessageLog.i(TAG, "[TRACKBLAZER] On-screen evaluation used fallback (${training.lastSelectionSource}): $trainingSelected.")
+            }
 
             // Still use training items (megaphones, ankle weights, charms, energy, stat items, etc.)
             if (date.day >= 13) {
@@ -1509,6 +1516,9 @@ class Trackblazer(game: Game) : Campaign(game) {
         val hasCharm = date.day >= 13 && !bUsedCharmToday && (currentInventory["Good-Luck Charm"] ?: 0) > 0
         training.analyzeTrainings(mapOf("ignoreFailureChance" to hasCharm, "minStatGainForCharm" to minCharmGain))
         var trainingSelected: StatName? = training.recommendTraining()
+        if (trainingSelected != null && training.lastSelectionSource != SelectionSource.ANALYSIS) {
+            MessageLog.i(TAG, "[TRACKBLAZER] Initial training selection used fallback (${training.lastSelectionSource}): $trainingSelected.")
+        }
 
         // Finally, perform a consolidated item usage pass after the training is finalized.
         if (date.day >= 13) {
@@ -1535,6 +1545,20 @@ class Trackblazer(game: Game) : Campaign(game) {
                         MessageLog.i(TAG, "[TRACKBLAZER] Re-analyzing trainings after Reset Whistle.")
                         training.analyzeTrainings(mapOf("ignoreFailureChance" to hasCharm, "minStatGainForCharm" to minCharmGain))
                         trainingSelected = training.recommendTraining(forceSelection = whistleForcesTraining)
+                        when {
+                            trainingSelected == null ->
+                                MessageLog.i(TAG, "[TRACKBLAZER] Reset Whistle re-analysis returned no training; nothing to execute.")
+                            training.lastSelectionSource == SelectionSource.FORCED_FROM_SKIPPED ->
+                                MessageLog.i(
+                                    TAG,
+                                    "[TRACKBLAZER] Reset Whistle re-analysis still rejected all trainings; Whistle Forces Training is enabled, " +
+                                        "so executing forced pick: $trainingSelected. Megaphone (if available) will be applied to this forced selection.",
+                                )
+                            training.lastSelectionSource != SelectionSource.ANALYSIS ->
+                                MessageLog.i(TAG, "[TRACKBLAZER] Reset Whistle re-analysis used fallback (${training.lastSelectionSource}): $trainingSelected.")
+                            else ->
+                                MessageLog.i(TAG, "[TRACKBLAZER] Reset Whistle re-analysis selected: $trainingSelected.")
+                        }
 
                         // Perform another consolidated item usage pass if needed after shuffle.
                         useItems(trainee, trainingSelected)
