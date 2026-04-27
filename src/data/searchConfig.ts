@@ -833,20 +833,41 @@ const searchConfig: SearchOption[] = [
         id: "llm-ask-the-docs",
         title: "Ask the Docs",
         description:
-            "On-device documentation chatbot. Answers are grounded in README.md, HOW_IT_WORKS.md, and the in-app option descriptions, retrieved via MiniLM embeddings and cosine similarity. Fully offline.",
+            "On-device documentation chatbot. Answers are grounded in README.md, HOW_IT_WORKS.md, in-app option descriptions, and Kotlin source code, retrieved via MiniLM embeddings and cosine similarity. Fully offline.",
         page: "Chat",
     },
-{
+    {
+        id: "llm-model-url",
+        title: "Chat Model URL",
+        description:
+            "Hugging Face URL of the GGUF chat model to download. Pick a preset (Qwen 2.5, etc.) or choose Custom and paste any GGUF model URL.",
+        page: "LLMSettings",
+    },
+    {
+        id: "llm-hf-token",
+        title: "Hugging Face Access Token",
+        description:
+            "Optional bearer token sent with the model download request. Required for gated repos. Persisted under the chat category so it is never included in settings exports.",
+        page: "LLMSettings",
+    },
+    {
+        id: "llm-active-model",
+        title: "Active Chat Model",
+        description:
+            "Which downloaded GGUF model the chatbot uses for generation. Tap a downloaded model row to mark it active; falls back to the most recently downloaded one when no explicit selection is set.",
+        page: "LLMSettings",
+    },
+    {
         id: "llm-download-chat-model",
         title: "Download Chat Model",
         description:
-            "Downloads the ~530 MB Gemma 3 1B MediaPipe model file used for natural-language answers when Gemini Nano is unavailable. Stored in app-private storage; can be deleted later.",
+            "Downloads the selected GGUF chat model file (Qwen 2.5 1.5B Instruct ~1.1 GB by default) for llama.rn generation. Stored in app-private storage; can be deleted later.",
         page: "LLMSettings",
     },
     {
         id: "llm-delete-chat-model",
         title: "Delete Chat Model",
-        description: "Removes the downloaded chat model from disk to free ~530 MB. Retrieve-only search continues to work without the model.",
+        description: "Removes a downloaded chat model from disk to free space. Retrieve-only search continues to work without any model present.",
         page: "LLMSettings",
     },
     {
