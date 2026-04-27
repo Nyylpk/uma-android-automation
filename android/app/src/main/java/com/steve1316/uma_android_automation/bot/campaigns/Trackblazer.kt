@@ -9,6 +9,7 @@ import com.steve1316.uma_android_automation.bot.DialogHandlerResult
 import com.steve1316.uma_android_automation.bot.Game
 import com.steve1316.uma_android_automation.bot.MainScreenAction
 import com.steve1316.uma_android_automation.bot.Racing
+import com.steve1316.uma_android_automation.bot.SelectionSource
 import com.steve1316.uma_android_automation.components.ButtonBack
 import com.steve1316.uma_android_automation.components.ButtonCancel
 import com.steve1316.uma_android_automation.components.ButtonClose
@@ -1051,6 +1052,9 @@ class Trackblazer(game: Game) : Campaign(game) {
                     )
 
                     val bestTraining = training.recommendTraining(args = mapOf("isIrregularEvaluation" to true, "irregularTrainingMinStatGain" to minIrregularGain))
+                    if (bestTraining != null && training.lastSelectionSource != SelectionSource.ANALYSIS) {
+                        MessageLog.i(TAG, "[TRACKBLAZER] Pre-screen evaluation used fallback (${training.lastSelectionSource}): $bestTraining.")
+                    }
 
                     if (bestTraining != null) {
                         // Stay on the training screen in order to perform the training.
@@ -1479,6 +1483,9 @@ class Trackblazer(game: Game) : Campaign(game) {
         if (bIsIrregularTraining) {
             MessageLog.i(TAG, "[TRACKBLAZER] Using existing irregular training analysis (already on Training screen).")
             val trainingSelected: StatName? = training.recommendTraining(args = mapOf("isIrregularEvaluation" to true, "irregularTrainingMinStatGain" to minIrregularGain))
+            if (trainingSelected != null && training.lastSelectionSource != SelectionSource.ANALYSIS) {
+                MessageLog.i(TAG, "[TRACKBLAZER] On-screen evaluation used fallback (${training.lastSelectionSource}): $trainingSelected.")
+            }
 
             // Still use training items (megaphones, ankle weights, charms, energy, stat items, etc.)
             if (date.day >= 13) {
@@ -1509,6 +1516,9 @@ class Trackblazer(game: Game) : Campaign(game) {
         val hasCharm = date.day >= 13 && !bUsedCharmToday && (currentInventory["Good-Luck Charm"] ?: 0) > 0
         training.analyzeTrainings(mapOf("ignoreFailureChance" to hasCharm, "minStatGainForCharm" to minCharmGain))
         var trainingSelected: StatName? = training.recommendTraining()
+        if (trainingSelected != null && training.lastSelectionSource != SelectionSource.ANALYSIS) {
+            MessageLog.i(TAG, "[TRACKBLAZER] Initial training selection used fallback (${training.lastSelectionSource}): $trainingSelected.")
+        }
 
         // Finally, perform a consolidated item usage pass after the training is finalized.
         if (date.day >= 13) {
@@ -1535,6 +1545,20 @@ class Trackblazer(game: Game) : Campaign(game) {
                         MessageLog.i(TAG, "[TRACKBLAZER] Re-analyzing trainings after Reset Whistle.")
                         training.analyzeTrainings(mapOf("ignoreFailureChance" to hasCharm, "minStatGainForCharm" to minCharmGain))
                         trainingSelected = training.recommendTraining(forceSelection = whistleForcesTraining)
+                        when {
+                            trainingSelected == null ->
+                                MessageLog.i(TAG, "[TRACKBLAZER] Reset Whistle re-analysis returned no training; nothing to execute.")
+                            training.lastSelectionSource == SelectionSource.FORCED_FROM_SKIPPED ->
+                                MessageLog.i(
+                                    TAG,
+                                    "[TRACKBLAZER] Reset Whistle re-analysis still rejected all trainings; Whistle Forces Training is enabled, " +
+                                        "so executing forced pick: $trainingSelected. Megaphone (if available) will be applied to this forced selection.",
+                                )
+                            training.lastSelectionSource != SelectionSource.ANALYSIS ->
+                                MessageLog.i(TAG, "[TRACKBLAZER] Reset Whistle re-analysis used fallback (${training.lastSelectionSource}): $trainingSelected.")
+                            else ->
+                                MessageLog.i(TAG, "[TRACKBLAZER] Reset Whistle re-analysis selected: $trainingSelected.")
+                        }
 
                         // Perform another consolidated item usage pass if needed after shuffle.
                         useItems(trainee, trainingSelected)
@@ -1817,6 +1841,10 @@ class Trackblazer(game: Game) : Campaign(game) {
 
         val itemsUsedWithReasons = mutableListOf<Pair<String, String>>()
         val itemNameMapInManage = mutableMapOf<Int, String>()
+        // Snapshot energy at the start of the pass so the energy-item threshold gate stays
+        // open after earlier items in the same pass raise `trainee.energy`. The greedy
+        // selection in `isBestEnergyItemToUse` still drives which specific items are queued.
+        val passStartEnergy = trainee?.energy ?: 0
         shopList.processItemsWithFallback(
             keyExtractor = { entry ->
                 val name = shopList.getShopItemName(entry, ButtonSkillUp.checkDisabled(game.imageUtils, entry.bitmap) == true)
@@ -1893,7 +1921,7 @@ class Trackblazer(game: Game) : Campaign(game) {
                             }
                         } else if (trainee != null) {
                             // Handle Energy, Mood, Ankle Weights, Charm, Megaphones, etc.
-                            val reason = handleInlineUsage(trainee, itemName, entry, isDisabled, trainingSelected, nextInventory, remainingItemsOfInterest)
+                            val reason = handleInlineUsage(trainee, itemName, entry, isDisabled, trainingSelected, nextInventory, remainingItemsOfInterest, passStartEnergy)
                             if (reason != null) {
                                 itemsUsedCount++
                                 itemsUsedWithReasons.add(itemName to reason)
@@ -1986,6 +2014,8 @@ class Trackblazer(game: Game) : Campaign(game) {
      * @param trainingSelected The stat name of the selected training.
      * @param nextInventory The updated inventory map reflecting changes in this pass.
      * @param remainingItemsOfInterest The set of items we are still looking for.
+     * @param passStartEnergy Trainee energy snapshotted at the start of the pass; used by the
+     *   energy-item threshold gate so it does not close mid-pass after earlier items raise energy.
      * @return The specific reason why the item was used, or null if not used.
      */
     private fun handleInlineUsage(
@@ -1996,6 +2026,7 @@ class Trackblazer(game: Game) : Campaign(game) {
         trainingSelected: StatName?,
         nextInventory: MutableMap<String, Int>,
         remainingItemsOfInterest: Set<String>,
+        passStartEnergy: Int,
     ): String? {
         if (isDisabled) return null
 
@@ -2035,7 +2066,7 @@ class Trackblazer(game: Game) : Campaign(game) {
                 (date.day >= 13 && failureChance >= 20 && (nextInventory["Good-Luck Charm"] ?: 0) > 0)
 
         // Energy Items Check.
-        if (!charmBeingUsedThisTurn && trainee.energy <= energyThresholdToUseEnergyItems && shopList.energyItemNames.contains(itemName)) {
+        if (!charmBeingUsedThisTurn && passStartEnergy <= energyThresholdToUseEnergyItems && shopList.energyItemNames.contains(itemName)) {
             // Conservation: always keep the last unit of the lowest-level energy item for emergency race recovery.
             if (!bForceUseReservedItem) {
                 val conserveItem = energyItemConservationOrder.firstOrNull { (nextInventory[it] ?: 0) > 0 }
@@ -2047,7 +2078,7 @@ class Trackblazer(game: Game) : Campaign(game) {
 
             if (isBestEnergyItemToUse(trainee, itemName, nextInventory, remainingItemsOfInterest)) {
                 val gain = energyGains[itemName] ?: 0
-                val reason = "Restored energy (current: ${trainee.energy}%) because it fell below the $energyThresholdToUseEnergyItems% threshold."
+                val reason = "Restored energy (current: ${trainee.energy}%, pass start: $passStartEnergy%) because it fell below the $energyThresholdToUseEnergyItems% threshold."
                 if (clickItemPlusButton(itemName, entry, "[TRACKBLAZER] Queuing $itemName for use (Energy: ${trainee.energy}%, Gain: +$gain).", nextInventory, reason = reason)) {
                     val oldEnergy = trainee.energy
                     trainee.energy = (trainee.energy + gain).coerceAtMost(100)
