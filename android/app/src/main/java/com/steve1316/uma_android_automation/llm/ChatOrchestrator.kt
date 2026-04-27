@@ -16,6 +16,7 @@ import com.steve1316.automation_library.data.SharedData
  */
 class ChatOrchestrator(private val context: Context) {
     @Volatile private var embedder: EmbeddingService? = null
+
     @Volatile private var index: DocIndex? = null
 
     private val downloader = ModelDownloader(context)
@@ -71,35 +72,42 @@ class ChatOrchestrator(private val context: Context) {
      * overlap from each non-first chunk, and joins. Returns [top]'s own text when no siblings exist.
      */
     private fun expandSection(top: DocIndex.Chunk): String {
-        // Code chunks are already self-contained at function/class granularity — no surrounding-section
+        // Code chunks are already self-contained at function/class granularity - no surrounding-section
         // reassembly to do. Return the chunk text verbatim (it already includes the leading KDoc).
         if (top.kind == DocIndex.Kind.CODE) return top.text
 
         val idx = index ?: return top.text
         val prefix = top.heading
-        val matches = idx.chunks.filter { c ->
-            c.kind == DocIndex.Kind.DOC &&
-                c.source == top.source &&
-                (c.heading == prefix || c.heading.startsWith("$prefix › "))
-        }
+        val matches =
+            idx.chunks.filter { c ->
+                c.kind == DocIndex.Kind.DOC &&
+                    c.source == top.source &&
+                    (c.heading == prefix || c.heading.startsWith("$prefix › "))
+            }
         if (matches.size <= 1) return top.text
 
-        val byFlush = matches.groupBy { c ->
-            c.id.substringAfterLast('#').substringBefore('-').toIntOrNull() ?: 0
-        }.toSortedMap()
+        val byFlush =
+            matches.groupBy { c ->
+                c.id.substringAfterLast('#').substringBefore('-').toIntOrNull() ?: 0
+            }.toSortedMap()
 
-        val parts = byFlush.values.map { group ->
-            val sorted = group.sortedBy { c ->
-                c.id.substringAfterLast('#').substringAfter('-').toIntOrNull() ?: 0
-            }
-            sorted.withIndex().joinToString("\n") { (i, c) ->
-                if (i == 0) c.text else dropLeadingWords(c.text, CHUNK_OVERLAP_WORDS)
-            }.trim()
-        }.filter { it.isNotEmpty() }
+        val parts =
+            byFlush.values.map { group ->
+                val sorted =
+                    group.sortedBy { c ->
+                        c.id.substringAfterLast('#').substringAfter('-').toIntOrNull() ?: 0
+                    }
+                sorted.withIndex().joinToString("\n") { (i, c) ->
+                    if (i == 0) c.text else dropLeadingWords(c.text, CHUNK_OVERLAP_WORDS)
+                }.trim()
+            }.filter { it.isNotEmpty() }
 
         val combined = parts.joinToString("\n\n")
-        return if (combined.length <= EXPANSION_CHAR_CAP) combined
-        else combined.take(EXPANSION_CHAR_CAP).substringBeforeLast(' ') + "…"
+        return if (combined.length <= EXPANSION_CHAR_CAP) {
+            combined
+        } else {
+            combined.take(EXPANSION_CHAR_CAP).substringBeforeLast(' ') + "…"
+        }
     }
 
     private fun dropLeadingWords(text: String, n: Int): String {

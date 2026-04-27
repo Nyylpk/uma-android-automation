@@ -31,6 +31,7 @@ class LLMChatModule(private val reactContext: ReactApplicationContext) : ReactCo
     private val scope = CoroutineScope(Dispatchers.Default)
 
     @Volatile private var downloadJob: Job? = null
+
     @Volatile private var authToken: String? = null
 
     companion object {
@@ -93,16 +94,17 @@ class LLMChatModule(private val reactContext: ReactApplicationContext) : ReactCo
         }
         val token = authToken
         val filename = filenameFromUrl(url)
-        downloadJob = scope.launch {
-            try {
-                orchestrator.modelDownloader().download(url, filename, token).collect { state ->
-                    emitDownloadState(state)
+        downloadJob =
+            scope.launch {
+                try {
+                    orchestrator.modelDownloader().download(url, filename, token).collect { state ->
+                        emitDownloadState(state)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "downloadModel:: failed: ${e.message}", e)
+                    emitDownloadStateRaw("error", 0, 0, e.message)
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "downloadModel:: failed: ${e.message}", e)
-                emitDownloadStateRaw("error", 0, 0, e.message)
             }
-        }
         promise.resolve(null)
     }
 

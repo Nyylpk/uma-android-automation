@@ -67,7 +67,7 @@ describe("chatSettings", () => {
 
         it("breaks on the last word boundary and adds an ellipsis", () => {
             const text = "alpha beta gamma delta epsilon zeta"
-            // Cap of 17 chars: "alpha beta gamma " — last space at index 16; truncate to 16 then add "…"
+            // Cap of 17 chars: "alpha beta gamma " - last space at index 16; truncate to 16 then add "…"
             expect(trimToCap(text, 17)).toBe("alpha beta gamma…")
         })
 

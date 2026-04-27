@@ -12,7 +12,7 @@ import kotlin.math.sqrt
 /**
  * Produces fixed-size sentence embeddings from text using MiniLM-L6-v2 (int8 quantized) via ONNX Runtime.
  *
- * Embeddings are 384-dimensional, mean-pooled over non-PAD token positions and L2-normalized — matching the reference
+ * Embeddings are 384-dimensional, mean-pooled over non-PAD token positions and L2-normalized - matching the reference
  * output of the `sentence-transformers/all-MiniLM-L6-v2` Python model so vectors produced here are directly comparable
  * via cosine similarity with vectors produced by the build-time indexer.
  *
@@ -30,7 +30,7 @@ class EmbeddingService(private val context: Context) {
         private const val MODEL_PATH = "llm/minilm-l6-v2-int8.onnx"
         private const val VOCAB_PATH = "llm/minilm-l6-v2-vocab.txt"
 
-        /** Output embedding dimensionality — fixed by the MiniLM-L6-v2 architecture. */
+        /** Output embedding dimensionality - fixed by the MiniLM-L6-v2 architecture. */
         const val EMBEDDING_DIM = 384
     }
 
@@ -45,21 +45,23 @@ class EmbeddingService(private val context: Context) {
      * @return A normalized float array of length [EMBEDDING_DIM], or null if the model is not loaded.
      */
     fun embed(text: String): FloatArray? {
-        val s = session ?: run {
-            Log.w(TAG, "embed:: session not initialized; returning null")
-            return null
-        }
+        val s =
+            session ?: run {
+                Log.w(TAG, "embed:: session not initialized; returning null")
+                return null
+            }
         val encoded = tokenizer.encode(text)
         val shape = longArrayOf(1, encoded.seqLen.toLong())
 
         OnnxTensor.createTensor(ortEnv, LongBuffer.wrap(encoded.inputIds), shape).use { ids ->
             OnnxTensor.createTensor(ortEnv, LongBuffer.wrap(encoded.attentionMask), shape).use { mask ->
                 OnnxTensor.createTensor(ortEnv, LongBuffer.wrap(encoded.tokenTypeIds), shape).use { types ->
-                    val inputs = mapOf(
-                        "input_ids" to ids,
-                        "attention_mask" to mask,
-                        "token_type_ids" to types,
-                    )
+                    val inputs =
+                        mapOf(
+                            "input_ids" to ids,
+                            "attention_mask" to mask,
+                            "token_type_ids" to types,
+                        )
                     s.run(inputs).use { result ->
                         @Suppress("UNCHECKED_CAST")
                         val hidden = result[0].value as Array<Array<FloatArray>>

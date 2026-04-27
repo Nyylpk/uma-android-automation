@@ -38,7 +38,7 @@ describe("groundingVerifier", () => {
 
     describe("isGrounded", () => {
         it("uses DEFAULT_THRESHOLD when none is given", () => {
-            // overlap = 0.5 → above default 0.4
+            // overlap = 0.5 -> above default 0.4
             const answer = "speed stamina power guts"
             const context = ["speed stamina"]
             expect(overlap(answer, context)).toBe(0.5)
@@ -46,7 +46,7 @@ describe("groundingVerifier", () => {
         })
 
         it("respects an explicit lower threshold (SUMMARY_THRESHOLD)", () => {
-            // overlap = 0.333... → below DEFAULT (0.4) but above SUMMARY (0.3)
+            // overlap = 0.333... -> below DEFAULT (0.4) but above SUMMARY (0.3)
             const answer = "speed stamina power"
             const context = ["speed only"]
             expect(isGrounded(answer, context, DEFAULT_THRESHOLD)).toBe(false)

@@ -45,10 +45,10 @@ const SYSTEM_INSTRUCTIONS =
     "You are a friendly documentation guide for an Android automation app. The excerpts may include user-facing documentation (markdown) or Kotlin source code from the implementation; explain functionality drawn from the code in plain language rather than echoing the code back. Using only the excerpts provided in this conversation, write a detailed, well-structured explanation that answers the user's question.\n\n" +
     "Rules:\n" +
     "- Paraphrase in your own words. Do NOT copy sentences verbatim from the excerpts.\n" +
-    "- Aim for 4–10 sentences depending on how much the excerpts cover. Use multiple short paragraphs and bullet lists where they aid clarity.\n" +
-    "- Do NOT prefix output with \"Answer:\" or repeat the question.\n" +
+    "- Aim for 4-10 sentences depending on how much the excerpts cover. Use multiple short paragraphs and bullet lists where they aid clarity.\n" +
+    '- Do NOT prefix output with "Answer:" or repeat the question.\n' +
     "- Only use facts that appear in the excerpts. Do not invent features, numbers, button names, or behavior.\n" +
-    '- If the excerpts do not answer the question, reply with exactly: NOT_IN_DOCS'
+    "- If the excerpts do not answer the question, reply with exactly: NOT_IN_DOCS"
 
 const Chat = () => {
     const { colors, isDark } = useTheme()
@@ -113,7 +113,12 @@ const Chat = () => {
 
         try {
             const citations = (await NativeModules.LLMChatModule.searchDocs(q, TOP_K)) as DocResult[]
-            console.log("[Chat] retrieval:", citations.length, "chunks", citations.map((c) => `${c.source}#${c.id} (${(c.score * 100).toFixed(0)}%)`))
+            console.log(
+                "[Chat] retrieval:",
+                citations.length,
+                "chunks",
+                citations.map((c) => `${c.source}#${c.id} (${(c.score * 100).toFixed(0)}%)`)
+            )
 
             if (citations.length === 0) {
                 setResult({ answer: "No matching documentation found.", mode: "retrieveOnly", citations: [] })
@@ -423,9 +428,7 @@ const Chat = () => {
                         {result.citations.map((r) => (
                             <View key={r.id} style={styles.resultCard}>
                                 <Text style={styles.resultHeading}>{citationHeading(r)}</Text>
-                                <Text style={styles.resultMeta}>
-                                    {`${r.source} · similarity ${(r.score * 100).toFixed(0)}%`}
-                                </Text>
+                                <Text style={styles.resultMeta}>{`${r.source} · similarity ${(r.score * 100).toFixed(0)}%`}</Text>
                                 {r.kind === "code" ? (
                                     <View style={styles.codeBlock}>
                                         <KotlinCode text={r.text} palette={isDark ? DARK_PALETTE : LIGHT_PALETTE} style={{ fontSize: 10, lineHeight: 18 }} />

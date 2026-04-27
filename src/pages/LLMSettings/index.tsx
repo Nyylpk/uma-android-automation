@@ -14,7 +14,7 @@ import { ACTIVE_MODEL_SETTING } from "../../lib/chat/activeModel"
 const MODEL_URL_SETTING = { category: "chat", key: "modelUrl" } as const
 /**
  * Hugging Face access token persistence key. Lives under the "chat" category, not BotStateContext, so it is
- * NOT included in settings exports — a token is a user-specific secret and must never leak into a shared JSON.
+ * NOT included in settings exports - a token is a user-specific secret and must never leak into a shared JSON.
  */
 const HF_TOKEN_SETTING = { category: "chat", key: "hfToken" } as const
 const MAX_OUTPUT_TOKENS_SETTING = { category: "chat", key: "maxOutputTokens" } as const
@@ -22,10 +22,10 @@ const CITATION_CHAR_CAP_SETTING = { category: "chat", key: "llmCitationCharCap" 
 const MODEL_CONTEXT_WINDOW_SETTING = { category: "chat", key: "modelContextWindow" } as const
 
 /** Sentinel `url` for the Custom preset card. Persisted as the user's `modelUrl` when they pick "Custom" but
- *  haven't yet pasted a real URL — the URL/token TextInputs become visible so they can fill them in. */
+ *  haven't yet pasted a real URL - the URL/token TextInputs become visible so they can fill them in. */
 const CUSTOM_URL_SENTINEL = "__custom__"
 
-/** Known Qwen 2.5 Instruct GGUF models for llama.rn. All Q4_K_M quants — the size/quality sweet spot. Sizes
+/** Known Qwen 2.5 Instruct GGUF models for llama.rn. All Q4_K_M quants - the size/quality sweet spot. Sizes
  *  verified against the official Qwen Hugging Face repos. These repos are public (no HF token required). */
 const MODEL_PRESETS: Array<{ label: string; detail: string; url: string }> = [
     {
@@ -130,7 +130,7 @@ const LLMSettings = () => {
                     if (typeof ctxWindow === "number") setModelContextWindow(ctxWindow)
                 }
             } catch {
-                // First run or DB not initialized — keep defaults.
+                // First run or DB not initialized - keep defaults.
             }
             refreshModels()
         })()
@@ -139,18 +139,15 @@ const LLMSettings = () => {
         }
     }, [refreshModels])
 
-    const handleSelectActiveModel = useCallback(
-        (filename: string) => {
-            setActiveModelFilename(filename)
-            NativeModules.LLMChatModule.setActiveModel(filename)
-            databaseManager.saveSetting(ACTIVE_MODEL_SETTING.category, ACTIVE_MODEL_SETTING.key, filename, true).catch(() => undefined)
-        },
-        []
-    )
+    const handleSelectActiveModel = useCallback((filename: string) => {
+        setActiveModelFilename(filename)
+        NativeModules.LLMChatModule.setActiveModel(filename)
+        databaseManager.saveSetting(ACTIVE_MODEL_SETTING.category, ACTIVE_MODEL_SETTING.key, filename, true).catch(() => undefined)
+    }, [])
 
     const handleDeleteModelFile = useCallback(
         (filename: string) => {
-            Alert.alert("Delete this model?", `Removes ${filename} (~${(downloadedModels.find((m) => m.filename === filename)?.sizeBytes ?? 0) / 1024 / 1024 | 0} MB) from disk.`, [
+            Alert.alert("Delete this model?", `Removes ${filename} (~${((downloadedModels.find((m) => m.filename === filename)?.sizeBytes ?? 0) / 1024 / 1024) | 0} MB) from disk.`, [
                 { text: "Cancel", style: "cancel" },
                 {
                     text: "Delete",
@@ -193,7 +190,7 @@ const LLMSettings = () => {
     }, [commitMaxOutputTokens, commitLlmCitationCharCap, commitModelContextWindow])
 
     /** Warn when the active model's filename advertises a baked-in KV cache smaller than the requested context window
-     *  — only relevant for legacy Gemma `_ekvN.task` files; modern GGUF models advertise their context window
+     *  - only relevant for legacy Gemma `_ekvN.task` files; modern GGUF models advertise their context window
      *  in metadata and llama.rn honors `n_ctx` directly. */
     const ekvCapWarning = useMemo(() => {
         const active = activeModelFilename ?? downloadedModels[0]?.filename
@@ -214,7 +211,6 @@ const LLMSettings = () => {
         databaseManager.saveSetting(MODEL_URL_SETTING.category, MODEL_URL_SETTING.key, url, true).catch(() => undefined)
     }, [])
 
-
     useEffect(() => {
         const emitter = new NativeEventEmitter(NativeModules.LLMChatModule)
         const sub = emitter.addListener("LLMChatModule.DownloadState", (state: DownloadState) => {
@@ -234,7 +230,7 @@ const LLMSettings = () => {
         const preset = MODEL_PRESETS.find((p) => p.url === modelUrl && p.url !== CUSTOM_URL_SENTINEL)
         const title = preset ? `Download ${preset.label.split(" (")[0]}?` : "Download custom model?"
         const body = preset
-            ? `${preset.label}\n\n${preset.detail}\n\nGated on Hugging Face — accept the license on the model page and paste a read-access token below before downloading. Prefer Wi-Fi.`
+            ? `${preset.label}\n\n${preset.detail}\n\nGated on Hugging Face - accept the license on the model page and paste a read-access token below before downloading. Prefer Wi-Fi.`
             : `Downloading from:\n${modelUrl}\n\nGated models require an accepted license and a read-access token. Prefer Wi-Fi.`
         Alert.alert(title, body, [
             { text: "Cancel", style: "cancel" },
@@ -279,15 +275,9 @@ const LLMSettings = () => {
 
     /** Custom is selected when the user explicitly chose it (sentinel persisted) or when the persisted URL
      *  doesn't match any Qwen preset. The latter case keeps existing custom-URL setups visible after upgrade. */
-    const isCustomSelected = useMemo(
-        () => modelUrl === CUSTOM_URL_SENTINEL || !MODEL_PRESETS.some((p) => p.url === modelUrl),
-        [modelUrl]
-    )
+    const isCustomSelected = useMemo(() => modelUrl === CUSTOM_URL_SENTINEL || !MODEL_PRESETS.some((p) => p.url === modelUrl), [modelUrl])
 
-    const selectedFilename = useMemo(
-        () => (modelUrl === CUSTOM_URL_SENTINEL ? "" : filenameFromUrl(modelUrl)),
-        [modelUrl]
-    )
+    const selectedFilename = useMemo(() => (modelUrl === CUSTOM_URL_SENTINEL ? "" : filenameFromUrl(modelUrl)), [modelUrl])
     const selectedAlreadyDownloaded = useMemo(() => downloadedModels.some((m) => m.filename === selectedFilename), [downloadedModels, selectedFilename])
 
     const progressText = useMemo(() => {
@@ -381,58 +371,58 @@ const LLMSettings = () => {
                     {downloadedModels.length === 0 && <Text style={styles.statusRow}>Not downloaded</Text>}
                     <>
                         <Text style={styles.hint}>
-                            The Qwen presets are public, no token required. Bigger models summarize better but need more RAM and download time. Pick Custom to paste a different .gguf URL; the
-                            token field will appear if the source is gated.
+                            The Qwen presets are public, no token required. Bigger models summarize better but need more RAM and download time. Pick Custom to paste a different .gguf URL; the token
+                            field will appear if the source is gated.
                         </Text>
-                            {MODEL_PRESETS.map((p) => {
-                                const selected = p.url === CUSTOM_URL_SENTINEL ? isCustomSelected : modelUrl === p.url
-                                const onPress =
-                                    p.url === CUSTOM_URL_SENTINEL
-                                        ? () => {
-                                              if (MODEL_PRESETS.some((q) => q.url !== CUSTOM_URL_SENTINEL && q.url === modelUrl)) {
-                                                  persistModelUrl(CUSTOM_URL_SENTINEL)
-                                              }
+                        {MODEL_PRESETS.map((p) => {
+                            const selected = p.url === CUSTOM_URL_SENTINEL ? isCustomSelected : modelUrl === p.url
+                            const onPress =
+                                p.url === CUSTOM_URL_SENTINEL
+                                    ? () => {
+                                          if (MODEL_PRESETS.some((q) => q.url !== CUSTOM_URL_SENTINEL && q.url === modelUrl)) {
+                                              persistModelUrl(CUSTOM_URL_SENTINEL)
                                           }
-                                        : () => persistModelUrl(p.url)
-                                return (
-                                    <Pressable key={p.url} style={[styles.presetCard, selected && styles.presetCardSelected]} onPress={onPress}>
-                                        <Text style={styles.presetLabel}>{p.label}</Text>
-                                        <Text style={styles.presetDetail}>{p.detail}</Text>
-                                    </Pressable>
-                                )
-                            })}
-                            {isCustomSelected && (
-                                <>
-                                    <View style={styles.linkRowContainer}>
-                                        {modelUrl !== CUSTOM_URL_SENTINEL && modelUrl.trim().length > 0 && (
-                                            <Pressable style={styles.linkRow} onPress={() => Linking.openURL(modelUrl.replace(/\/resolve\/main\/.*$/, ""))}>
-                                                <Text style={styles.link}>Open selected model page</Text>
-                                            </Pressable>
-                                        )}
-                                        <Pressable style={styles.linkRow} onPress={() => Linking.openURL("https://huggingface.co/settings/tokens")}>
-                                            <Text style={styles.link}>Create token</Text>
+                                      }
+                                    : () => persistModelUrl(p.url)
+                            return (
+                                <Pressable key={p.url} style={[styles.presetCard, selected && styles.presetCardSelected]} onPress={onPress}>
+                                    <Text style={styles.presetLabel}>{p.label}</Text>
+                                    <Text style={styles.presetDetail}>{p.detail}</Text>
+                                </Pressable>
+                            )
+                        })}
+                        {isCustomSelected && (
+                            <>
+                                <View style={styles.linkRowContainer}>
+                                    {modelUrl !== CUSTOM_URL_SENTINEL && modelUrl.trim().length > 0 && (
+                                        <Pressable style={styles.linkRow} onPress={() => Linking.openURL(modelUrl.replace(/\/resolve\/main\/.*$/, ""))}>
+                                            <Text style={styles.link}>Open selected model page</Text>
                                         </Pressable>
-                                    </View>
-                                    <TextInput
-                                        style={styles.tokenInput}
-                                        value={hfToken}
-                                        onChangeText={persistHfToken}
-                                        placeholder="hf_... (only for gated repos)"
-                                        placeholderTextColor={colors.mutedForeground}
-                                        autoCapitalize="none"
-                                        autoCorrect={false}
-                                    />
-                                    <TextInput
-                                        style={styles.tokenInput}
-                                        value={modelUrl === CUSTOM_URL_SENTINEL ? "" : modelUrl}
-                                        onChangeText={persistModelUrl}
-                                        placeholder="Model .gguf URL"
-                                        placeholderTextColor={colors.mutedForeground}
-                                        autoCapitalize="none"
-                                        autoCorrect={false}
-                                    />
-                                </>
-                            )}
+                                    )}
+                                    <Pressable style={styles.linkRow} onPress={() => Linking.openURL("https://huggingface.co/settings/tokens")}>
+                                        <Text style={styles.link}>Create token</Text>
+                                    </Pressable>
+                                </View>
+                                <TextInput
+                                    style={styles.tokenInput}
+                                    value={hfToken}
+                                    onChangeText={persistHfToken}
+                                    placeholder="hf_... (only for gated repos)"
+                                    placeholderTextColor={colors.mutedForeground}
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                />
+                                <TextInput
+                                    style={styles.tokenInput}
+                                    value={modelUrl === CUSTOM_URL_SENTINEL ? "" : modelUrl}
+                                    onChangeText={persistModelUrl}
+                                    placeholder="Model .gguf URL"
+                                    placeholderTextColor={colors.mutedForeground}
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                />
+                            </>
+                        )}
                     </>
                     {progressText && <Text style={styles.hint}>{progressText}</Text>}
                     <View style={styles.buttonRow}>
@@ -496,12 +486,10 @@ const LLMSettings = () => {
                             <Text style={styles.link}>Reset to defaults</Text>
                         </Pressable>
                     </View>
-                    <Text style={styles.hint}>
-                        Bigger numbers = longer, slower answers. Changes apply to the next chat call. Engine context window changes reload the loaded model.
-                    </Text>
+                    <Text style={styles.hint}>Bigger numbers = longer, slower answers. Changes apply to the next chat call. Engine context window changes reload the loaded model.</Text>
                     <CustomSlider
                         label="Max output tokens"
-                        description="Upper bound on answer length. 768 default is enough for 4–10 sentences; 1024+ slows generation noticeably on phones."
+                        description="Upper bound on answer length. 768 default is enough for 4-10 sentences; 1024+ slows generation noticeably on phones."
                         value={maxOutputTokens}
                         onValueChange={setMaxOutputTokens}
                         onSlidingComplete={commitMaxOutputTokens}
@@ -532,7 +520,10 @@ const LLMSettings = () => {
                     {ekvCapWarning && <Text style={styles.warningHint}>{ekvCapWarning}</Text>}
                 </View>
 
-                <WarningContainer>Generated answers may occasionally be wrong or phrased imprecisely. A verifier guards against clear hallucinations by falling back to showing the source text verbatim, but always cross-check important answers against the full docs.</WarningContainer>
+                <WarningContainer>
+                    Generated answers may occasionally be wrong or phrased imprecisely. A verifier guards against clear hallucinations by falling back to showing the source text verbatim, but always
+                    cross-check important answers against the full docs.
+                </WarningContainer>
             </ScrollView>
         </View>
     )

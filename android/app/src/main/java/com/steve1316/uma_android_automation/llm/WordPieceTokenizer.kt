@@ -12,7 +12,7 @@ import java.text.Normalizer
  * `input_ids` tensor.
  *
  * Not a general-purpose tokenizer: only supports the subset of BERT's behavior needed for embedding short
- * English queries and document chunks — lowercase, strip accents, split on whitespace + punctuation, no
+ * English queries and document chunks - lowercase, strip accents, split on whitespace + punctuation, no
  * basic-tokenizer cjk handling, no [UNK] bookkeeping beyond id 100.
  *
  * @property vocab Map from wordpiece string (including ``##`` continuations) to vocabulary id.
@@ -140,10 +140,11 @@ class WordPieceTokenizer(private val vocab: Map<String, Int>) {
             var end = chars.size
             var matched: String? = null
             while (start < end) {
-                val substr = buildString {
-                    if (start > 0) append("##")
-                    for (i in start until end) append(chars[i])
-                }
+                val substr =
+                    buildString {
+                        if (start > 0) append("##")
+                        for (i in start until end) append(chars[i])
+                    }
                 if (vocab.containsKey(substr)) {
                     matched = substr
                     break

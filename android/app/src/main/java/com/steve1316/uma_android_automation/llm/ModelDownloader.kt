@@ -16,7 +16,7 @@ import java.io.File
  * app-private storage using Android [DownloadManager], so the APK stays lean and the download shows up in the
  * system notification shade with cancel and pause support.
  *
- * Downloads land at [modelFile] under `context.getExternalFilesDir("llm")`, which is app-private — no storage
+ * Downloads land at [modelFile] under `context.getExternalFilesDir("llm")`, which is app-private - no storage
  * permission required. Delete via [delete] when the user wants to reclaim space.
  *
  * @property context Application context.
@@ -35,7 +35,7 @@ class ModelDownloader(private val context: Context) {
      *
      * Uses app-private external storage (`getExternalFilesDir`) rather than `filesDir` because DownloadManager runs
      * in a separate system process and cannot write into `/data/data/<pkg>/` ("Unsupported path" error). Still
-     * app-scoped — no storage permission and auto-deleted on uninstall — just a different filesystem.
+     * app-scoped - no storage permission and auto-deleted on uninstall - just a different filesystem.
      */
     private val baseDir: File by lazy {
         context.getExternalFilesDir(LLM_DIR) ?: File(context.filesDir, LLM_DIR).also { it.mkdirs() }
@@ -76,9 +76,13 @@ class ModelDownloader(private val context: Context) {
      */
     sealed class State {
         object Pending : State()
+
         data class Running(val bytesDownloaded: Long, val bytesTotal: Long) : State()
+
         data class Paused(val bytesDownloaded: Long, val bytesTotal: Long) : State()
+
         data class Failed(val failureReason: Int) : State()
+
         object Complete : State()
     }
 
@@ -90,40 +94,42 @@ class ModelDownloader(private val context: Context) {
      * @param url HTTPS URL of the model file.
      * @return Cold [Flow] that begins the download when collected.
      */
-    fun download(url: String, filename: String, authToken: String? = null): Flow<State> = flow {
-        val dest = fileFor(filename)
-        // Only replace this specific filename if it already exists; other downloaded models stay on-device so the
-        // user can keep multiple variants and swap between them from LLM Settings.
-        if (dest.exists()) dest.delete()
-        val request = DownloadManager.Request(Uri.parse(url))
-            .setTitle("Uma Chat Model")
-            .setDescription("Downloading the on-device chatbot model.")
-            .setDestinationUri(Uri.fromFile(dest))
-            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setAllowedOverMetered(false)
-        if (!authToken.isNullOrBlank()) request.addRequestHeader("Authorization", "Bearer ${authToken.trim()}")
-        val id = dm.enqueue(request)
-        Log.i(TAG, "download:: enqueued id=$id url=$url")
-        emit(State.Pending)
+    fun download(url: String, filename: String, authToken: String? = null): Flow<State> =
+        flow {
+            val dest = fileFor(filename)
+            // Only replace this specific filename if it already exists; other downloaded models stay on-device so the
+            // user can keep multiple variants and swap between them from LLM Settings.
+            if (dest.exists()) dest.delete()
+            val request =
+                DownloadManager.Request(Uri.parse(url))
+                    .setTitle("Uma Chat Model")
+                    .setDescription("Downloading the on-device chatbot model.")
+                    .setDestinationUri(Uri.fromFile(dest))
+                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                    .setAllowedOverMetered(false)
+            if (!authToken.isNullOrBlank()) request.addRequestHeader("Authorization", "Bearer ${authToken.trim()}")
+            val id = dm.enqueue(request)
+            Log.i(TAG, "download:: enqueued id=$id url=$url")
+            emit(State.Pending)
 
-        try {
-            while (true) {
-                val snapshot = query(id)
-                if (snapshot == null) {
-                    emit(State.Failed(DownloadManager.ERROR_UNKNOWN))
-                    return@flow
+            try {
+                while (true) {
+                    val snapshot = query(id)
+                    if (snapshot == null) {
+                        emit(State.Failed(DownloadManager.ERROR_UNKNOWN))
+                        return@flow
+                    }
+                    emit(snapshot)
+                    if (snapshot is State.Complete || snapshot is State.Failed) return@flow
+                    delay(POLL_INTERVAL_MS)
                 }
-                emit(snapshot)
-                if (snapshot is State.Complete || snapshot is State.Failed) return@flow
-                delay(POLL_INTERVAL_MS)
+            } finally {
+                // Leave the file in place on success; DownloadManager auto-cleans temp files on failure. If the
+                // consumer cancels mid-flight we remove the partial record so the notification disappears.
+                val latest = query(id)
+                if (latest !is State.Complete && latest !is State.Failed) dm.remove(id)
             }
-        } finally {
-            // Leave the file in place on success; DownloadManager auto-cleans temp files on failure. If the
-            // consumer cancels mid-flight we remove the partial record so the notification disappears.
-            val latest = query(id)
-            if (latest !is State.Complete && latest !is State.Failed) dm.remove(id)
         }
-    }
 
     /** Remove every `.gguf` model file from disk. @return true if at least one file was deleted. */
     fun delete(): Boolean {

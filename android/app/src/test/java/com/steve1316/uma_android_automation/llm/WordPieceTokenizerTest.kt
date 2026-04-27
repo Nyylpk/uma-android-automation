@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test
 /**
  * Unit tests for [WordPieceTokenizer] against the `bert-base-uncased` / `all-MiniLM-L6-v2` shared vocabulary.
  *
- * Expected ids are the reference output of HuggingFace `BertTokenizerFast("bert-base-uncased")` on the same inputs —
+ * Expected ids are the reference output of HuggingFace `BertTokenizerFast("bert-base-uncased")` on the same inputs -
  * keeping Kotlin output in lockstep with it is what guarantees the ONNX model receives the exact tensors it was
  * trained on.
  */

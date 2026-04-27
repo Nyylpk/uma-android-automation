@@ -44,7 +44,7 @@ export async function loadChatTuning(): Promise<ChatTuning> {
     }
 }
 
-/** Persist a single tuning value to SQLite. Fire-and-forget — failures are swallowed (DB layer logs them). */
+/** Persist a single tuning value to SQLite. Fire-and-forget - failures are swallowed (DB layer logs them). */
 export function saveTuning<K extends keyof typeof SETTING_KEYS>(key: K, value: number): void {
     databaseManager.saveSetting(CHAT_CATEGORY, SETTING_KEYS[key], value, true).catch(() => undefined)
 }

@@ -11,7 +11,7 @@
 
 /**
  * Fold inline GitHub-flavored HTML tags into markdown equivalents the marked tokenizer can style.
- * `<details>`/`<summary>` are NOT folded here — they're handled separately by [splitDetails] so we can render
+ * `<details>`/`<summary>` are NOT folded here - they're handled separately by [splitDetails] so we can render
  * them as collapsible sections instead of static text.
  */
 export function foldHtmlTags(md: string): string {

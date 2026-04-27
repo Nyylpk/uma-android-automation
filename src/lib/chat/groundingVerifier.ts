@@ -8,7 +8,7 @@
  * Identical algorithm to the Kotlin original so behavior matches the existing 5 JUnit cases.
  */
 
-/** Default unigram-overlap threshold — hand-picked to allow natural paraphrase while rejecting invention. */
+/** Default unigram-overlap threshold - hand-picked to allow natural paraphrase while rejecting invention. */
 export const DEFAULT_THRESHOLD = 0.4
 
 /** Lower threshold the orchestrator actually uses, since summary-style answers paraphrase and reduce overlap. */

@@ -173,7 +173,7 @@ function chunkMarkdown(markdown: string, source: string): Chunk[] {
         }
         // Word-offset chunking that preserves the original whitespace (newlines, blank lines, code fence
         // indentation) inside each chunk. Splitting on /\s+/ and rejoining with " " would destroy markdown
-        // structure — tables, bullet lists, and fenced code would render as one line of noise in the UI.
+        // structure - tables, bullet lists, and fenced code would render as one line of noise in the UI.
         const wordMatches = [...text.matchAll(/\S+/g)]
         const heading = headingStack.filter(Boolean).join(" › ") || source
         const step = TARGET_CHUNK_TOKENS - CHUNK_OVERLAP_TOKENS

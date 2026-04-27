@@ -104,7 +104,7 @@ function walk(
 			const headerSource = src.slice(child.startIndex, headerEnd)
 			const headerText = combineWithKDoc(kdoc, headerSource).trim()
 			const headerHierarchy = [...hierarchy, name]
-			// Skip nearly-empty headers (e.g. bare `companion object` with no KDoc) — they add noise without signal.
+			// Skip nearly-empty headers (e.g. bare `companion object` with no KDoc) - they add noise without signal.
 			if (kdoc !== null || headerText.length > 30) {
 				out.push({
 					id: `${source}#${headerHierarchy.join(".")}`,

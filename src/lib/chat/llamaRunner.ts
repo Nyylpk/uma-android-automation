@@ -3,7 +3,7 @@ import { initLlama, LlamaContext } from "llama.rn"
 /**
  * Singleton wrapper around llama.rn's `initLlama` + `context.completion` for the on-device chatbot.
  *
- * Holds one [LlamaContext] across queries — reloading the GGUF + warming up the KV cache costs seconds, so the
+ * Holds one [LlamaContext] across queries - reloading the GGUF + warming up the KV cache costs seconds, so the
  * second prompt onward should be much faster than the first.
  *
  * Usage:
@@ -81,7 +81,7 @@ export async function ensureContext(modelPath: string, opts: LoadOptions = {}): 
     if (loadInFlight) return loadInFlight
 
     loadInFlight = (async () => {
-        // Tear down any previous context before bringing up the new one — keeping two loaded would double RAM.
+        // Tear down any previous context before bringing up the new one - keeping two loaded would double RAM.
         if (currentContext) {
             try {
                 await currentContext.release()

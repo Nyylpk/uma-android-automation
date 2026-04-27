@@ -36,10 +36,14 @@ class DocIndexTest {
             val sourceBytes = source.toByteArray(Charsets.UTF_8)
             val headingBytes = heading.toByteArray(Charsets.UTF_8)
             val textBytes = text.toByteArray(Charsets.UTF_8)
-            writeU16LE(d, idBytes.size); d.write(idBytes)
-            writeU16LE(d, sourceBytes.size); d.write(sourceBytes)
-            writeU16LE(d, headingBytes.size); d.write(headingBytes)
-            writeU32LE(d, textBytes.size); d.write(textBytes)
+            writeU16LE(d, idBytes.size)
+            d.write(idBytes)
+            writeU16LE(d, sourceBytes.size)
+            d.write(sourceBytes)
+            writeU16LE(d, headingBytes.size)
+            d.write(headingBytes)
+            writeU32LE(d, textBytes.size)
+            d.write(textBytes)
             d.writeByte(0x01) // kind = doc (test fixtures)
             val bb = ByteBuffer.allocate(dim * 4).order(ByteOrder.LITTLE_ENDIAN)
             for (x in emb) bb.putFloat(x)
@@ -49,11 +53,15 @@ class DocIndexTest {
     }
 
     private fun writeU16LE(d: DataOutputStream, v: Int) {
-        d.write(v and 0xFF); d.write((v ushr 8) and 0xFF)
+        d.write(v and 0xFF)
+        d.write((v ushr 8) and 0xFF)
     }
 
     private fun writeU32LE(d: DataOutputStream, v: Int) {
-        d.write(v and 0xFF); d.write((v ushr 8) and 0xFF); d.write((v ushr 16) and 0xFF); d.write((v ushr 24) and 0xFF)
+        d.write(v and 0xFF)
+        d.write((v ushr 8) and 0xFF)
+        d.write((v ushr 16) and 0xFF)
+        d.write((v ushr 24) and 0xFF)
     }
 
     @Test
@@ -63,14 +71,15 @@ class DocIndexTest {
         val a = l2Normalize(floatArrayOf(1f, 0f, 0f, 0f))
         val b = l2Normalize(floatArrayOf(0f, 1f, 0f, 0f))
         val c = l2Normalize(floatArrayOf(0.8f, 0.6f, 0f, 0f))
-        val bytes = encodeIndex(
-            listOf(
-                Triple(Triple("id-a", "README.md", "Alpha"), "alpha chunk", a),
-                Triple(Triple("id-b", "HOW_IT_WORKS.md", "Bravo"), "bravo chunk", b),
-                Triple(Triple("id-c", "README.md", "Charlie"), "charlie chunk", c),
-            ),
-            dim,
-        )
+        val bytes =
+            encodeIndex(
+                listOf(
+                    Triple(Triple("id-a", "README.md", "Alpha"), "alpha chunk", a),
+                    Triple(Triple("id-b", "HOW_IT_WORKS.md", "Bravo"), "bravo chunk", b),
+                    Triple(Triple("id-c", "README.md", "Charlie"), "charlie chunk", c),
+                ),
+                dim,
+            )
         val index = DocIndex.load(ByteArrayInputStream(bytes))
         assertEquals(3, index.chunks.size)
         assertEquals(4, index.dim)
@@ -86,14 +95,15 @@ class DocIndexTest {
         val a = l2Normalize(floatArrayOf(1f, 0f, 0f, 0f))
         val b = l2Normalize(floatArrayOf(0f, 1f, 0f, 0f))
         val c = l2Normalize(floatArrayOf(0.8f, 0.6f, 0f, 0f))
-        val bytes = encodeIndex(
-            listOf(
-                Triple(Triple("id-a", "A.md", "A"), "alpha", a),
-                Triple(Triple("id-b", "B.md", "B"), "bravo", b),
-                Triple(Triple("id-c", "C.md", "C"), "charlie", c),
-            ),
-            dim,
-        )
+        val bytes =
+            encodeIndex(
+                listOf(
+                    Triple(Triple("id-a", "A.md", "A"), "alpha", a),
+                    Triple(Triple("id-b", "B.md", "B"), "bravo", b),
+                    Triple(Triple("id-c", "C.md", "C"), "charlie", c),
+                ),
+                dim,
+            )
         val index = DocIndex.load(ByteArrayInputStream(bytes))
         val results = index.search(a, k = 3)
         assertEquals("id-a", results[0].chunk.id)
@@ -105,13 +115,14 @@ class DocIndexTest {
     @DisplayName("search caps results at k")
     fun searchCapsAtK() {
         val dim = 2
-        val bytes = encodeIndex(
-            (0 until 10).map { i ->
-                val v = l2Normalize(floatArrayOf(i.toFloat(), 1f))
-                Triple(Triple("id-$i", "S", "H"), "t-$i", v)
-            },
-            dim,
-        )
+        val bytes =
+            encodeIndex(
+                (0 until 10).map { i ->
+                    val v = l2Normalize(floatArrayOf(i.toFloat(), 1f))
+                    Triple(Triple("id-$i", "S", "H"), "t-$i", v)
+                },
+                dim,
+            )
         val index = DocIndex.load(ByteArrayInputStream(bytes))
         assertEquals(3, index.search(floatArrayOf(1f, 0f), k = 3).size)
     }
