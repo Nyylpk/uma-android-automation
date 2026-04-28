@@ -61,6 +61,11 @@ interface WeightsMap {
     aptitudeThreshold: string
 }
 
+// Stringify the bundled JSON once at module load so we don't pay the serialisation cost on
+// every debounced preview call.
+const RACES_DATA_JSON = JSON.stringify(racesData)
+const EPITHETS_DATA_JSON = JSON.stringify(epithetsData)
+
 const APTITUDE_RANKS = ["S", "A", "B", "C", "D", "E", "F", "G"]
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 const YEAR_LABELS: Array<{ name: string; startTurn: number }> = [
@@ -290,6 +295,8 @@ const SmartRaceSolverSettings = () => {
         forcedEpithets,
         manualLocks,
         weights,
+        racesDataJson: RACES_DATA_JSON,
+        epithetsDataJson: EPITHETS_DATA_JSON,
     })
 
     useEffect(() => {
@@ -372,6 +379,13 @@ const SmartRaceSolverSettings = () => {
                 },
                 lockTurn: { width: 60, color: colors.foreground, fontSize: 13 },
                 lockRace: { flex: 1, color: colors.foreground, fontSize: 13 },
+                presetList: {
+                    maxHeight: 280,
+                    marginBottom: 8,
+                    borderWidth: StyleSheet.hairlineWidth,
+                    borderColor: colors.border,
+                    borderRadius: 6,
+                },
                 presetItem: {
                     paddingVertical: 8,
                     paddingHorizontal: 6,
@@ -551,24 +565,30 @@ const SmartRaceSolverSettings = () => {
                                     onChangeText={setPresetSearch}
                                     placeholder="Search 125 characters…"
                                 />
-                                {filteredPresets.map((p) => {
-                                    const active = smartRaceSolverCharacterPreset === p.name
-                                    return (
-                                        <TouchableOpacity
-                                            key={p.name}
-                                            style={[styles.presetItem, active && styles.presetItemActive]}
-                                            onPress={() => applyPreset(p)}
-                                        >
-                                            <Text style={active ? styles.presetNameActive : styles.presetName}>{p.name}</Text>
-                                            <Text style={styles.presetAptitudes}>
-                                                Sprint {p.distanceAptitudes.Sprint} · Mile {p.distanceAptitudes.Mile} · Med {p.distanceAptitudes.Medium} · Long {p.distanceAptitudes.Long} · Turf {p.surfaceAptitudes.Turf} · Dirt {p.surfaceAptitudes.Dirt}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    )
-                                })}
-                                {presetSearch && filteredPresets.length === 0 && (
-                                    <Text style={styles.inputDescription}>No matches.</Text>
-                                )}
+                                <ScrollView
+                                    style={styles.presetList}
+                                    nestedScrollEnabled={true}
+                                    keyboardShouldPersistTaps="handled"
+                                >
+                                    {filteredPresets.map((p) => {
+                                        const active = smartRaceSolverCharacterPreset === p.name
+                                        return (
+                                            <TouchableOpacity
+                                                key={p.name}
+                                                style={[styles.presetItem, active && styles.presetItemActive]}
+                                                onPress={() => applyPreset(p)}
+                                            >
+                                                <Text style={active ? styles.presetNameActive : styles.presetName}>{p.name}</Text>
+                                                <Text style={styles.presetAptitudes}>
+                                                    Sprint {p.distanceAptitudes.Sprint} · Mile {p.distanceAptitudes.Mile} · Med {p.distanceAptitudes.Medium} · Long {p.distanceAptitudes.Long} · Turf {p.surfaceAptitudes.Turf} · Dirt {p.surfaceAptitudes.Dirt}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        )
+                                    })}
+                                    {presetSearch && filteredPresets.length === 0 && (
+                                        <Text style={styles.inputDescription}>No matches.</Text>
+                                    )}
+                                </ScrollView>
                             </View>
                         </SearchableItem>
 

@@ -93,8 +93,12 @@ object SmartRaceSolverIntegration {
      *   either `{type:"Train"}`, `{type:"Rest"}`, or `{type:"Race", raceKey, name, grade}`.
      */
     fun previewSchedule(configJson: String): String {
-        val epithets = loadEpithets() ?: emptyList()
-        val racesByTurn = loadAllRaces()
+        val config = runCatching { JSONObject(configJson) }.getOrElse { JSONObject() }
+        // Prefer the JS-provided races/epithets payload (always present from the bundled JSON
+        // imports) and fall back to SettingsHelper. This avoids depending on persistence timing
+        // for users whose profiles predate these settings.
+        val racesByTurn = parseRacesJsonField(config.optStringOrNull("racesDataJson"))
+            ?: loadAllRaces()
         if (racesByTurn == null) {
             return JSONObject()
                 .put("decisions", JSONObject())
@@ -103,8 +107,10 @@ object SmartRaceSolverIntegration {
                 .put("error", "races data unavailable")
                 .toString()
         }
+        val epithets = parseEpithetsJsonField(config.optStringOrNull("epithetsDataJson"))
+            ?: loadEpithets()
+            ?: emptyList()
 
-        val config = runCatching { JSONObject(configJson) }.getOrElse { JSONObject() }
         val state = SolverState(
             currentTurn = 1,
             scenario = config.optString("scenario", "Trackblazer"),
@@ -331,6 +337,20 @@ object SmartRaceSolverIntegration {
             )
         }
         return out
+    }
+
+    private fun parseRacesJsonField(json: String?): Map<TurnNumber, List<RaceCandidate>>? {
+        if (json.isNullOrEmpty()) return null
+        return runCatching { parseRacesData(json) }
+            .onFailure { MessageLog.e(TAG, "Failed to parse inline racesDataJson: ${it.message}") }
+            .getOrNull()
+    }
+
+    private fun parseEpithetsJsonField(json: String?): List<Epithet>? {
+        if (json.isNullOrEmpty()) return null
+        return runCatching { parseEpithets(json) }
+            .onFailure { MessageLog.e(TAG, "Failed to parse inline epithetsDataJson: ${it.message}") }
+            .getOrNull()
     }
 
     private fun parseRacesData(json: String): Map<TurnNumber, List<RaceCandidate>> {

@@ -17,6 +17,12 @@ export interface SolverConfigSnapshot {
         summerPenalty: number
         aptitudeThreshold: string
     }
+    /**
+     * Bundled races.json and epithets.json passed inline so the bridge does not depend on
+     * SettingsHelper persistence having reached SQLite by the time the preview fires.
+     */
+    racesDataJson?: string
+    epithetsDataJson?: string
 }
 
 export type ScheduleEntryType = "Race" | "Train" | "Rest"
