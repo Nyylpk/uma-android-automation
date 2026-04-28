@@ -481,6 +481,20 @@ const searchConfig: SearchOption[] = [
         parentId: "enable-smart-race-solver",
     },
     {
+        id: "smart-solver-calendar-preview",
+        title: "Schedule Preview",
+        description: "Solver's initial 72-turn schedule rendered as 3 year-cards. Updates ~500ms after any solver setting change.",
+        page: "SmartRaceSolverSettings",
+        parentId: "enable-smart-race-solver",
+    },
+    {
+        id: "smart-solver-epithet-rewards",
+        title: "Epithet Rewards",
+        description: "Lists each selected and projected epithet alongside its reward (stat bonus or skill hint).",
+        page: "SmartRaceSolverSettings",
+        parentId: "enable-smart-race-solver",
+    },
+    {
         id: "smart-solver-diagnostic",
         title: "Configuration Summary",
         description: "Read-only summary of the current solver configuration.",
