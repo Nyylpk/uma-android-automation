@@ -244,12 +244,6 @@ const MessageLog = () => {
         const mediumTargetsString = `Medium: \n\t\tSpeed: ${settings.trainingStatTarget.trainingMediumStatTarget_speedStatTarget}\t\tStamina: ${settings.trainingStatTarget.trainingMediumStatTarget_staminaStatTarget}\t\tPower: ${settings.trainingStatTarget.trainingMediumStatTarget_powerStatTarget}\n\t\tGuts: ${settings.trainingStatTarget.trainingMediumStatTarget_gutsStatTarget}\t\t\tWit: ${settings.trainingStatTarget.trainingMediumStatTarget_witStatTarget}`
         const longTargetsString = `Long: \n\t\tSpeed: ${settings.trainingStatTarget.trainingLongStatTarget_speedStatTarget}\t\tStamina: ${settings.trainingStatTarget.trainingLongStatTarget_staminaStatTarget}\t\tPower: ${settings.trainingStatTarget.trainingLongStatTarget_powerStatTarget}\n\t\tGuts: ${settings.trainingStatTarget.trainingLongStatTarget_gutsStatTarget}\t\t\tWit: ${settings.trainingStatTarget.trainingLongStatTarget_witStatTarget}`
 
-        // Racing plan settings that is a string of the JSON array.
-        const racingPlanString =
-            settings.racing.racingPlan && settings.racing.racingPlan !== "[]" && typeof settings.racing.racingPlan === "string"
-                ? `${JSON.parse(settings.racing.racingPlan).length} Race(s) Selected`
-                : "None Selected"
-
         // Smart Race Solver settings — counts derived from JSON-string fields.
         const safeJsonLength = (json: string): number => {
             try {
@@ -333,21 +327,9 @@ ${longTargetsString}
 🏁 Skip Summer Training for Agenda: ${settings.racing.skipSummerTrainingForAgenda ? "✅" : "❌"}
 🏁 Selected User In-Game Race Agenda: ${settings.racing.selectedUserAgenda}
 🏁 Custom Agenda Title: ${settings.racing.customAgendaTitle || "(none)"}
-🏁 Enable Racing Plan: ${settings.racing.enableRacingPlan ? "✅" : "❌"}
-🏁 Racing Plan is Mandatory: ${settings.racing.enableMandatoryRacingPlan ? "✅" : "❌"}
-🏁 Racing Plan: ${racingPlanString}
-👥 Minimum Fans Threshold: ${settings.racing.minFansThreshold}
-🏃 Preferred Terrain: ${settings.racing.preferredTerrain}
-🏆 Preferred Grades: ${settings.racing.preferredGrades.join(", ")}
-🏃 Preferred Distances: ${settings.racing.preferredDistances.join(", ")}
-📅 Look Ahead Days: ${settings.racing.lookAheadDays} days
-⏰ Smart Racing Check Interval: ${settings.racing.smartRacingCheckInterval} days
 🎯 Per-Distance Strategy: ${settings.racing.enablePerDistanceStrategy ? "Enabled" : "Disabled"}
 🎯 Junior Year Race Strategy: ${settings.racing.enablePerDistanceStrategy ? `[Short: ${settings.racing.juniorYearPerDistanceStrategies?.Short ?? "Default"}, Mile: ${settings.racing.juniorYearPerDistanceStrategies?.Mile ?? "Default"}, Medium: ${settings.racing.juniorYearPerDistanceStrategies?.Medium ?? "Default"}, Long: ${settings.racing.juniorYearPerDistanceStrategies?.Long ?? "Default"}]` : settings.racing.juniorYearRaceStrategy}
 🎯 Classic/Senior Year Race Strategy: ${settings.racing.enablePerDistanceStrategy ? `[Short: ${settings.racing.originalPerDistanceStrategies?.Short ?? "Default"}, Mile: ${settings.racing.originalPerDistanceStrategies?.Mile ?? "Default"}, Medium: ${settings.racing.originalPerDistanceStrategies?.Medium ?? "Default"}, Long: ${settings.racing.originalPerDistanceStrategies?.Long ?? "Default"}]` : settings.racing.originalRaceStrategy}
-📊 Minimum Quality Threshold: ${settings.racing.minimumQualityThreshold}
-⏱️ Time Decay Factor: ${settings.racing.timeDecayFactor}
-📈 Improvement Threshold: ${settings.racing.improvementThreshold}
 🤖 Enable Smart Race Solver: ${settings.racing.enableSmartRaceSolver ? "✅" : "❌"}
 🎭 Solver Character Preset: ${settings.racing.smartRaceSolverCharacterPreset || "(none)"}
 🎯 Solver Target Epithets: ${smartRaceSolverTargetCount} selected

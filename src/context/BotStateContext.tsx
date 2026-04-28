@@ -1,6 +1,5 @@
 import { createContext, useState, useMemo, useCallback } from "react"
 import { startTiming } from "../lib/performanceLogger"
-import racesData from "../data/races.json"
 import epithetsData from "../data/epithets.json"
 import characterPresetsData from "../data/characterPresets.json"
 import { skillPlanSettingsPages } from "../pages/SkillPlanSettings/config"
@@ -55,25 +54,12 @@ export interface Settings {
         skipSummerTrainingForAgenda: boolean
         selectedUserAgenda: string
         customAgendaTitle: string
-        enableRacingPlan: boolean
-        enableMandatoryRacingPlan: boolean
-        racingPlan: string
-        racingPlanData: string
-        minFansThreshold: number
-        preferredTerrain: string
-        preferredGrades: string[]
-        preferredDistances: string[]
-        lookAheadDays: number
-        smartRacingCheckInterval: number
         juniorYearRaceStrategy: string
         originalRaceStrategy: string
         enablePerDistanceStrategy: boolean
         juniorYearPerDistanceStrategies: Record<string, string>
         originalPerDistanceStrategies: Record<string, string>
-        minimumQualityThreshold: number
-        timeDecayFactor: number
-        improvementThreshold: number
-        // Smart Race Solver — opt-in alternative to the legacy Racing Plan.
+        // Smart Race Solver — beam-search-based race scheduler driven by epithet completions.
         enableSmartRaceSolver: boolean
         smartRaceSolverCharacterPreset: string
         smartRaceSolverAptitudes: string
@@ -250,30 +236,11 @@ export const defaultSettings: Settings = {
         skipSummerTrainingForAgenda: false,
         selectedUserAgenda: "Agenda 1",
         customAgendaTitle: "",
-        enableRacingPlan: false,
-        enableMandatoryRacingPlan: false,
-        racingPlan: JSON.stringify(
-            Object.values(racesData).map((race, index) => ({
-                raceName: race.name,
-                date: race.date,
-                priority: index,
-            }))
-        ),
-        racingPlanData: JSON.stringify(racesData),
-        minFansThreshold: 0,
-        preferredTerrain: "Any",
-        preferredGrades: ["G1", "G2", "G3"],
-        preferredDistances: ["Short", "Mile", "Medium", "Long"],
-        lookAheadDays: 10,
-        smartRacingCheckInterval: 2,
         juniorYearRaceStrategy: "Default",
         originalRaceStrategy: "Default",
         enablePerDistanceStrategy: false,
         juniorYearPerDistanceStrategies: { Short: "Default", Mile: "Default", Medium: "Default", Long: "Default" },
         originalPerDistanceStrategies: { Short: "Default", Mile: "Default", Medium: "Default", Long: "Default" },
-        minimumQualityThreshold: 50.0,
-        timeDecayFactor: 0.7,
-        improvementThreshold: 50.0,
         enableSmartRaceSolver: false,
         smartRaceSolverCharacterPreset: "",
         smartRaceSolverAptitudes: JSON.stringify({

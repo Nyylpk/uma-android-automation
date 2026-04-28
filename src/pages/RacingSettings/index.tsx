@@ -61,11 +61,11 @@ const RacingSettings = () => {
             setSettings({
                 ...bsc.settings,
                 racing: {
-                    // Disable the Farming Fans and Racing Plan settings when User In Game Race Agenda is enabled.
+                    // Disable Farming Fans and the Smart Race Solver when User In Game Race Agenda is enabled.
                     ...bsc.settings.racing,
                     enableFarmingFans: false,
                     enableUserInGameRaceAgenda: true,
-                    enableRacingPlan: false,
+                    enableSmartRaceSolver: false,
                 },
             })
         } else {
@@ -430,11 +430,11 @@ const RacingSettings = () => {
                         />
 
                         <NavigationLink
-                            title="Go to Racing Plan Settings"
-                            description="Configure prioritized races to target including enabling additional filters for race selection."
+                            title="Go to Smart Race Solver Settings"
+                            description="Beam-search-based race scheduler that targets epithet completions and re-plans dynamically."
                             disabled={!enableFarmingFans || enableForceRacing || enableUserInGameRaceAgenda}
-                            disabledDescription="Farming Fans must be enabled and Force Racing and User In-Game Race Agenda settings must be disabled in order to use the Racing Plan Settings."
-                            onPress={() => navigation.navigate("RacingPlanSettings" as never)}
+                            disabledDescription="Farming Fans must be enabled and Force Racing and User In-Game Race Agenda settings must be disabled in order to use the Smart Race Solver."
+                            onPress={() => navigation.navigate("SmartRaceSolverSettings" as never)}
                             style={{ ...styles.section, marginTop: 0 }}
                         />
                     </View>

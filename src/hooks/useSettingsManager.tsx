@@ -323,7 +323,8 @@ export const useSettingsManager = () => {
             const settingsForExport = JSON.parse(JSON.stringify(bsc.settings))
 
             // Remove unnecessary fields before export.
-            delete settingsForExport.racing.racingPlanData
+            delete settingsForExport.racing.epithetsData
+            delete settingsForExport.racing.characterPresetsData
             delete settingsForExport.trainingEvent.characterEventData
             delete settingsForExport.trainingEvent.supportEventData
             delete settingsForExport.misc.formattedSettingsString

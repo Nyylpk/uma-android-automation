@@ -85,44 +85,9 @@ class Racing(private val game: Game, private val campaign: Campaign) {
     /** Whether to force the bot to race extra races regardless of other conditions. */
     val enableForceRacing = SettingsHelper.getBooleanSetting("racing", "enableForceRacing")
 
-    /** Whether to enable the custom racing plan. */
-    private val enableRacingPlan = SettingsHelper.getBooleanSetting("racing", "enableRacingPlan")
     private val enableSmartRaceSolver = SettingsHelper.getBooleanSetting("racing", "enableSmartRaceSolver").also {
         if (it) SmartRaceSolverIntegration.reset()
     }
-
-    /** The number of days to look ahead for better racing opportunities. */
-    private val lookAheadDays = SettingsHelper.getIntSetting("racing", "lookAheadDays")
-
-    /** The frequency (in turns) to perform a smart racing evaluation. */
-    private val smartRacingCheckInterval = SettingsHelper.getIntSetting("racing", "smartRacingCheckInterval")
-
-    /** The minimum fan count required for a race to be considered. */
-    private val minFansThreshold = SettingsHelper.getIntSetting("racing", "minFansThreshold")
-
-    /** The user-preferred track surface for races. */
-    private val preferredTrackSurfaceString = SettingsHelper.getStringSetting("racing", "preferredTerrain")
-
-    /** The user-preferred race grades. */
-    private val preferredGradesString = SettingsHelper.getStringSetting("racing", "preferredGrades")
-
-    /** The user-preferred track distances. */
-    private val preferredTrackDistanceString = SettingsHelper.getStringSetting("racing", "preferredDistances")
-
-    /** The JSON string representing the user's custom racing plan. */
-    private val racingPlanJson = SettingsHelper.getStringSetting("racing", "racingPlan")
-
-    /** The minimum quality threshold for a race to be included in the plan. */
-    private val minimumQualityThreshold = SettingsHelper.getDoubleSetting("racing", "minimumQualityThreshold")
-
-    /** The factor used to decay race scores over time. */
-    private val timeDecayFactor = SettingsHelper.getDoubleSetting("racing", "timeDecayFactor")
-
-    /** The minimum improvement required to prioritize a later race. */
-    private val improvementThreshold = SettingsHelper.getDoubleSetting("racing", "improvementThreshold")
-
-    /** Whether to strictly follow the racing plan and ignore non-planned races. */
-    private val enableMandatoryRacingPlan = SettingsHelper.getBooleanSetting("racing", "enableMandatoryRacingPlan")
 
     /** Whether to use the in-game race agenda feature. */
     val enableUserInGameRaceAgenda = SettingsHelper.getBooleanSetting("racing", "enableUserInGameRaceAgenda")
@@ -169,9 +134,6 @@ class Racing(private val game: Game, private val campaign: Campaign) {
     /** Indicates that an insufficient goal race result pts requirement has been detected. */
     var hasInsufficientGoalRacePtsRequirement = false
 
-    /** Tracks the specific day to race based on opportunity cost analysis. */
-    private var nextSmartRaceDay: Int? = null
-
     /** Tracks if the user's race agenda has been loaded during this career. */
     private var hasLoadedUserRaceAgenda = false
 
@@ -217,12 +179,6 @@ class Racing(private val game: Game, private val campaign: Campaign) {
 
     /** A control flag used between the dialog handler and [selectRaceStrategy]. Only set when a strategy is selected in the dialog handler and unset at the beginning of [selectRaceStrategy]. */
     var bHasSetTemporaryRunningStyle: Boolean = false
-
-    /** The complete race database loaded at initialization. */
-    private val raceData: Map<String, RaceData> = loadRaceData()
-
-    /** The user's defined planned races loaded at initialization. */
-    private val userPlannedRaces: List<PlannedRace> = loadUserPlannedRaces()
 
     /** The maximum number of retries allowed per race, provided by the campaign. */
     private val maxRetriesPerRace: Int = campaign.getMaxRetriesPerRace()
@@ -294,16 +250,6 @@ class Racing(private val game: Game, private val campaign: Campaign) {
      * @property aptitudeBonus The bonus applied based on the trainee's aptitudes.
      */
     data class ScoredRace(val raceData: RaceData, val score: Double, val fansScore: Double, val gradeScore: Double, val aptitudeBonus: Double)
-
-    /**
-     * Stores information about a race that the user has planned.
-     *
-     * @property raceName The name of the planned race.
-     * @property date The date string assigned to the planned race.
-     * @property priority The priority level of the planned race.
-     * @property turnNumber The turn number the planned race occurs on.
-     */
-    data class PlannedRace(val raceName: String, val date: String, val priority: Int, val turnNumber: Int)
 
     companion object {
         private val TAG: String = "[${MainActivity.loggerTag}]Racing"
@@ -386,89 +332,6 @@ class Racing(private val game: Game, private val campaign: Campaign) {
         hasPreOpOrAboveRequirement = false
         hasG3OrAboveRequirement = false
         hasInsufficientGoalRacePtsRequirement = false
-    }
-
-    /**
-     * Retrieves the user's planned races from saved settings.
-     *
-     * @return A list of [PlannedRace] entries defined by the user, or an empty list if none exist.
-     */
-    private fun loadUserPlannedRaces(): List<PlannedRace> {
-        if (!enableRacingPlan) {
-            MessageLog.i(TAG, "[RACE] Racing plan is disabled, returning empty planned races list.")
-            return emptyList()
-        }
-
-        return try {
-            if (racingPlanJson.isEmpty() || racingPlanJson == "[]") {
-                MessageLog.i(TAG, "[RACE] User-selected racing plan is empty, returning empty list.")
-                return emptyList()
-            }
-
-            val jsonArray = JSONArray(racingPlanJson)
-            val plannedRaces = mutableListOf<PlannedRace>()
-
-            for (i in 0 until jsonArray.length()) {
-                val raceObj = jsonArray.getJSONObject(i)
-                val plannedRace =
-                    PlannedRace(
-                        raceName = raceObj.getString("raceName"),
-                        date = raceObj.getString("date"),
-                        priority = raceObj.optInt("priority", 0),
-                        turnNumber = raceObj.getInt("turnNumber"),
-                    )
-                plannedRaces.add(plannedRace)
-            }
-
-            MessageLog.i(TAG, "[RACE] Successfully loaded ${plannedRaces.size} user-selected planned races from settings.")
-            plannedRaces
-        } catch (e: Exception) {
-            MessageLog.e(TAG, "[ERROR] loadUserPlannedRaces:: Failed to parse user-selected racing plan JSON: ${e.message}. Returning empty list.")
-            emptyList()
-        }
-    }
-
-    /**
-     * Loads the complete race database from saved settings, including all race metadata such as names, grades, distances, and turn numbers.
-     *
-     * @return A map of race names to their [RaceData] or an empty map if racing plan data is missing or invalid.
-     */
-    private fun loadRaceData(): Map<String, RaceData> {
-        return try {
-            val racingPlanDataJson = SettingsHelper.getStringSetting("racing", "racingPlanData")
-            if (racingPlanDataJson.isEmpty()) {
-                MessageLog.i(TAG, "[RACE] Racing plan data is empty, returning empty map.")
-                return emptyMap()
-            }
-
-            val jsonObject = JSONObject(racingPlanDataJson)
-            val raceDataMap = mutableMapOf<String, RaceData>()
-
-            val keys = jsonObject.keys()
-            while (keys.hasNext()) {
-                val key = keys.next()
-                val raceObj = jsonObject.getJSONObject(key)
-
-                val raceData =
-                    RaceData(
-                        name = raceObj.getString(RACES_COLUMN_NAME),
-                        grade = raceObj.getString(RACES_COLUMN_GRADE),
-                        trackSurface = raceObj.getString(RACES_COLUMN_TRACK_SURFACE),
-                        trackDistance = raceObj.getString(RACES_COLUMN_TRACK_DISTANCE),
-                        fans = raceObj.getInt(RACES_COLUMN_FANS),
-                        turnNumber = raceObj.getInt(RACES_COLUMN_TURN_NUMBER),
-                        nameFormatted = raceObj.getString(RACES_COLUMN_NAME_FORMATTED),
-                    )
-
-                raceDataMap[raceData.name] = raceData
-            }
-
-            MessageLog.i(TAG, "[RACE] Successfully loaded ${raceDataMap.size} race entries from racing plan data.")
-            raceDataMap
-        } catch (e: Exception) {
-            MessageLog.e(TAG, "[ERROR] loadRaceData:: Failed to parse racing plan data JSON: ${e.message}. Returning empty map.")
-            emptyMap()
-        }
     }
 
     /**
@@ -771,36 +634,6 @@ class Racing(private val game: Game, private val campaign: Campaign) {
     }
 
     /**
-     * Finds the mandatory planned race for the current turn number if mandatory mode is enabled.
-     *
-     * @return A Pair containing the PlannedRace and RaceData for the mandatory extra race if found, null otherwise.
-     */
-    private fun findMandatoryExtraRaceForCurrentTurn(): Pair<PlannedRace?, RaceData?> {
-        if (!enableRacingPlan || !enableMandatoryRacingPlan) {
-            Log.d(TAG, "[DEBUG] findMandatoryExtraRaceForCurrentTurn:: Mandatory racing plan is not enabled so skipping the search for a mandatory extra race.")
-            return Pair(null, null)
-        }
-
-        val currentTurnNumber = campaign.date.day
-
-        // Find planned race matching current turn number.
-        val matchingPlannedRace = userPlannedRaces.find { it.turnNumber == currentTurnNumber }
-        if (matchingPlannedRace == null) {
-            Log.d(TAG, "[DEBUG] findMandatoryExtraRaceForCurrentTurn:: No mandatory extra race found for current turn number $currentTurnNumber.")
-            return Pair(null, null)
-        }
-
-        // Look up race data from raceData map.
-        val raceData = this.raceData[matchingPlannedRace.raceName]
-        if (raceData == null) {
-            MessageLog.e(TAG, "[ERROR] findMandatoryExtraRaceForCurrentTurn:: Planned race \"${matchingPlannedRace.raceName}\" not found in race data.")
-            return Pair(null, null)
-        }
-
-        return Pair(matchingPlannedRace, raceData)
-    }
-
-    /**
      * Checks if there are fan or trophy requirements that need to be satisfied.
      *
      * @param sourceBitmap Optional source bitmap to use for detection.
@@ -932,14 +765,12 @@ class Racing(private val game: Game, private val campaign: Campaign) {
             // Check if G1 races exist at current turn before proceeding.
             // If no G1 races are available, it will still allow regular racing if it's a regular race day or smart racing day.
             if (!hasG1RacesAtTurn(campaign.date.day)) {
-                // Skip interval check if Racing Plan is enabled.
-                val isRegularRacingDay = enableFarmingFans && !enableRacingPlan && (turnsRemaining % daysToRunExtraRaces == 0)
-                val isSmartRacingDay = enableRacingPlan && enableFarmingFans && nextSmartRaceDay == turnsRemaining
+                val isRegularRacingDay = enableFarmingFans && (turnsRemaining % daysToRunExtraRaces == 0)
 
-                if (isRegularRacingDay || isSmartRacingDay) {
+                if (isRegularRacingDay) {
                     MessageLog.i(TAG, "[RACE] Trophy requirement detected but no G1 races at turn ${campaign.date.day}. Allowing regular racing on eligible day.")
                 } else {
-                    MessageLog.i(TAG, "[RACE] Trophy requirement detected but no G1 races available at turn ${campaign.date.day} and not a regular/smart racing day. Skipping racing.")
+                    MessageLog.i(TAG, "[RACE] Trophy requirement detected but no G1 races available at turn ${campaign.date.day} and not a regular racing day. Skipping racing.")
                     return false
                 }
             } else {
@@ -949,138 +780,8 @@ class Racing(private val game: Game, private val campaign: Campaign) {
             return !raceRepeatWarningCheck
         }
 
-        // Check for mandatory racing plan mode (before opportunity cost analysis and while still on the main screen).
-        if (enableRacingPlan && enableMandatoryRacingPlan) {
-            val currentTurnNumber = campaign.date.day
-
-            // Find planned race matching current turn number.
-            val matchingPlannedRace = userPlannedRaces.find { it.turnNumber == currentTurnNumber }
-
-            if (matchingPlannedRace != null) {
-                MessageLog.i(TAG, "[RACE] Found planned race \"${matchingPlannedRace.raceName}\" for turn $currentTurnNumber and mandatory mode for extra races is enabled.")
-                return !raceRepeatWarningCheck
-            } else {
-                MessageLog.i(TAG, "[RACE] No planned race matches current turn $currentTurnNumber and mandatory mode for extra races is enabled. Continuing with normal eligibility checks.")
-            }
-        } else if (enableRacingPlan && enableFarmingFans) {
-            // Log eligible planned races if any exist (informational).
-            if (campaign.date.year != DateYear.JUNIOR && userPlannedRaces.isNotEmpty()) {
-                val currentTurnNumber = campaign.date.day
-
-                // Check each planned race for eligibility within the look-ahead window.
-                val eligiblePlannedRaces =
-                    userPlannedRaces.filter { plannedRace ->
-                        val raceDetails = raceData[plannedRace.raceName]
-                        if (raceDetails == null) {
-                            MessageLog.e(TAG, "[ERROR] checkEligibilityToStartExtraRacingProcess::: Planned race \"${plannedRace.raceName}\" not found in race data.")
-                            false
-                        } else {
-                            val turnDistance = raceDetails.turnNumber - currentTurnNumber
-
-                            // Check if race is within look-ahead window.
-                            if (turnDistance !in 0..lookAheadDays) {
-                                if (turnDistance > lookAheadDays) {
-                                    if (game.debugMode) {
-                                        MessageLog.d(
-                                            TAG,
-                                            "[DEBUG] checkEligibilityToStartExtraRacingProcess:: Planned race \"${plannedRace.raceName}\" is too far ahead of the look-ahead window (distance $turnDistance > lookAheadDays $lookAheadDays).",
-                                        )
-                                    } else {
-                                        Log.d(
-                                            TAG,
-                                            "[DEBUG] checkEligibilityToStartExtraRacingProcess:: Planned race \"${plannedRace.raceName}\" is too far ahead of the look-ahead window (distance $turnDistance > lookAheadDays $lookAheadDays).",
-                                        )
-                                    }
-                                }
-                                false
-                            } else {
-                                true
-                            }
-                        }
-                    }
-
-                if (eligiblePlannedRaces.isEmpty()) {
-                    MessageLog.i(TAG, "[RACE] No user-selected races are eligible at turn $currentTurnNumber. Continuing with other checks.")
-                } else {
-                    MessageLog.i(TAG, "[RACE] Found ${eligiblePlannedRaces.size} eligible user-selected races: ${eligiblePlannedRaces.map { it.raceName }}.")
-                }
-            }
-            // Smart racing: Check turn-based eligibility before screen checks.
-            // Only run opportunity cost analysis with smartRacingCheckInterval.
-            val isCheckInterval = campaign.date.day % smartRacingCheckInterval == 0
-
-            if (isCheckInterval) {
-                MessageLog.i(TAG, "[RACE] Running opportunity cost analysis at turn ${campaign.date.day} (smartRacingCheckInterval: every $smartRacingCheckInterval turns)...")
-
-                // Check if there are any races available at the current turn.
-                val currentTurnRaces = queryRacesFromDatabase(campaign.date.day, 0)
-                if (currentTurnRaces.isEmpty()) {
-                    MessageLog.i(TAG, "[RACE] No races available at turn ${campaign.date.day}.")
-                    return false
-                }
-
-                MessageLog.i(TAG, "[RACE] Found ${currentTurnRaces.size} race(s) at the current turn ${campaign.date.day}.")
-
-                // Query upcoming races in the look-ahead window for opportunity cost analysis.
-                val upcomingRaces = queryRacesFromDatabase(campaign.date.day + 1, lookAheadDays)
-                MessageLog.i(TAG, "[RACE] Found ${upcomingRaces.size} upcoming races in look-ahead window.")
-
-                // Apply filters to both current and upcoming races.
-                val filteredCurrentRaces = filterRacesByCriteria(currentTurnRaces)
-                val filteredUpcomingRaces = filterRacesByCriteria(upcomingRaces)
-
-                MessageLog.i(TAG, "[RACE] After filtering: ${filteredCurrentRaces.size} current races, ${filteredUpcomingRaces.size} upcoming races.")
-
-                // If no filtered current races exist, we shouldn't race.
-                if (filteredCurrentRaces.isEmpty()) {
-                    MessageLog.i(TAG, "[RACE] No current races match the filter criteria. Skipping racing.")
-                    return false
-                }
-
-                // If there are no upcoming races to compare against, race now if we have acceptable races.
-                if (filteredUpcomingRaces.isEmpty()) {
-                    MessageLog.i(TAG, "[RACE] No upcoming races to compare against. Racing now with available races.")
-                    nextSmartRaceDay = turnsRemaining
-                } else {
-                    // Use opportunity cost logic to determine if we should race now or wait.
-                    val shouldRace = evaluateOpportunityCost(filteredCurrentRaces, lookAheadDays)
-                    if (!shouldRace) {
-                        MessageLog.i(TAG, "[RACE] No suitable races at turn ${campaign.date.day} based on opportunity cost analysis.")
-                        return false
-                    }
-
-                    // Opportunity cost analysis determined we should race now, so set the optimal race day to the current day.
-                    nextSmartRaceDay = turnsRemaining
-                }
-
-                MessageLog.i(TAG, "[RACE] Opportunity cost analysis completed, proceeding with screen checks...")
-            } else {
-                MessageLog.i(TAG, "[RACE] Skipping opportunity cost analysis (turn ${campaign.date.day} does not match smartRacingCheckInterval). Using cached optimal race day.")
-            }
-
-            // Check if current day matches the optimal race day or falls on the interval.
-            val isOptimalDay = nextSmartRaceDay == turnsRemaining
-            val isIntervalDay = !enableRacingPlan && (turnsRemaining % daysToRunExtraRaces == 0)
-
-            if (isOptimalDay) {
-                MessageLog.i(TAG, "[RACE] Current day ($turnsRemaining) matches optimal race day.")
-                return !raceRepeatWarningCheck
-            } else if (isIntervalDay) {
-                MessageLog.i(TAG, "[RACE] Current day ($turnsRemaining) falls on racing interval ($daysToRunExtraRaces).")
-                return !raceRepeatWarningCheck
-            } else {
-                if (enableRacingPlan) {
-                    MessageLog.i(TAG, "[RACE] Current day ($turnsRemaining) is not optimal (next: $nextSmartRaceDay).")
-                } else {
-                    MessageLog.i(TAG, "[RACE] Current day ($turnsRemaining) is not optimal (next: $nextSmartRaceDay, interval: $daysToRunExtraRaces).")
-                }
-                return false
-            }
-        }
-
-        // Conditionally start the standard racing process.
-        // This fallback only applies when Racing Plan is disabled, so use interval-based logic.
-        return enableFarmingFans && !enableRacingPlan && (turnsRemaining % daysToRunExtraRaces == 0) && !raceRepeatWarningCheck
+        // Standard racing fallback: race on every Nth day of the racing interval.
+        return enableFarmingFans && (turnsRemaining % daysToRunExtraRaces == 0) && !raceRepeatWarningCheck
     }
 
     /**
@@ -1679,140 +1380,6 @@ class Racing(private val game: Game, private val campaign: Campaign) {
     }
 
     /**
-     * Calculates a composite race score based on fan count, race grade, and aptitude performance.
-     *
-     * The score is derived from three weighted factors:
-     * - **Fans:** Normalized to a 0–100 scale.
-     * - **Grade:** Weighted to a map of values based on grade.
-     * - **Aptitude:** Adds a bonus if both track surface and distance aptitudes are A or S.
-     *
-     * The final score is the average of these three components.
-     *
-     * @param race The [RaceData] instance to evaluate.
-     * @return A [ScoredRace] object containing the final score and individual factor breakdowns.
-     */
-    private fun scoreRace(race: RaceData): ScoredRace {
-        // Normalize fans to 0-100 scale (assuming max fans is 30000).
-        val fansScore = (race.fans.toDouble() / 30000.0) * 100.0
-
-        // Grade scoring: G1 = 75, G2 = 50, G3 = 25.
-        val gradeScore =
-            when (race.grade) {
-                RaceGrade.G1 -> 75.0
-                RaceGrade.G2 -> 50.0
-                RaceGrade.G3 -> 25.0
-                else -> 0.0
-            }
-
-        // Get the trainee's aptitude for this race's track surface/distance.
-        val trackSurfaceAptitude: Aptitude = campaign.trainee.checkTrackSurfaceAptitude(race.trackSurface)
-        val trackDistanceAptitude: Aptitude = campaign.trainee.checkTrackDistanceAptitude(race.trackDistance)
-
-        // Aptitude bonus: 100 if both track surface and distance are >= B aptitude, else 0.
-        val trackSurfaceMatch: Boolean = trackSurfaceAptitude >= Aptitude.B
-        val trackDistanceMatch: Boolean = trackDistanceAptitude >= Aptitude.B
-
-        val aptitudeBonus = if (trackSurfaceMatch && trackDistanceMatch) 100.0 else 0.0
-
-        // Calculate final score with equal weights.
-        val finalScore = (fansScore + gradeScore + aptitudeBonus) / 3.0
-
-        // Log detailed scoring breakdown for debugging.
-        if (game.debugMode) {
-            MessageLog.d(
-                TAG,
-                """
-                [DEBUG] Scoring ${race.name}:
-                Fans            = ${race.fans} (${game.decimalFormat.format(fansScore)})
-                Grade           = ${race.grade} (${game.decimalFormat.format(gradeScore)})
-                Track Surface   = ${race.trackSurface} ($trackSurfaceAptitude)
-                Track Distance  = ${race.trackDistance} ($trackDistanceAptitude)
-                Aptitude        = ${game.decimalFormat.format(aptitudeBonus)}
-                Final           = ${game.decimalFormat.format(finalScore)}
-                """.trimIndent(),
-            )
-        }
-
-        return ScoredRace(
-            raceData = race,
-            score = finalScore,
-            fansScore = fansScore,
-            gradeScore = gradeScore,
-            aptitudeBonus = aptitudeBonus,
-        )
-    }
-
-    /**
-     * Database queries for races.
-     *
-     * @param currentTurn The current turn number used as the starting point.
-     * @param lookAheadDays The number of days (turns) to look ahead for upcoming races.
-     * @return A list of [RaceData] objects representing all races within the look-ahead window.
-     */
-    private fun queryRacesFromDatabase(currentTurn: Int, lookAheadDays: Int): List<RaceData> {
-        val settingsManager = SQLiteSettingsManager(game.myContext)
-        if (!settingsManager.isAvailable()) {
-            MessageLog.e(TAG, "[ERROR] queryRacesFromDatabase:: Database not available for race lookup.")
-            settingsManager.close()
-            return emptyList()
-        }
-
-        return try {
-            val database = settingsManager.readableDatabase
-            if (database == null) {
-                MessageLog.e(TAG, "[ERROR] queryRacesFromDatabase:: Database is null for race lookup.")
-                return emptyList()
-            }
-
-            val endTurn = currentTurn + lookAheadDays
-            val cursor =
-                database.query(
-                    TABLE_RACES,
-                    arrayOf(
-                        RACES_COLUMN_NAME,
-                        RACES_COLUMN_GRADE,
-                        RACES_COLUMN_FANS,
-                        RACES_COLUMN_NAME_FORMATTED,
-                        RACES_COLUMN_TRACK_SURFACE,
-                        RACES_COLUMN_TRACK_DISTANCE,
-                        RACES_COLUMN_TURN_NUMBER,
-                    ),
-                    "$RACES_COLUMN_TURN_NUMBER >= ? AND $RACES_COLUMN_TURN_NUMBER <= ?",
-                    arrayOf(currentTurn.toString(), endTurn.toString()),
-                    null,
-                    null,
-                    "$RACES_COLUMN_TURN_NUMBER ASC",
-                )
-
-            val races = mutableListOf<RaceData>()
-            if (cursor.moveToFirst()) {
-                do {
-                    val race =
-                        RaceData(
-                            name = cursor.getString(0),
-                            grade = cursor.getString(1),
-                            fans = cursor.getInt(2),
-                            nameFormatted = cursor.getString(3),
-                            trackSurface = cursor.getString(4),
-                            trackDistance = cursor.getString(5),
-                            turnNumber = cursor.getInt(6),
-                        )
-                    races.add(race)
-                } while (cursor.moveToNext())
-            }
-            cursor.close()
-
-            MessageLog.i(TAG, "[RACE] Found ${races.size} races in look-ahead window (turns $currentTurn to $endTurn).")
-            races
-        } catch (e: Exception) {
-            MessageLog.e(TAG, "[ERROR] queryRacesFromDatabase:: Error getting races from database: ${e.message}")
-            emptyList()
-        } finally {
-            settingsManager.close()
-        }
-    }
-
-    /**
      * Checks if any G1 races exist at the specified turn number in the database.
      *
      * @param turnNumber The turn number to check for G1 races.
@@ -1854,200 +1421,6 @@ class Racing(private val game: Game, private val campaign: Campaign) {
         } finally {
             settingsManager.close()
         }
-    }
-
-    /**
-     * Filters the given list of races according to the user's Racing Plan settings.
-     *
-     * @param races The list of [RaceData] entries to filter.
-     * @param bypassMinFans If true, bypasses the minimum fans threshold check (useful for trophy requirement).
-     * @return A list of [RaceData] objects that satisfy all Racing Plan filter criteria.
-     */
-    private fun filterRacesByCriteria(races: List<RaceData>, bypassMinFans: Boolean = false): List<RaceData> {
-        // Parse preferred grades.
-        val preferredGrades =
-            try {
-                // Parse as JSON array.
-                val jsonArray = JSONArray(preferredGradesString)
-                val parsed = (0 until jsonArray.length()).map { jsonArray.getString(it).uppercase() }
-                MessageLog.i(TAG, "[RACE] Parsed preferred grades as JSON array: $parsed.")
-                parsed
-            } catch (e: Exception) {
-                MessageLog.w(TAG, "[WARN] filterRacesByCriteria:: Error parsing preferred grades: ${e.message}, using fallback.")
-                val parsed = preferredGradesString.split(",").map { it.trim().uppercase() }
-                MessageLog.w(TAG, "[WARN] filterRacesByCriteria:: Fallback parsing result: $parsed")
-                parsed
-            }
-
-        // Parse preferred distances.
-        val preferredDistances =
-            try {
-                // Parse as JSON array.
-                val jsonArray = JSONArray(preferredTrackDistanceString)
-                val parsed = (0 until jsonArray.length()).map { jsonArray.getString(it).uppercase() }
-                MessageLog.i(TAG, "[RACE] Parsed preferred distances as JSON array: $parsed.")
-                parsed
-            } catch (e: Exception) {
-                MessageLog.w(TAG, "[WARN] filterRacesByCriteria:: Error parsing preferred distances: ${e.message}, using fallback.")
-                val parsed = preferredTrackDistanceString.split(",").map { it.trim().uppercase() }
-                MessageLog.w(TAG, "[WARN] filterRacesByCriteria:: Fallback parsing result: $parsed")
-                parsed
-            }
-
-        if (game.debugMode) {
-            MessageLog.d(
-                TAG,
-                "[DEBUG] filterRacesByCriteria:: Filter criteria: Min fans: $minFansThreshold, trackSurface: $preferredTrackSurfaceString, grades: $preferredGrades, distances: $preferredDistances",
-            )
-        } else {
-            Log.d(
-                TAG,
-                "[DEBUG] filterRacesByCriteria:: Filter criteria: Min fans: $minFansThreshold, trackSurface: $preferredTrackSurfaceString, grades: $preferredGrades, distances: $preferredDistances",
-            )
-        }
-
-        val filteredRaces =
-            races.filter { race ->
-                val isRequirementActive = hasFanRequirement || hasTrophyRequirement
-                val meetsFansThreshold = bypassMinFans || isRequirementActive || race.fans >= minFansThreshold
-                val meetsTrackSurfacePreference = isRequirementActive || preferredTrackSurfaceString == "Any" || race.trackSurface == TrackSurface.fromName(preferredTrackSurfaceString)
-                val meetsGradePreference = isRequirementActive || preferredGrades.isEmpty() || preferredGrades.contains(race.grade.name)
-                val meetsTrackDistancePreference = isRequirementActive || preferredDistances.isEmpty() || preferredDistances.contains(race.trackDistance.name)
-
-                val passes = meetsFansThreshold && meetsTrackSurfacePreference && meetsGradePreference && meetsTrackDistancePreference
-
-                // If the race did not pass any of the filters, print the reason why.
-                if (!passes) {
-                    val reasons = mutableListOf<String>()
-                    if (!meetsFansThreshold) reasons.add("fans ${race.fans} < $minFansThreshold")
-                    if (!meetsTrackSurfacePreference) reasons.add("trackSurface ${race.trackSurface} != $preferredTrackSurfaceString")
-                    if (!meetsGradePreference) reasons.add("grade ${race.grade} not in $preferredGrades")
-                    if (!meetsTrackDistancePreference) reasons.add("distance ${race.trackDistance} not in $preferredDistances")
-                    if (game.debugMode) {
-                        MessageLog.d(TAG, "[DEBUG] filterRacesByCriteria:: ✗ Filtered out ${race.name}: ${reasons.joinToString(", ")}")
-                    } else {
-                        Log.d(TAG, "[DEBUG] filterRacesByCriteria:: ✗ Filtered out ${race.name}: ${reasons.joinToString(", ")}")
-                    }
-                } else {
-                    if (game.debugMode) {
-                        MessageLog.d(
-                            TAG,
-                            "[DEBUG] filterRacesByCriteria:: ✓ Passed filter: ${race.name} (fans: ${race.fans}, trackSurface: ${race.trackSurface}, grade: ${race.grade}, distance: ${race.trackDistance})",
-                        )
-                    } else {
-                        Log.d(
-                            TAG,
-                            "[DEBUG] filterRacesByCriteria:: ✓ Passed filter: ${race.name} (fans: ${race.fans}, trackSurface: ${race.trackSurface}, grade: ${race.grade}, distance: ${race.trackDistance})",
-                        )
-                    }
-                }
-
-                passes
-            }
-
-        return filteredRaces
-    }
-
-    /**
-     * Evaluates opportunity cost to determine whether the bot should race immediately or wait for a better opportunity.
-     *
-     * @param currentRaces List of currently available [RaceData] races.
-     * @param lookAheadDays Number of turns/days to consider for upcoming races.
-     * @return True if the bot should race now, false if it is better to wait for a future race.
-     */
-    private fun evaluateOpportunityCost(currentRaces: List<RaceData>, lookAheadDays: Int): Boolean {
-        MessageLog.i(TAG, "[RACE] Evaluating whether to race now using Opportunity Cost logic...")
-        if (currentRaces.isEmpty()) {
-            MessageLog.i(TAG, "[RACE] No current races available, cannot race now.")
-            return false
-        }
-
-        // Score current races.
-        MessageLog.i(TAG, "[RACE] Scoring ${currentRaces.size} current races (sorted by score descending):")
-        val currentScoredRaces = currentRaces.map { scoreRace(it) }
-        val sortedScoredRaces = currentScoredRaces.sortedByDescending { it.score }
-        sortedScoredRaces.forEach { scoredRace ->
-            MessageLog.i(TAG, "[RACE]     Current race: ${scoredRace.raceData.name} (score: ${game.decimalFormat.format(scoredRace.score)})")
-        }
-        val bestCurrentRace = sortedScoredRaces.maxByOrNull { it.score }
-
-        if (bestCurrentRace == null) {
-            MessageLog.i(TAG, "[RACE] Failed to score current races, cannot race now.")
-            return false
-        }
-
-        MessageLog.i(TAG, "[RACE] Best current race: ${bestCurrentRace.raceData.name} (score: ${game.decimalFormat.format(bestCurrentRace.score)})")
-
-        // Get and score upcoming races.
-        MessageLog.i(TAG, "[RACE] Looking ahead $lookAheadDays days for upcoming races...")
-        val upcomingRaces = queryRacesFromDatabase(campaign.date.day + 1, lookAheadDays)
-        MessageLog.i(TAG, "[RACE] Found ${upcomingRaces.size} upcoming races in database.")
-
-        val filteredUpcomingRaces = filterRacesByCriteria(upcomingRaces)
-        MessageLog.i(TAG, "[RACE] After filtering: ${filteredUpcomingRaces.size} upcoming races remain.")
-
-        if (filteredUpcomingRaces.isEmpty()) {
-            MessageLog.i(TAG, "[RACE] No suitable upcoming races found, racing now with best current option.")
-            return true
-        }
-
-        // Score all upcoming races and find the best one.
-        val scoredUpcomingRaces = filteredUpcomingRaces.map { scoreRace(it) }
-        val sortedUpcomingScoredRaces = scoredUpcomingRaces.sortedByDescending { it.score }
-        val bestUpcomingRace = sortedUpcomingScoredRaces.maxByOrNull { it.score }
-
-        if (bestUpcomingRace == null) {
-            MessageLog.i(TAG, "[RACE] No suitable upcoming races found, racing now with best current option.")
-            return true
-        }
-
-        MessageLog.i(TAG, "[RACE] Best upcoming race: ${bestUpcomingRace.raceData.name} (score: ${game.decimalFormat.format(bestUpcomingRace.score)}).")
-
-        // Apply time decay to upcoming race score.
-        val discountedUpcomingScore = bestUpcomingRace.score * timeDecayFactor
-
-        // Calculate opportunity cost: How much better is waiting?
-        val improvementFromWaiting = discountedUpcomingScore - bestCurrentRace.score
-
-        // Decision criteria.
-        val isGoodEnough = bestCurrentRace.score >= minimumQualityThreshold
-        val notWorthWaiting = improvementFromWaiting < improvementThreshold
-        val shouldRace = isGoodEnough && notWorthWaiting
-
-        MessageLog.i(TAG, "[RACE] Opportunity Cost Analysis:")
-        MessageLog.i(TAG, "[RACE]     Current score: ${game.decimalFormat.format(bestCurrentRace.score)}")
-        MessageLog.i(TAG, "[RACE]     Upcoming score (raw): ${game.decimalFormat.format(bestUpcomingRace.score)}")
-        MessageLog.i(TAG, "[RACE]     Upcoming score (discounted by ${game.decimalFormat.format((1 - timeDecayFactor) * 100)}%): ${game.decimalFormat.format(discountedUpcomingScore)}")
-        MessageLog.i(TAG, "[RACE]     Improvement from waiting: ${game.decimalFormat.format(improvementFromWaiting)}")
-        MessageLog.i(TAG, "[RACE]     Quality check (≥$minimumQualityThreshold): ${if (isGoodEnough) "PASS" else "FAIL"}")
-        MessageLog.i(TAG, "[RACE]     Worth waiting check (<$improvementThreshold): ${if (notWorthWaiting) "PASS" else "FAIL"}")
-        MessageLog.i(TAG, "[RACE]     Decision: ${if (shouldRace) "RACE NOW" else "WAIT FOR BETTER OPPORTUNITY"}")
-
-        // Print the reasoning for the decision.
-        if (shouldRace) {
-            MessageLog.i(
-                TAG,
-                "[RACE] Reasoning: Current race is good enough (${game.decimalFormat.format(bestCurrentRace.score)} ≥ $minimumQualityThreshold) and waiting only gives ${
-                    game.decimalFormat.format(improvementFromWaiting)
-                } more points (less than $improvementThreshold).",
-            )
-            // Race now - clear the next race day tracker.
-            nextSmartRaceDay = null
-        } else {
-            val reason =
-                if (!isGoodEnough) {
-                    "Current race quality too low (${game.decimalFormat.format(bestCurrentRace.score)} < $minimumQualityThreshold)."
-                } else {
-                    "Worth waiting for better opportunity (+${game.decimalFormat.format(improvementFromWaiting)} points > $improvementThreshold)."
-                }
-            MessageLog.i(TAG, "[RACE] Reasoning: $reason")
-            // Wait for better opportunity - store the turn number to race on.
-            val bestUpcomingRaceData = upcomingRaces.find { it.name == bestUpcomingRace.raceData.name }
-            nextSmartRaceDay = bestUpcomingRaceData?.turnNumber
-            MessageLog.i(TAG, "[RACE] Setting next smart race day to turn $nextSmartRaceDay.")
-        }
-
-        return shouldRace
     }
 
     // //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2177,9 +1550,6 @@ class Racing(private val game: Game, private val campaign: Campaign) {
         // Skip the race if possible, otherwise run it manually.
         runRaceWithRetries()
         finalizeRaceResults(isExtra = true)
-
-        // Clear the next smart race day tracker since we just completed a race.
-        nextSmartRaceDay = null
 
         MessageLog.v(TAG, "[RACE] Racing process for already selected race is completed. Grade: ${lastRaceGrade ?: "OP"}")
         MessageLog.v(TAG, "********************")
@@ -2438,9 +1808,6 @@ class Racing(private val game: Game, private val campaign: Campaign) {
         runRaceWithRetries()
         finalizeRaceResults(isExtra = true)
 
-        // Clear the next smart race day tracker since we just completed a race.
-        nextSmartRaceDay = null
-
         MessageLog.v(TAG, "[RACE] Racing process for Maiden Race is completed. Grade: ${lastRaceGrade ?: "Maiden"}")
         MessageLog.v(TAG, "********************")
         return true
@@ -2457,34 +1824,8 @@ class Racing(private val game: Game, private val campaign: Campaign) {
 
         // If there is a scheduled race pending, proceed to run it immediately.
         if (!isScheduledRace) {
-            // Check for mandatory racing plan mode before any screen detection.
-            // Bypass this check if a fan or trophy requirement is active.
-            val (_, mandatoryExtraRaceData) =
-                if (hasFanRequirement || hasTrophyRequirement || hasInsufficientGoalRacePtsRequirement) {
-                    Pair(null, null)
-                } else {
-                    findMandatoryExtraRaceForCurrentTurn()
-                }
-
-            if (mandatoryExtraRaceData != null) {
-                // Check if aptitudes match (both track surface and distance must be B or greater) for double predictions.
-                val aptitudesMatch = checkRaceAptitudeMatch(mandatoryExtraRaceData)
-                if (!aptitudesMatch) {
-                    // Get the trainee's aptitude for this race's track surface/distance.
-                    val trackSurfaceAptitude: Aptitude = campaign.trainee.checkTrackSurfaceAptitude(mandatoryExtraRaceData.trackSurface)
-                    val trackDistanceAptitude: Aptitude = campaign.trainee.checkTrackDistanceAptitude(mandatoryExtraRaceData.trackDistance)
-                    MessageLog.v(
-                        TAG,
-                        "[RACE] Mandatory extra race \"${mandatoryExtraRaceData.name}\" aptitudes don't match requirements (TrackSurface: $trackSurfaceAptitude, TrackDistance: $trackDistanceAptitude). Both must be B or greater.",
-                    )
-                    return false
-                } else {
-                    MessageLog.v(TAG, "[RACE] Mandatory extra race \"${mandatoryExtraRaceData.name}\" aptitudes match requirements. Proceeding to navigate to the Extra Races screen.")
-                }
-            }
-
             // Check for the consecutive race dialog before proceeding.
-            val overrideIgnore: Boolean = isScheduledRace || enableForceRacing || enableMandatoryRacingPlan || hasInsufficientGoalRacePtsRequirement
+            val overrideIgnore: Boolean = isScheduledRace || enableForceRacing || hasInsufficientGoalRacePtsRequirement
             val result: DialogHandlerResult = campaign.handleDialogs(args = mapOf("overrideIgnoreConsecutiveRaceWarning" to overrideIgnore))
             if (result is DialogHandlerResult.Handled &&
                 result.dialog.name == "consecutive_race_warning" &&
@@ -2547,8 +1888,8 @@ class Racing(private val game: Game, private val campaign: Campaign) {
                     // Trophy requirement can use smart racing as it filters to G1 races internally.
                     // Use smart racing for all years except Year 1 (Junior Year).
                     campaign.date.year != DateYear.JUNIOR
-                } else if ((enableRacingPlan || enableSmartRaceSolver) && campaign.date.year != DateYear.JUNIOR) {
-                    // Year 2 and 3: Use smart racing if conditions are met.
+                } else if (enableSmartRaceSolver && campaign.date.year != DateYear.JUNIOR) {
+                    // Year 2 and 3: Use the Smart Race Solver if Farming Fans is on and Force Racing is off.
                     enableFarmingFans && !enableForceRacing
                 } else {
                     false
@@ -2556,20 +1897,16 @@ class Racing(private val game: Game, private val campaign: Campaign) {
 
             val success =
                 if (useSmartRacing && campaign.date.year != DateYear.JUNIOR) {
-                    // Use the smart racing logic.
-                    MessageLog.v(TAG, "[RACE] Using smart racing for Year ${campaign.date.year}.")
-                    processSmartRacing(mandatoryExtraRaceData)
+                    MessageLog.v(TAG, "[RACE] Using Smart Race Solver for Year ${campaign.date.year}.")
+                    processSmartRacing()
                 } else {
-                    // Use the standard racing logic.
-                    // If needed, print the reason(s) to why the smart racing logic was not started.
-                    if (enableRacingPlan && !hasFanRequirement && !hasTrophyRequirement) {
-                        MessageLog.i(TAG, "[RACE] Smart racing conditions not met due to current settings, using traditional racing logic...")
-                        MessageLog.i(TAG, "[RACE] Reason: One or more conditions failed:")
-                        if (campaign.date.year != DateYear.JUNIOR) {
+                    if (enableSmartRaceSolver && !hasFanRequirement && !hasTrophyRequirement) {
+                        MessageLog.i(TAG, "[RACE] Smart Race Solver conditions not met, using traditional racing logic...")
+                        if (campaign.date.year == DateYear.JUNIOR) {
+                            MessageLog.i(TAG, "[RACE]   - It is currently the Junior Year.")
+                        } else {
                             if (!enableFarmingFans) MessageLog.i(TAG, "[RACE]   - enableFarmingFans is false")
                             if (enableForceRacing) MessageLog.i(TAG, "[RACE]   - enableForceRacing is true")
-                        } else {
-                            MessageLog.i(TAG, "[RACE]   - It is currently the Junior Year.")
                         }
                     }
 
@@ -2621,27 +1958,24 @@ class Racing(private val game: Game, private val campaign: Campaign) {
         runRaceWithRetries()
         finalizeRaceResults(isExtra = true)
 
-        // Clear the next smart race day tracker since we just completed a race.
-        nextSmartRaceDay = null
-
         MessageLog.v(TAG, "[RACE] Racing process for Extra Race${if (isScheduledRace) " (scheduled) " else " "}is completed. Grade: ${lastRaceGrade ?: "OP"}")
         MessageLog.v(TAG, "********************")
         return true
     }
 
     /**
-     * Handles extra races using Smart Racing logic.
+     * Handles extra races by delegating to the [SmartRaceSolverIntegration].
      *
-     * @param mandatoryExtraRaceData Race data for the extra race that is mandatory to run. If provided, this race will be selected immediately if found on the screen.
-     * @return True if a race was successfully selected and ready to run, false if the process was canceled.
+     * Detects on-screen double-star race predictions, matches them via [lookupRaceInDatabase],
+     * and asks the solver to pick one. Returns false if the solver is disabled, no candidates
+     * match, or no schedule pick is found on screen — callers fall through to standard racing.
+     *
+     * @return True if a race was successfully selected and ready to run, false otherwise.
      */
-    private fun processSmartRacing(mandatoryExtraRaceData: RaceData? = null): Boolean {
-        MessageLog.v(TAG, "[RACE] Using Smart Racing Plan logic...")
-
-        // Update the current date and aptitudes for accurate scoring.
+    private fun processSmartRacing(): Boolean {
+        MessageLog.v(TAG, "[RACE] Using Smart Race Solver logic.")
         campaign.updateDate()
 
-        // Detect all double-star race predictions on screen.
         val doublePredictionLocations = IconRaceListPredictionDoubleStar.findAll(game.imageUtils)
         MessageLog.i(TAG, "[RACE] Found ${doublePredictionLocations.size} double-star prediction locations.")
         if (doublePredictionLocations.isEmpty()) {
@@ -2649,8 +1983,6 @@ class Racing(private val game: Game, private val campaign: Campaign) {
             return false
         }
 
-        // Extract race names from the screen and match them with the in-game database.
-        MessageLog.i(TAG, "[RACE] Extracting race names and matching with database...")
         val currentRaces =
             doublePredictionLocations.flatMap { location ->
                 val raceName = game.imageUtils.extractRaceName(location)
@@ -2665,294 +1997,39 @@ class Racing(private val game: Game, private val campaign: Campaign) {
                     emptyList()
                 }
             }
-
-        // If mandatory extra race data is provided, immediately find and select it on screen.
-        if (mandatoryExtraRaceData != null) {
-            MessageLog.v(TAG, "[RACE] Mandatory mode for extra races enabled. Looking for planned race \"${mandatoryExtraRaceData.name}\" on screen for turn ${campaign.date.day}.")
-
-            // Check if there are multiple races with the same formatted name but different fan counts.
-            val raceVariants = currentRaces.filter { it.nameFormatted == mandatoryExtraRaceData.nameFormatted }
-            val hasMultipleFanVariants = raceVariants.size > 1
-            if (hasMultipleFanVariants) {
-                MessageLog.i(TAG, "[RACE] Found ${raceVariants.size} variants with different fan counts.")
-            }
-
-            // Search for the mandatory extra race with scroll retry logic.
-            // Some devices show fewer races due to shorter screen heights, so scroll down up to 2 times to check.
-            val maxScrollAttempts = 2
-            var currentDoublePredictions = doublePredictionLocations
-
-            for (scrollAttempt in 0..maxScrollAttempts) {
-                // Find the mandatory extra race on screen.
-                val mandatoryExtraRaceLocation = findRaceLocationByName(currentDoublePredictions, mandatoryExtraRaceData.name)
-
-                if (mandatoryExtraRaceLocation != null) {
-                    // If multiple fan variants exist in the database, scroll to try to find the higher-fan version.
-                    if (hasMultipleFanVariants && scrollAttempt == 0) {
-                        MessageLog.i(TAG, "[RACE] Found a match but database shows multiple fan variants. Scrolling to check for higher-fan version...")
-
-                        val newPredictions = scrollRaceListAndRedetect(scrollDown = true)
-                        if (newPredictions != null) {
-                            currentDoublePredictions = newPredictions
-                            val higherFanLocation = findRaceLocationByName(currentDoublePredictions, mandatoryExtraRaceData.name)
-
-                            if (higherFanLocation != null) {
-                                MessageLog.i(TAG, "[RACE] ✓ Found higher-fan variant after scrolling. Selecting it.")
-                                game.tap(higherFanLocation.x, higherFanLocation.y, IconRaceListPredictionDoubleStar.template.path, ignoreWaiting = true)
-                                return true
-                            } else {
-                                // Not found after scroll, scroll back up and use the first found location.
-                                MessageLog.i(TAG, "[RACE] Higher-fan variant not found after scrolling. Scrolling back up...")
-                                val restoredPredictions = scrollRaceListAndRedetect(scrollDown = false)
-                                if (restoredPredictions != null) {
-                                    currentDoublePredictions = restoredPredictions
-                                    val relocatedLocation = findRaceLocationByName(currentDoublePredictions, mandatoryExtraRaceData.name)
-                                    val finalLocation = relocatedLocation ?: mandatoryExtraRaceLocation
-                                    MessageLog.i(TAG, "[RACE] Mandatory extra race \"${mandatoryExtraRaceData.name}\" found. Selecting it.")
-                                    game.tap(finalLocation.x, finalLocation.y, IconRaceListPredictionDoubleStar.template.path, ignoreWaiting = true)
-                                    return true
-                                } else {
-                                    MessageLog.i(TAG, "[RACE] Could not scroll back. Using first found position.")
-                                    game.tap(mandatoryExtraRaceLocation.x, mandatoryExtraRaceLocation.y, IconRaceListPredictionDoubleStar.template.path, ignoreWaiting = true)
-                                    return true
-                                }
-                            }
-                        }
-                    }
-
-                    MessageLog.v(
-                        TAG,
-                        "[RACE] Mandatory extra race \"${mandatoryExtraRaceData.name}\" found on screen with double predictions${if (scrollAttempt > 0) " after $scrollAttempt scroll(s)" else ""}. Selecting it immediately (skipping opportunity cost analysis).",
-                    )
-                    game.tap(mandatoryExtraRaceLocation.x, mandatoryExtraRaceLocation.y, IconRaceListPredictionDoubleStar.template.path, ignoreWaiting = true)
-                    return true
-                }
-
-                // If not found, and we have scrolls remaining, scroll down and re-detect.
-                if (scrollAttempt < maxScrollAttempts) {
-                    MessageLog.i(TAG, "[RACE] Mandatory extra race \"${mandatoryExtraRaceData.name}\" not found on current screen. Scrolling down (attempt ${scrollAttempt + 1}/$maxScrollAttempts)...")
-
-                    val newPredictions = scrollRaceListAndRedetect(scrollDown = true)
-                    if (newPredictions == null) {
-                        MessageLog.i(TAG, "[RACE] Stopping scroll attempts due to scroll failure.")
-                        break
-                    }
-
-                    currentDoublePredictions = newPredictions
-                    MessageLog.i(TAG, "[RACE] After scrolling, found ${currentDoublePredictions.size} double-star prediction locations.")
-                    if (currentDoublePredictions.isEmpty()) {
-                        MessageLog.i(TAG, "[RACE] No double-star predictions found after scrolling. Stopping scroll attempts.")
-                        break
-                    }
-                }
-            }
-
-            MessageLog.v(TAG, "[RACE] Mandatory extra race \"${mandatoryExtraRaceData.name}\" not found on screen after $maxScrollAttempts scroll(s). Canceling racing process.")
-            return false
-        }
-
-        // Smart Race Solver hook: when enabled, ask the solver to pick from the on-screen races.
-        // If it returns a candidate that matches a detected location, click it and short-circuit
-        // the existing opportunity-cost analysis. Otherwise fall through.
-        if (enableSmartRaceSolver) {
-            val solverPick = SmartRaceSolverIntegration.pickRace(
-                currentTurn = campaign.date.day,
-                scenario = SettingsHelper.getStringSetting("general", "scenario"),
-                candidates = currentRaces,
-            )
-            if (solverPick != null) {
-                val pickLocation = findRaceLocationByName(doublePredictionLocations, solverPick.name)
-                if (pickLocation != null) {
-                    MessageLog.v(TAG, "[RACE] Smart Race Solver selected \"${solverPick.name}\". Selecting it.")
-                    SmartRaceSolverIntegration.recordRaceWon(
-                        raceKey = solverPick.name,
-                        raceName = solverPick.name,
-                        classYear = campaign.date.year.name,
-                        turnNumber = campaign.date.day,
-                    )
-                    game.tap(pickLocation.x, pickLocation.y, IconRaceListPredictionDoubleStar.template.path, ignoreWaiting = true)
-                    return true
-                } else {
-                    MessageLog.i(TAG, "[RACE] Smart Race Solver picked \"${solverPick.name}\" but no on-screen location was found. Falling through.")
-                }
-            }
-        }
-
         if (currentRaces.isEmpty()) {
-            MessageLog.i(TAG, "[RACE] No races matched in database. Canceling racing process.")
-            return false
-        }
-        MessageLog.i(TAG, "[RACE] Successfully matched ${currentRaces.size} races in database.")
-
-        // If trophy requirement is active, filter to only G1 races.
-        // Trophy requirement is independent of racing plan and farming fans settings.
-        // If Pre-OP or G3 criteria is active, any race can fulfill the requirement.
-        val racesForSelection =
-            if (hasTrophyRequirement && !hasPreOpOrAboveRequirement && !hasG3OrAboveRequirement) {
-                val g1Races = currentRaces.filter { it.grade == RaceGrade.G1 }
-                if (g1Races.isEmpty()) {
-                    // No G1 races available. Cancel since trophy requirement specifically needs G1 races.
-                    MessageLog.v(TAG, "[RACE] Trophy requirement active but no G1 races available. Canceling racing process (independent of racing plan/farming fans).")
-                    return false
-                } else {
-                    MessageLog.i(TAG, "[RACE] Trophy requirement active. Filtering to ${g1Races.size} G1 races: ${g1Races.map { it.name }}.")
-                    g1Races
-                }
-            } else if (hasTrophyRequirement && (hasPreOpOrAboveRequirement || hasG3OrAboveRequirement)) {
-                if (hasPreOpOrAboveRequirement) {
-                    MessageLog.i(TAG, "[RACE] Trophy requirement with Pre-OP or above criteria active. Using all ${currentRaces.size} races.")
-                } else {
-                    MessageLog.i(TAG, "[RACE] Trophy requirement with G3 or above criteria active. Using all ${currentRaces.size} races.")
-                }
-                currentRaces
-            } else {
-                currentRaces
-            }
-
-        // Separate matched races into planned vs unplanned.
-        val (plannedRaces, regularRaces) =
-            racesForSelection.partition { race ->
-                userPlannedRaces.any { it.raceName == race.name }
-            }
-
-        // Log which races are user-selected vs regular.
-        MessageLog.i(TAG, "[RACE] Found ${plannedRaces.size} user-selected races on screen: ${plannedRaces.map { it.name }}.")
-        MessageLog.i(TAG, "[RACE] Found ${regularRaces.size} regular races on screen: ${regularRaces.map { it.name }}.")
-
-        // Filter both lists by user Racing Plan settings.
-        // If trophy requirement is active, bypass min fan filtering but still apply other filters.
-        val filteredPlannedRaces =
-            if (hasTrophyRequirement) {
-                if (hasPreOpOrAboveRequirement || hasG3OrAboveRequirement) {
-                    MessageLog.i(TAG, "[RACE] Trophy requirement active. Bypassing min fan threshold for all valid races.")
-                } else {
-                    MessageLog.i(TAG, "[RACE] Trophy requirement active. Bypassing min fan threshold for G1 races.")
-                }
-                filterRacesByCriteria(plannedRaces, bypassMinFans = true)
-            } else {
-                filterRacesByCriteria(plannedRaces)
-            }
-        val filteredRegularRaces =
-            if (hasTrophyRequirement) {
-                filterRacesByCriteria(regularRaces, bypassMinFans = true)
-            } else {
-                filterRacesByCriteria(regularRaces)
-            }
-        MessageLog.i(TAG, "[RACE] After filtering: ${filteredPlannedRaces.size} planned races and ${filteredRegularRaces.size} regular races remain.")
-
-        // Combine all filtered races for Opportunity Cost analysis.
-        val allFilteredRaces = filteredPlannedRaces + filteredRegularRaces
-        if (allFilteredRaces.isEmpty()) {
-            MessageLog.i(TAG, "[RACE] No races match current settings after filtering. Canceling racing process.")
+            MessageLog.i(TAG, "[RACE] No on-screen races matched the database. Canceling racing process.")
             return false
         }
 
-        // Evaluate whether the bot should race now using Opportunity Cost logic.
-        // If fan or trophy requirement is active, bypass opportunity cost to prioritize clearing the requirement.
-        if (hasFanRequirement || hasTrophyRequirement) {
-            MessageLog.i(TAG, "[RACE] Bypassing opportunity cost analysis to prioritize satisfying the current requirement.")
-        } else if (!evaluateOpportunityCost(allFilteredRaces, lookAheadDays)) {
-            MessageLog.i(TAG, "[RACE] Smart racing suggests waiting for better opportunities. Canceling racing process.")
+        val solverPick = SmartRaceSolverIntegration.pickRace(
+            currentTurn = campaign.date.day,
+            scenario = SettingsHelper.getStringSetting("general", "scenario"),
+            candidates = currentRaces,
+        )
+        if (solverPick == null) {
+            MessageLog.i(TAG, "[RACE] Smart Race Solver did not return a pick for turn ${campaign.date.day}. Canceling racing process.")
             return false
         }
 
-        // Decide which races to score based on availability.
-        val racesToScore =
-            if (filteredPlannedRaces.isNotEmpty()) {
-                // Prefer planned races, but include regular races for comparison.
-                MessageLog.i(TAG, "[RACE] Prioritizing ${filteredPlannedRaces.size} planned races with ${filteredRegularRaces.size} regular races for comparison.")
-                filteredPlannedRaces + filteredRegularRaces
-            } else {
-                // No planned races available, use regular races only.
-                MessageLog.i(TAG, "[RACE] No planned races available, using ${filteredRegularRaces.size} regular races only.")
-                filteredRegularRaces
-            }
-
-        // Score all eligible races with bonus for planned races.
-        val scoredRaces =
-            racesToScore.map { race ->
-                val baseScore = scoreRace(race)
-                if (plannedRaces.contains(race)) {
-                    // Add a bonus for planned races.
-                    val bonusScore = baseScore.copy(score = baseScore.score + 50.0)
-                    MessageLog.i(TAG, "[RACE] Planned race \"${race.name}\" gets a bonus: ${game.decimalFormat.format(baseScore.score)} -> ${game.decimalFormat.format(bonusScore.score)}.")
-                    bonusScore
-                } else {
-                    baseScore
-                }
-            }
-
-        // Sort by score and find the best race.
-        val sortedScoredRaces = scoredRaces.sortedByDescending { it.score }
-        val bestRace = sortedScoredRaces.first()
-
-        MessageLog.v(TAG, "[RACE] Best race selected: ${bestRace.raceData.name} (score: ${game.decimalFormat.format(bestRace.score)}).")
-        if (plannedRaces.contains(bestRace.raceData)) {
-            MessageLog.i(TAG, "[RACE] Selected race is from user's planned races list.")
-        } else {
-            MessageLog.i(TAG, "[RACE] Selected race is from regular available races.")
-        }
-
-        // Check if there are multiple races with the same formatted name but different fan counts.
-        // If so, we may need to scroll to find the higher-fan version (game sorts by fan count ascending and ordered by grade).
-        // Reuse the already-extracted currentRaces list instead of querying the database again.
-        val targetRaceMatches = currentRaces.filter { it.nameFormatted == bestRace.raceData.nameFormatted }
-        val hasMultipleFanVariants = targetRaceMatches.size > 1
-
-        // Locates the best race on screen and selects it.
-        MessageLog.v(TAG, "[RACE] Looking for target race \"${bestRace.raceData.name}\" on screen...")
-        var currentDoublePredictions = doublePredictionLocations
-        var targetRaceLocation = findRaceLocationByName(currentDoublePredictions, bestRace.raceData.name, logMatch = true)
-
-        // If multiple fan variants exist, and we found one, try scrolling to find the higher-fan version.
-        if (hasMultipleFanVariants && targetRaceLocation != null) {
-            MessageLog.i(TAG, "[RACE] Found a match but there may be a higher-fan variant below (game sorts by fan count ascending).")
-            val firstFoundLocation = targetRaceLocation
-
-            // Scroll down to look for the higher-fan variant.
-            MessageLog.i(TAG, "[RACE] Scrolling down to check for higher-fan variant...")
-            val newPredictions = scrollRaceListAndRedetect(scrollDown = true)
-            if (newPredictions != null) {
-                currentDoublePredictions = newPredictions
-                val newTargetLocation = findRaceLocationByName(currentDoublePredictions, bestRace.raceData.name)
-
-                if (newTargetLocation != null) {
-                    MessageLog.i(TAG, "[RACE] ✓ Found higher-fan variant at location (${newTargetLocation.x}, ${newTargetLocation.y}) after scrolling.")
-                    targetRaceLocation = newTargetLocation
-                } else {
-                    // Not found after scroll, scroll back up and use the first found location.
-                    MessageLog.i(TAG, "[RACE] Higher-fan variant not found after scrolling. Scrolling back up...")
-                    val restoredPredictions = scrollRaceListAndRedetect(scrollDown = false)
-                    if (restoredPredictions != null) {
-                        currentDoublePredictions = restoredPredictions
-                        targetRaceLocation = findRaceLocationByName(currentDoublePredictions, bestRace.raceData.name)
-
-                        if (targetRaceLocation == null) {
-                            MessageLog.i(TAG, "[RACE] Could not re-locate target race after scrolling back. Using last known position.")
-                            targetRaceLocation = firstFoundLocation
-                        } else {
-                            MessageLog.i(TAG, "[RACE] ✓ Re-located target race at (${targetRaceLocation.x}, ${targetRaceLocation.y}) after scrolling back.")
-                        }
-                    } else {
-                        MessageLog.i(TAG, "[RACE] Could not scroll back. Using first found position.")
-                        targetRaceLocation = firstFoundLocation
-                    }
-                }
-            }
-        }
-
-        if (targetRaceLocation == null) {
-            MessageLog.v(TAG, "[RACE] Could not find target race \"${bestRace.raceData.name}\" on screen. Canceling racing process.")
+        val pickLocation = findRaceLocationByName(doublePredictionLocations, solverPick.name)
+        if (pickLocation == null) {
+            MessageLog.i(TAG, "[RACE] Smart Race Solver picked \"${solverPick.name}\" but no matching on-screen location was found. Canceling racing process.")
             return false
         }
 
-        MessageLog.v(TAG, "[RACE] Selecting smart racing choice: ${bestRace.raceData.name} (score: ${game.decimalFormat.format(bestRace.score)}).")
-        game.tap(targetRaceLocation.x, targetRaceLocation.y, IconRaceListPredictionDoubleStar.template.path, ignoreWaiting = true)
-        lastRaceGrade = bestRace.raceData.grade
-        lastRaceFans = bestRace.raceData.fans
-        lastRaceDistance = bestRace.raceData.trackDistance
-        lastRaceIsRival = bestRace.raceData.isRival
-
+        MessageLog.v(TAG, "[RACE] Smart Race Solver selected \"${solverPick.name}\". Selecting it.")
+        SmartRaceSolverIntegration.recordRaceWon(
+            raceKey = solverPick.name,
+            raceName = solverPick.name,
+            classYear = campaign.date.year.name,
+            turnNumber = campaign.date.day,
+        )
+        game.tap(pickLocation.x, pickLocation.y, IconRaceListPredictionDoubleStar.template.path, ignoreWaiting = true)
+        lastRaceGrade = solverPick.grade
+        lastRaceFans = solverPick.fans
+        lastRaceDistance = solverPick.trackDistance
+        lastRaceIsRival = solverPick.isRival
         return true
     }
 

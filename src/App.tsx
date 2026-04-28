@@ -18,7 +18,6 @@ import Settings from "./pages/Settings"
 import TrainingSettings from "./pages/TrainingSettings"
 import TrainingEventSettings from "./pages/TrainingEventSettings"
 import RacingSettings from "./pages/RacingSettings"
-import RacingPlanSettings from "./pages/RacingPlanSettings"
 import SmartRaceSolverSettings from "./pages/SmartRaceSolverSettings"
 import SkillSettings from "./pages/SkillSettings"
 import SkillPlanSettings from "./pages/SkillPlanSettings"
@@ -54,7 +53,6 @@ function SettingsStack() {
             <Stack.Screen name="TrainingSettings" component={TrainingSettings} />
             <Stack.Screen name="TrainingEventSettings" component={TrainingEventSettings} />
             <Stack.Screen name="RacingSettings" component={RacingSettings} />
-            <Stack.Screen name="RacingPlanSettings" component={RacingPlanSettings} />
             <Stack.Screen name="SmartRaceSolverSettings" component={SmartRaceSolverSettings} />
             <Stack.Screen name="SkillSettings" component={SkillSettings} />
             {Object.entries(skillPlanSettingsPages).map(([key, config]) => (
