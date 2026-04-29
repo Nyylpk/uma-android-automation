@@ -2,7 +2,7 @@ import React, { useMemo, useContext, useEffect, useState, useRef, useCallback } 
 import { View, Text, ScrollView, StyleSheet, Modal, TouchableOpacity, Dimensions } from "react-native"
 import { Snackbar } from "react-native-paper"
 import { useTheme } from "../../context/ThemeContext"
-import { BotStateContext, defaultSettings, Settings } from "../../context/BotStateContext"
+import { TrainingContext, GeneralMiscContext, BotMetaContext, defaultSettings, Settings } from "../../context/BotStateContext"
 import CustomButton from "../../components/CustomButton"
 import CustomSlider from "../../components/CustomSlider"
 import CustomCheckbox from "../../components/CustomCheckbox"
@@ -30,7 +30,9 @@ import WarningContainer from "../../components/WarningContainer"
 const TrainingSettings = () => {
     usePerformanceLogging("TrainingSettings")
     const { colors } = useTheme()
-    const bsc = useContext(BotStateContext)
+    const { training, trainingStatTarget, updateTraining, updateTrainingStatTarget: updateStatTargetSlice } = useContext(TrainingContext)
+    const { misc, updateMisc } = useContext(GeneralMiscContext)
+    const { setSettings } = useContext(BotMetaContext)
     const scrollViewRef = useRef<ScrollView>(null)
     const { saveSettingsImmediate } = useSettings()
     const { currentProfileName } = useProfileManager()
@@ -40,17 +42,15 @@ const TrainingSettings = () => {
     const [snackbarVisible, setSnackbarVisible] = useState(false)
     const [snackbarMessage, setSnackbarMessage] = useState("")
 
-    const { settings, setSettings } = bsc
-
     // Initialize local state from settings, with fallback to defaults.
     const [statPrioritizationItems, setStatPrioritizationItems] = useState<string[]>(() =>
-        settings.training?.statPrioritization !== undefined ? settings.training.statPrioritization : defaultSettings.training.statPrioritization
+        training?.statPrioritization !== undefined ? training.statPrioritization : defaultSettings.training.statPrioritization
     )
     const [blacklistItems, setBlacklistItems] = useState<string[]>(() =>
-        settings.training?.trainingBlacklist !== undefined ? settings.training.trainingBlacklist : defaultSettings.training.trainingBlacklist
+        training?.trainingBlacklist !== undefined ? training.trainingBlacklist : defaultSettings.training.trainingBlacklist
     )
     const [sparkStatTargetItems, setSparkStatTargetItems] = useState<string[]>(() => {
-        const value = settings.training?.focusOnSparkStatTarget
+        const value = training?.focusOnSparkStatTarget
         // Ensure we always have an array (migration should handle this, but be safe).
         if (Array.isArray(value)) {
             return value
@@ -66,15 +66,15 @@ const TrainingSettings = () => {
     const trainingSettings = useMemo(
         () => ({
             ...defaultSettings.training,
-            ...settings.training,
+            ...training,
             trainingBlacklist: blacklistItems,
             statPrioritization: statPrioritizationItems,
             focusOnSparkStatTarget: sparkStatTargetItems,
         }),
-        [settings.training, blacklistItems, statPrioritizationItems, sparkStatTargetItems]
+        [training, blacklistItems, statPrioritizationItems, sparkStatTargetItems]
     )
 
-    const trainingStatTargetSettings = useMemo(() => ({ ...defaultSettings.trainingStatTarget, ...settings.trainingStatTarget }), [settings.trainingStatTarget])
+    const trainingStatTargetSettings = useMemo(() => ({ ...defaultSettings.trainingStatTarget, ...trainingStatTarget }), [trainingStatTarget])
 
     const {
         maximumFailureChance,
@@ -95,7 +95,7 @@ const TrainingSettings = () => {
     // We also verify that the values are actually different before triggering an update.
     useEffect(() => {
         if (isMounted.current) {
-            if (!shallowArrayEqual(settings.training?.statPrioritization, statPrioritizationItems)) {
+            if (!shallowArrayEqual(training?.statPrioritization, statPrioritizationItems)) {
                 updateTrainingSetting("statPrioritization", statPrioritizationItems)
             }
         }
@@ -103,7 +103,7 @@ const TrainingSettings = () => {
 
     useEffect(() => {
         if (isMounted.current) {
-            if (!shallowArrayEqual(settings.training?.trainingBlacklist, blacklistItems)) {
+            if (!shallowArrayEqual(training?.trainingBlacklist, blacklistItems)) {
                 updateTrainingSetting("trainingBlacklist", blacklistItems)
             }
         }
@@ -111,7 +111,7 @@ const TrainingSettings = () => {
 
     useEffect(() => {
         if (isMounted.current) {
-            if (!shallowArrayEqual(settings.training?.focusOnSparkStatTarget, sparkStatTargetItems)) {
+            if (!shallowArrayEqual(training?.focusOnSparkStatTarget, sparkStatTargetItems)) {
                 updateTrainingSetting("focusOnSparkStatTarget", sparkStatTargetItems)
             }
         }
@@ -124,39 +124,33 @@ const TrainingSettings = () => {
 
     // Sync local state when settings change (e.g., when switching profiles).
     useEffect(() => {
-        const newVal = settings.training?.trainingBlacklist
+        const newVal = training?.trainingBlacklist
         if (newVal !== undefined && !shallowArrayEqual(newVal, blacklistItems)) {
             setBlacklistItems(newVal)
         }
-    }, [settings.training?.trainingBlacklist])
+    }, [training?.trainingBlacklist])
 
     useEffect(() => {
-        const newVal = settings.training?.statPrioritization
+        const newVal = training?.statPrioritization
         if (newVal !== undefined && !shallowArrayEqual(newVal, statPrioritizationItems)) {
             setStatPrioritizationItems(newVal)
         }
-    }, [settings.training?.statPrioritization])
+    }, [training?.statPrioritization])
 
     useEffect(() => {
-        const newVal = settings.training?.focusOnSparkStatTarget
+        const newVal = training?.focusOnSparkStatTarget
         if (newVal !== undefined && Array.isArray(newVal) && !shallowArrayEqual(newVal, sparkStatTargetItems)) {
             setSparkStatTargetItems(newVal)
         }
-    }, [settings.training?.focusOnSparkStatTarget])
+    }, [training?.focusOnSparkStatTarget])
 
     // Sync currentProfileName from profile manager to settings context.
     // This is now purely for the BotStateContext as the ProfileContext is the source of truth for the UI.
     useEffect(() => {
         const syncProfileName = async () => {
             const profileName = currentProfileName || ""
-            if (settings.misc.currentProfileName !== profileName) {
-                setSettings((prev) => ({
-                    ...prev,
-                    misc: {
-                        ...prev.misc,
-                        currentProfileName: profileName,
-                    },
-                }))
+            if (misc.currentProfileName !== profileName) {
+                updateMisc({ currentProfileName: profileName })
             }
         }
         syncProfileName()
@@ -168,16 +162,10 @@ const TrainingSettings = () => {
      * @param value The value to set the setting to.
      */
     const updateTrainingSetting = useCallback(
-        (key: keyof typeof settings.training, value: any) => {
-            setSettings((prev) => ({
-                ...prev,
-                training: {
-                    ...prev.training,
-                    [key]: value,
-                },
-            }))
+        (key: keyof Settings["training"], value: any) => {
+            updateTraining({ [key]: value } as Partial<Settings["training"]>)
         },
-        [setSettings]
+        [updateTraining]
     )
 
     /**
@@ -222,20 +210,15 @@ const TrainingSettings = () => {
 
     /**
      * Update a training stat target setting in the global bot state.
+     * Wraps the slice updater so call sites can pass `(key, value)` rather than a partial object.
      * @param key The key of the stat target setting to update.
      * @param value The value to set the target to.
      */
     const updateTrainingStatTarget = useCallback(
-        (key: keyof typeof settings.trainingStatTarget, value: any) => {
-            setSettings((prev) => ({
-                ...prev,
-                trainingStatTarget: {
-                    ...prev.trainingStatTarget,
-                    [key]: value,
-                },
-            }))
+        (key: keyof Settings["trainingStatTarget"], value: any) => {
+            updateStatTargetSlice({ [key]: value } as Partial<Settings["trainingStatTarget"]>)
         },
-        [setSettings]
+        [updateStatTargetSlice]
     )
 
     const styles = useMemo(

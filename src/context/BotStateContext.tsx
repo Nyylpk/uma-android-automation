@@ -500,6 +500,12 @@ export interface BotMetaContextValue {
     setAppName: (appName: string) => void
     appVersion: string
     setAppVersion: (appVersion: string) => void
+    /**
+     * Bulk settings setter. Exposed here (rather than only via the legacy `BotStateContext`)
+     * so cross-slice writers (e.g., profile overwrite) can mutate without subscribing to the
+     * full settings object, since `setSettings` is a stable callback identity.
+     */
+    setSettings: (settings: Settings | ((prev: Settings) => Settings)) => void
 }
 
 export interface RacingContextValue {
@@ -649,8 +655,8 @@ export const BotStateProvider = ({ children }: any): React.ReactElement => {
     // stable identity across renders, so consumers of that slice's context skip re-rendering
     // when an unrelated domain mutates.
     const metaValue = useMemo<BotMetaContextValue>(
-        () => ({ readyStatus, setReadyStatus, defaultSettings, appName, setAppName, appVersion, setAppVersion }),
-        [readyStatus, appName, appVersion]
+        () => ({ readyStatus, setReadyStatus, defaultSettings, appName, setAppName, appVersion, setAppVersion, setSettings: setSettingsWithLogging }),
+        [readyStatus, appName, appVersion, setSettingsWithLogging]
     )
     const racingValue = useMemo<RacingContextValue>(() => ({ racing: settings.racing, updateRacing }), [settings.racing, updateRacing])
     const skillsValue = useMemo<SkillsContextValue>(() => ({ skills: settings.skills, updateSkills }), [settings.skills, updateSkills])
