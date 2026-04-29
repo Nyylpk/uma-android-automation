@@ -521,7 +521,7 @@ const SmartRaceSolverSettings = () => {
             return (
                 <View>
                     <Text style={styles.popoverTitle}>
-                        {turnLabel} — {entry?.type === "Rest" ? "Rest" : "Training"}
+                        {turnLabel} — {entry?.type === "Rest" ? "Rest" : "No race"}
                     </Text>
                     <Text style={styles.popoverMeta}>No race scheduled this turn.</Text>
                 </View>
@@ -569,7 +569,7 @@ const SmartRaceSolverSettings = () => {
                                 </Text>
                             </>
                         ) : (
-                            <Text style={styles.calendarCellEmpty}>{entry?.type === "Rest" ? "Rest" : "Train"}</Text>
+                            <Text style={styles.calendarCellEmpty}>{entry?.type === "Rest" ? "Rest" : "No race"}</Text>
                         )}
                     </TouchableOpacity>
                 </PopoverTrigger>
