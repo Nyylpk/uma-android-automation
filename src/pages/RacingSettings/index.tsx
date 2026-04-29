@@ -1,4 +1,4 @@
-import { useMemo, useContext, useRef } from "react"
+import { useMemo, useContext, useRef, useCallback } from "react"
 import { View, Text, TextInput, ScrollView, StyleSheet } from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import { useTheme } from "../../context/ThemeContext"
@@ -56,28 +56,31 @@ const RacingSettings = () => {
      * @param key The key of the setting to update.
      * @param value The value to set the setting to.
      */
-    const updateRacingSetting = (key: keyof typeof settings.racing, value: any) => {
-        if (key === "enableUserInGameRaceAgenda" && value) {
-            setSettings({
-                ...bsc.settings,
-                racing: {
-                    // Disable the Farming Fans and Racing Plan settings when User In Game Race Agenda is enabled.
-                    ...bsc.settings.racing,
-                    enableFarmingFans: false,
-                    enableUserInGameRaceAgenda: true,
-                    enableRacingPlan: false,
-                },
-            })
-        } else {
-            setSettings({
-                ...bsc.settings,
-                racing: {
-                    ...bsc.settings.racing,
-                    [key]: value,
-                },
-            })
-        }
-    }
+    const updateRacingSetting = useCallback(
+        (key: keyof typeof settings.racing, value: any) => {
+            if (key === "enableUserInGameRaceAgenda" && value) {
+                setSettings((prev) => ({
+                    ...prev,
+                    racing: {
+                        // Disable the Farming Fans and Racing Plan settings when User In Game Race Agenda is enabled.
+                        ...prev.racing,
+                        enableFarmingFans: false,
+                        enableUserInGameRaceAgenda: true,
+                        enableRacingPlan: false,
+                    },
+                }))
+            } else {
+                setSettings((prev) => ({
+                    ...prev,
+                    racing: {
+                        ...prev.racing,
+                        [key]: value,
+                    },
+                }))
+            }
+        },
+        [setSettings]
+    )
 
     const styles = useMemo(
         () =>
