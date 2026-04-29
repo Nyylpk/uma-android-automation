@@ -73,6 +73,10 @@ const EPITHETS_DATA_JSON = JSON.stringify(epithetsData)
 // the preview result it produced.
 let lastPreviewCache: { key: string; preview: SchedulePreview } | null = null
 
+// Kotlin caches parsed races/epithets across calls; once we've shipped the bundled JSON once we
+// can omit it from subsequent bridge payloads, dropping ~150KB of marshalling per call.
+let bridgeDataPrimed = false
+
 const APTITUDE_RANKS = ["S", "A", "B", "C", "D", "E", "F", "G"]
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 const YEAR_LABELS: Array<{ name: string; startTurn: number }> = [
@@ -305,8 +309,9 @@ const SmartRaceSolverSettings = () => {
         forcedEpithets,
         manualLocks,
         weights,
-        racesDataJson: RACES_DATA_JSON,
-        epithetsDataJson: EPITHETS_DATA_JSON,
+        // Only ship the bundled JSON the first time; Kotlin caches it after that.
+        racesDataJson: bridgeDataPrimed ? undefined : RACES_DATA_JSON,
+        epithetsDataJson: bridgeDataPrimed ? undefined : EPITHETS_DATA_JSON,
     })
 
     useEffect(() => {
@@ -338,6 +343,7 @@ const SmartRaceSolverSettings = () => {
             console.log("[SmartRaceSolver] previewSchedule:start")
             try {
                 const result = await previewSchedule(snapshot)
+                if (!result.error) bridgeDataPrimed = true
                 setPreview(result)
                 setPreviewError(result.error ?? null)
                 lastPreviewCache = { key, preview: result }
