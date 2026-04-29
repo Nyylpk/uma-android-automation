@@ -1,5 +1,5 @@
 import { useMemo, useContext, useState, useEffect, useRef } from "react"
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native"
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList } from "react-native"
 import { Divider } from "react-native-paper"
 import { previewSchedule, SchedulePreview, ScheduleEntry, SolverConfigSnapshot } from "../../lib/solver/preview"
 import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover"
@@ -715,16 +715,20 @@ const SmartRaceSolverSettings = () => {
                                     onChangeText={setPresetSearch}
                                     placeholder="Search 125 characters…"
                                 />
-                                <ScrollView
+                                <FlatList
                                     style={styles.presetList}
-                                    nestedScrollEnabled={true}
+                                    data={filteredPresets}
+                                    keyExtractor={(p) => p.name}
+                                    initialNumToRender={10}
+                                    maxToRenderPerBatch={10}
+                                    windowSize={5}
+                                    removeClippedSubviews
+                                    nestedScrollEnabled
                                     keyboardShouldPersistTaps="handled"
-                                >
-                                    {filteredPresets.map((p) => {
+                                    renderItem={({ item: p }) => {
                                         const active = smartRaceSolverCharacterPreset === p.name
                                         return (
                                             <TouchableOpacity
-                                                key={p.name}
                                                 style={[styles.presetItem, active && styles.presetItemActive]}
                                                 onPress={() => applyPreset(p)}
                                             >
@@ -734,11 +738,12 @@ const SmartRaceSolverSettings = () => {
                                                 </Text>
                                             </TouchableOpacity>
                                         )
-                                    })}
-                                    {presetSearch && filteredPresets.length === 0 && (
-                                        <Text style={styles.inputDescription}>No matches.</Text>
-                                    )}
-                                </ScrollView>
+                                    }}
+                                    ListEmptyComponent={
+                                        presetSearch ? <Text style={styles.inputDescription}>No matches.</Text> : null
+                                    }
+                                />
+                                <Text style={styles.inputDescription}>Showing {filteredPresets.length} preset{filteredPresets.length === 1 ? "" : "s"}.</Text>
                             </View>
                         </SearchableItem>
 
