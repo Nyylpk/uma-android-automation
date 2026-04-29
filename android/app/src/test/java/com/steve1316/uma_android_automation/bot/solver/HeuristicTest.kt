@@ -38,6 +38,7 @@ class HeuristicTest {
             currentTurn = 64,
             races = listOf(rich, key),
             epithets = listOf(target),
+            targetEpithets = setOf("Key Win"),
             weights = Weights(epithetValue = 100.0),
         )
 

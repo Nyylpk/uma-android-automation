@@ -70,6 +70,7 @@ internal object TestFixtures {
         completedEpithets: Set<String> = emptySet(),
         deadEpithets: Set<String> = emptySet(),
         forcedEpithets: Set<String> = emptySet(),
+        targetEpithets: Set<String> = emptySet(),
         lockedDecisions: Map<TurnNumber, Decision> = emptyMap(),
         aptitudes: Aptitudes = Aptitudes.DEFAULT_A,
         weights: Weights = Weights(),
@@ -85,6 +86,7 @@ internal object TestFixtures {
         completedEpithets = completedEpithets,
         deadEpithets = deadEpithets,
         forcedEpithets = forcedEpithets,
+        targetEpithets = targetEpithets,
         lockedDecisions = lockedDecisions,
         weights = weights,
     )

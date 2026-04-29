@@ -120,7 +120,12 @@ object Heuristic {
         }
 
         val baseScore = ScoringFunctions.raceValue(race, state.weights)
-        val epithetGain = newlyCompleted.sumOf { ScoringFunctions.epithetContribution(it, state.weights) }
+        // Only target/forced epithets contribute to the score so the solver doesn't pursue free
+        // upside; non-targeted completions still appear in [completedEpithets] for the projection
+        // panel but don't bias the schedule toward racing.
+        val epithetGain = newlyCompleted
+            .filter { it.name in state.targetEpithets || it.name in state.forcedEpithets }
+            .sumOf { ScoringFunctions.epithetContribution(it, state.weights) }
         val summer = ScoringFunctions.summerBlockPenalty(turn, state)
         val consec = ScoringFunctions.consecutiveRacePenalty(newConsec, state.weights)
 
