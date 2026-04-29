@@ -1,7 +1,25 @@
 import { createContext, useState, useMemo, useCallback } from "react"
 import { startTiming } from "../lib/performanceLogger"
-import racesData from "../data/races.json"
 import { skillPlanSettingsPages } from "../pages/SkillPlanSettings/config"
+
+// Defer parsing the races.json bundle until the racing-plan defaults are first read.
+// This keeps the cold-start path off the main thread until something actually consumes it.
+let _racingDefaultsCache: { plan: string; data: string } | null = null
+const _getRacingDefaults = (): { plan: string; data: string } => {
+    if (_racingDefaultsCache) return _racingDefaultsCache
+    const racesData = require("../data/races.json")
+    _racingDefaultsCache = {
+        plan: JSON.stringify(
+            Object.values(racesData as Record<string, { name: string; date: string }>).map((race, index) => ({
+                raceName: race.name,
+                date: race.date,
+                priority: index,
+            }))
+        ),
+        data: JSON.stringify(racesData),
+    }
+    return _racingDefaultsCache
+}
 
 /**
  * Configuration for an individual skill plan (e.g. preFinals, careerComplete).
@@ -240,14 +258,12 @@ export const defaultSettings: Settings = {
         customAgendaTitle: "",
         enableRacingPlan: false,
         enableMandatoryRacingPlan: false,
-        racingPlan: JSON.stringify(
-            Object.values(racesData).map((race, index) => ({
-                raceName: race.name,
-                date: race.date,
-                priority: index,
-            }))
-        ),
-        racingPlanData: JSON.stringify(racesData),
+        get racingPlan() {
+            return _getRacingDefaults().plan
+        },
+        get racingPlanData() {
+            return _getRacingDefaults().data
+        },
         minFansThreshold: 0,
         preferredTerrain: "Any",
         preferredGrades: ["G1", "G2", "G3"],

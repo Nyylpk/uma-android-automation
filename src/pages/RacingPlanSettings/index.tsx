@@ -9,7 +9,6 @@ import CustomButton from "../../components/CustomButton"
 import CustomScrollView from "../../components/CustomScrollView"
 import { Input } from "../../components/ui/input"
 import { CircleCheckBig, Plus, Trash2 } from "lucide-react-native"
-import racesData from "../../data/races.json"
 import PageHeader from "../../components/PageHeader"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
 import SearchableItem from "../../components/SearchableItem"
@@ -104,8 +103,8 @@ const RacingPlanSettings = () => {
         return racingPlan && racingPlan !== "[]" && typeof racingPlan === "string" ? JSON.parse(racingPlan) : []
     }, [racingPlan])
 
-    // Convert races.json to array.
-    const allRaces: Race[] = useMemo(() => Object.values(racesData), [])
+    // Convert races.json to array. Lazy-required so the parse only happens when this page mounts.
+    const allRaces: Race[] = useMemo(() => Object.values(require("../../data/races.json")) as Race[], [])
 
     // Filter races based on search and preferences.
     const filteredRaces = useMemo(() => {
