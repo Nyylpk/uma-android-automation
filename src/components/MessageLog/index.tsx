@@ -2,6 +2,7 @@ import { useContext, useState, useMemo, useCallback, memo, useEffect, useRef } f
 import { MessageLogContext } from "../../context/MessageLogContext"
 import { BotStateContext } from "../../context/BotStateContext"
 import { useSettings } from "../../context/SettingsContext"
+import { databaseManager } from "../../lib/database"
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Animated } from "react-native"
 import * as Clipboard from "expo-clipboard"
 import { Copy, Plus, Minus, Type, X, ArrowUp, ArrowDown, ArrowUpAZ, ArrowDownZA } from "lucide-react-native"
@@ -407,12 +408,19 @@ ${longTargetsString}
 ****************************************`
     }, [bsc.settings])
 
-    // Save the formatted string to the context for persistence.
+    // Persist the formatted string directly to SQLite. The Kotlin runtime is the only consumer
+    // (via SettingsHelper.getStringSetting), so writing through `setSettings` would just trigger
+    // an extra full re-render of every BotStateContext consumer for each user toggle.
+    // Debounce coalesces bursts of rapid setting changes into a single DB write.
+    const formattedStringWriteTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
     useEffect(() => {
-        bsc.setSettings({
-            ...bsc.settings,
-            misc: { ...bsc.settings.misc, formattedSettingsString: formattedSettingsString },
-        })
+        if (formattedStringWriteTimer.current) clearTimeout(formattedStringWriteTimer.current)
+        formattedStringWriteTimer.current = setTimeout(() => {
+            databaseManager.saveSetting("misc", "formattedSettingsString", formattedSettingsString, true).catch(() => {})
+        }, 250)
+        return () => {
+            if (formattedStringWriteTimer.current) clearTimeout(formattedStringWriteTimer.current)
+        }
     }, [formattedSettingsString])
 
     /**
