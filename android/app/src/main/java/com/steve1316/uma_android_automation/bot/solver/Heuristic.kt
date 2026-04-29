@@ -11,7 +11,7 @@ package com.steve1316.uma_android_automation.bot.solver
  */
 object Heuristic {
 
-    const val DEFAULT_BEAM_WIDTH: Int = 20
+    const val DEFAULT_BEAM_WIDTH: Int = 12
     const val LAST_TURN: TurnNumber = 72
 
     /**

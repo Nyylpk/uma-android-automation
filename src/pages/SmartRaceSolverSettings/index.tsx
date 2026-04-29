@@ -241,6 +241,8 @@ const SmartRaceSolverSettings = () => {
     }
 
     const applyPreset = (preset: CharacterPresetEntry) => {
+        const startedAt = Date.now()
+        console.log(`[SmartRaceSolver] applyPreset:start name=${preset.name}`)
         updateRacingSetting("smartRaceSolverCharacterPreset", preset.name)
         updateRacingSetting(
             "smartRaceSolverAptitudes",
@@ -253,6 +255,7 @@ const SmartRaceSolverSettings = () => {
                 Dirt: preset.surfaceAptitudes.Dirt,
             })
         )
+        console.log(`[SmartRaceSolver] applyPreset:end ${Date.now() - startedAt}ms`)
     }
 
     const toggleTargetEpithet = (name: string) => {
@@ -308,6 +311,8 @@ const SmartRaceSolverSettings = () => {
         }
         const handle = setTimeout(async () => {
             setPreviewLoading(true)
+            const startedAt = Date.now()
+            console.log("[SmartRaceSolver] previewSchedule:start")
             try {
                 const snapshot = buildSnapshot()
                 const result = await previewSchedule(snapshot)
@@ -318,8 +323,9 @@ const SmartRaceSolverSettings = () => {
                 setPreviewError(String(e?.message ?? e))
             } finally {
                 setPreviewLoading(false)
+                console.log(`[SmartRaceSolver] previewSchedule:end ${Date.now() - startedAt}ms`)
             }
-        }, 500)
+        }, 250)
         return () => clearTimeout(handle)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
