@@ -3176,6 +3176,16 @@
             "Randomly either\n----------\nMaximum Energy +12\nEnergy +40\nHeal all negative status effects\nor (~30%)\nor (~30%)\nEnergy -20\nMood -2\nGet Practice Poor status",
             "Randomly either\n----------\nEnergy +20\nMood +1\nGet Charming ○ status\nor (~15%)\nor (~15%)\nEnergy -10 / -20\nMood -1\n(random) Get Practice Poor status",
             "Energy +10"
+        ],
+        "Encouragement on Demand": [
+            "Mood +2/+1\nPower +15 / +20\nSkill points +15 / +20\nPumped hint +1"
+        ],
+        "To Be Continued?": [
+            "Unyielding Spirit hint +2",
+            "Energy +15"
+        ],
+        "Urara Returns the Favor": [
+            "Speed +10\n(random) Get Practice Perfect ○ status"
         ]
     },
     "Kitasan Black": {
@@ -5852,6 +5862,16 @@
             "Randomly either\n----------\nMaximum Energy +12\nEnergy +40\nHeal all negative status effects\nor (~30%)\nor (~30%)\nEnergy -20\nMood -2\nGet Practice Poor status",
             "Randomly either\n----------\nEnergy +20\nMood +1\nGet Charming ○ status\nor (~15%)\nor (~15%)\nEnergy -10 / -20\nMood -1\n(random) Get Practice Poor status",
             "Energy +10"
+        ],
+        "Cheers on Video!": [
+            "Power +10\nSkill points +15",
+            "Fighter hint +2"
+        ],
+        "Cheers at the Game!": [
+            "Mood +1\nStamina +20\nSkill points +20\nFearless hint +1"
+        ],
+        "Your Cheers": [
+            "Guts +10\n(random) Get Practice Perfect ○ status"
         ]
     },
     "Nishino Flower": {
@@ -9191,6 +9211,22 @@
             "Randomly either\n----------\nMaximum Energy +12\nEnergy +40\nHeal all negative status effects\nor (~30%)\nor (~30%)\nEnergy -20\nMood -2\nGet Practice Poor status",
             "Randomly either\n----------\nEnergy +20\nMood +1\nGet Charming ○ status\nor (~15%)\nor (~15%)\nEnergy -10 / -20\nMood -1\n(random) Get Practice Poor status",
             "Energy +10"
+        ],
+        "Simply Doing What Needs to Be Done": [
+            "Speed +20",
+            "Wit +20"
+        ],
+        "Master Glutton": [
+            "Energy +10\nSkill points +5",
+            "Randomly either\n----------\nEnergy +30\nSkill points +10\nor (~10%)\nor (~10%)\nEnergy +30\nSkill points +10\nSpeed -5\nPower +5\nGet Slow Metabolism status"
+        ],
+        "To My Dear Student": [
+            "Stamina +10",
+            "Guts +10"
+        ],
+        "Finding the Legendary Tome": [
+            "Speed +5\nGuts +5",
+            "Stamina +5\nPower +5"
         ]
     }
 }

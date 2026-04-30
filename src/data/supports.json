@@ -175,6 +175,16 @@
         ],
         "(❯❯❯)\nSomeday, I'll Be Your Rival!": [
             "Randomly either\n----------\nMaximum Energy +4\nEnergy -5\nStamina +15\nPower +20\nRising Dragon hint +3\nBamboo Memory bond +5\n----------\n\n----------\nEnergy -15\nStamina +10\nPower +15\nOuter Swell hint +3\nBamboo Memory bond +5"
+        ],
+        "(❯)\nThe Ultimate Omlet Training Arc": [
+            "Mood +1\nEnergy -5\nGuts +15\nPosition Pilfer hint +1\nBamboo Memory bond +1",
+            "Skill points +30\nBamboo Memory bond +5\nEvent chain ended"
+        ],
+        "(❯❯)\nSweat, Discipline, and Friendship!": [
+            "Energy -10\nPower +15\nGuts +15\nBamboo Memory bond +5"
+        ],
+        "(❯❯❯)\nMiracle Makers! The Red-Hot Cheer Squad!": [
+            "Randomly either\n----------\nEnergy -10\nStamina +20\nGuts +20\nFull of Vigor hint +3\nBamboo Memory bond +5\n----------\n\n----------\nEnergy -10\nStamina +15\nGuts +15\nPumped hint +1\nBamboo Memory bond +5"
         ]
     },
     "Biko Pegasus": {
@@ -596,6 +606,15 @@
         "(❯❯❯)\nHit It! Princess Road!": [
             "Speed +15\nGuts +15\nCenter Stage hint +1\nKawakami Princess bond +5",
             "Energy +25\nSkill points +25"
+        ],
+        "(❯)\nOH! MY! Ghost Hunt!": [
+            "Energy -5\nPower +10\nKawakami Princess bond +5"
+        ],
+        "(❯❯)\nAllies Assemble! A Princess Must Be Regal!": [
+            "Energy -10\nPower +20\nKawakami Princess bond +5"
+        ],
+        "(❯❯❯)\nTogether as One! Grand Ghost Hunting Finale!": [
+            "Energy -15\nPower +30\nUnyielding hint +1\nKawakami Princess bond +5"
         ]
     },
     "King Halo": {
@@ -1384,6 +1403,16 @@
         ],
         "(❯❯)\nNever Give Up! Endless Possibilities!": [
             "Power +5\nGuts +5\nShifting Gears hint +1"
+        ],
+        "(❯)\nIt'll All Turn Out Fine": [
+            "Speed +10\nWit +10\nMaximum Energy +4\nSeeking the Pearl bond +5"
+        ],
+        "(❯❯)\nRe: START!": [
+            "Energy +10\nWit +10\nUpdrafters hint +2\nSeeking the Pearl bond +5",
+            "Power +20\nSkill points +10\nLight as a Feather hint +2\nSeeking the Pearl bond +5"
+        ],
+        "(❯❯❯)\nYou Are Me": [
+            "Speed +14\nGuts +7\nWit +7\nDauntless hint +1\nSeeking the Pearl bond +5"
         ]
     },
     "Seiun Sky": {
