@@ -12,7 +12,6 @@ import com.facebook.react.bridge.ReactMethod
  * @property reactContext Injected by React Native's module loader.
  */
 class SmartRaceSolverModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
-
     override fun getName(): String = MODULE_NAME
 
     /**
