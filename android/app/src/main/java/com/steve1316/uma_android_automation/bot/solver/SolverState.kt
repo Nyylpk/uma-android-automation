@@ -19,27 +19,43 @@ data class Aptitudes(
     val turf: Aptitude,
     val dirt: Aptitude,
 ) {
-    fun forDistance(d: TrackDistance): Aptitude = when (d) {
-        TrackDistance.SPRINT -> sprint
-        TrackDistance.MILE -> mile
-        TrackDistance.MEDIUM -> medium
-        TrackDistance.LONG -> long
-    }
+    fun forDistance(d: TrackDistance): Aptitude =
+        when (d) {
+            TrackDistance.SPRINT -> sprint
+            TrackDistance.MILE -> mile
+            TrackDistance.MEDIUM -> medium
+            TrackDistance.LONG -> long
+        }
 
-    fun forSurface(s: TrackSurface): Aptitude = when (s) {
-        TrackSurface.TURF -> turf
-        TrackSurface.DIRT -> dirt
-    }
+    fun forSurface(s: TrackSurface): Aptitude =
+        when (s) {
+            TrackSurface.TURF -> turf
+            TrackSurface.DIRT -> dirt
+        }
 
     companion object {
         /** All-A baseline used by tests and as a safe default when no preset is selected. */
-        val DEFAULT_A: Aptitudes = Aptitudes(
-            Aptitude.A, Aptitude.A, Aptitude.A, Aptitude.A, Aptitude.A, Aptitude.A,
-        )
+        val DEFAULT_A: Aptitudes =
+            Aptitudes(
+                Aptitude.A,
+                Aptitude.A,
+                Aptitude.A,
+                Aptitude.A,
+                Aptitude.A,
+                Aptitude.A,
+            )
     }
 }
 
-/** Tunable scoring weights consumed by the heuristic. Defaults mirror the reference solver. */
+/**
+ * Tunable scoring weights consumed by the heuristic. Defaults mirror the reference Trackblazer
+ * solver: a 50% race-bonus uplift on top of the BASE_REWARD table and a per-race cost equal to
+ * the weighted G2 baseline. With these defaults G2/G3 races score zero — they tie with Train and
+ * only get picked when an epithet, fans tiebreaker, or Late-Dec window pushes them positive.
+ *
+ * @property raceBonusPct Percentage uplift applied to base stat/sp rewards before weighting.
+ * @property raceCostPct Per-race cost expressed as a percentage of the weighted G2 baseline.
+ */
 data class Weights(
     val raceValue: Double = 1.0,
     val epithetValue: Double = 1.0,
@@ -48,7 +64,11 @@ data class Weights(
     val hintWeight: Double = 8.0,
     val consecutiveRacePenalty: Double = 3.0,
     val summerPenalty: Double = 5.0,
+    val raceBonusPct: Double = 50.0,
+    val raceCostPct: Double = 100.0,
     val aptitudeThreshold: Aptitude = Aptitude.C,
+    val includeOpAndPreOp: Boolean = false,
+    val allowSummerRacing: Boolean = false,
 )
 
 /**
@@ -115,10 +135,19 @@ data class SolverState(
          * Default summer training blocks (no-race turns). Junior: Early Jul → Early Aug;
          * Classic & Senior: Early Jul → Late Aug. Mirrors the reference solver's constant.
          */
-        val DEFAULT_SUMMER_BLOCKS: Set<TurnNumber> = setOf(
-            12, 13, 14,
-            36, 37, 38, 39,
-            60, 61, 62, 63,
-        )
+        val DEFAULT_SUMMER_BLOCKS: Set<TurnNumber> =
+            setOf(
+                12,
+                13,
+                14,
+                36,
+                37,
+                38,
+                39,
+                60,
+                61,
+                62,
+                63,
+            )
     }
 }
