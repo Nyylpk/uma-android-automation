@@ -10,7 +10,6 @@ import com.steve1316.uma_android_automation.types.TrackSurface
  * with minimum boilerplate; tests override only the fields they care about.
  */
 internal object TestFixtures {
-
     fun race(
         name: String,
         turnNumber: TurnNumber,
@@ -22,19 +21,20 @@ internal object TestFixtures {
         classYear: String = "Senior",
         distanceMeters: Int = 2000,
         date: String = "$classYear Class January, First Half",
-    ): RaceCandidate = RaceCandidate(
-        key = "$name ($date)",
-        name = name,
-        date = date,
-        classYear = classYear,
-        raceTrack = raceTrack,
-        grade = grade,
-        terrain = terrain,
-        distanceType = distance,
-        distanceMeters = distanceMeters,
-        fans = fans,
-        turnNumber = turnNumber,
-    )
+    ): RaceCandidate =
+        RaceCandidate(
+            key = "$name ($date)",
+            name = name,
+            date = date,
+            classYear = classYear,
+            raceTrack = raceTrack,
+            grade = grade,
+            terrain = terrain,
+            distanceType = distance,
+            distanceMeters = distanceMeters,
+            fans = fans,
+            turnNumber = turnNumber,
+        )
 
     fun epithet(
         name: String,
@@ -43,24 +43,26 @@ internal object TestFixtures {
         rewardKind: String = "stat",
         amount: Int = 20,
         displayAmount: Int = 10,
-    ): Epithet = Epithet(
-        name = name,
-        category = "$amount stat reward",
-        rewardText = "+$displayAmount to 2 random stats",
-        rewardKind = rewardKind,
-        amount = amount,
-        displayAmount = displayAmount,
-        conditionText = "(test)",
-        dependsOn = dependsOn,
-        matchers = matchers,
-    )
+    ): Epithet =
+        Epithet(
+            name = name,
+            category = "$amount stat reward",
+            rewardText = "+$displayAmount to 2 random stats",
+            rewardKind = rewardKind,
+            amount = amount,
+            displayAmount = displayAmount,
+            conditionText = "(test)",
+            dependsOn = dependsOn,
+            matchers = matchers,
+        )
 
-    fun win(race: RaceCandidate): RaceWin = RaceWin(
-        raceKey = race.key,
-        name = race.name,
-        classYear = race.classYear,
-        turnNumber = race.turnNumber,
-    )
+    fun win(race: RaceCandidate): RaceWin =
+        RaceWin(
+            raceKey = race.key,
+            name = race.name,
+            classYear = race.classYear,
+            turnNumber = race.turnNumber,
+        )
 
     fun state(
         currentTurn: TurnNumber = 14,
@@ -75,24 +77,31 @@ internal object TestFixtures {
         aptitudes: Aptitudes = Aptitudes.DEFAULT_A,
         weights: Weights = Weights(),
         scenario: String = "Trackblazer",
-    ): SolverState = SolverState(
-        currentTurn = currentTurn,
-        scenario = scenario,
-        characterPreset = null,
-        aptitudes = aptitudes,
-        racesByTurn = races.groupBy { it.turnNumber },
-        epithets = epithets,
-        raceHistory = history,
-        completedEpithets = completedEpithets,
-        deadEpithets = deadEpithets,
-        forcedEpithets = forcedEpithets,
-        targetEpithets = targetEpithets,
-        lockedDecisions = lockedDecisions,
-        weights = weights,
-    )
+    ): SolverState =
+        SolverState(
+            currentTurn = currentTurn,
+            scenario = scenario,
+            characterPreset = null,
+            aptitudes = aptitudes,
+            racesByTurn = races.groupBy { it.turnNumber },
+            epithets = epithets,
+            raceHistory = history,
+            completedEpithets = completedEpithets,
+            deadEpithets = deadEpithets,
+            forcedEpithets = forcedEpithets,
+            targetEpithets = targetEpithets,
+            lockedDecisions = lockedDecisions,
+            weights = weights,
+        )
 
     /** All-G aptitudes, used to test the eligibility filter. */
-    val ALL_G_APTITUDES: Aptitudes = Aptitudes(
-        Aptitude.G, Aptitude.G, Aptitude.G, Aptitude.G, Aptitude.G, Aptitude.G,
-    )
+    val ALL_G_APTITUDES: Aptitudes =
+        Aptitudes(
+            Aptitude.G,
+            Aptitude.G,
+            Aptitude.G,
+            Aptitude.G,
+            Aptitude.G,
+            Aptitude.G,
+        )
 }
