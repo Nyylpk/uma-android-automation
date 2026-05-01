@@ -1,5 +1,5 @@
 import React, { useMemo, useContext, useEffect, useState, useRef, useCallback } from "react"
-import { View, Text, ScrollView, StyleSheet, Modal, TouchableOpacity, Dimensions } from "react-native"
+import { View, Text, ScrollView, StyleSheet, Modal, TouchableOpacity, Dimensions, InteractionManager } from "react-native"
 import { Snackbar } from "react-native-paper"
 import { useTheme } from "../../context/ThemeContext"
 import { TrainingContext, GeneralMiscContext, BotMetaContext, defaultSettings, Settings } from "../../context/BotStateContext"
@@ -66,6 +66,20 @@ const TrainingSettings = () => {
 
     // Use a ref to track if the initial mount sync has been done to avoid redundant updates.
     const isMounted = useRef(false)
+
+    // Two-phase mount. First paint renders the page header + profile selector (~100 ms baseline)
+    // so the user sees the page immediately; the heavy body — stat selectors, ~20 stat target
+    // sliders, and the rest of the checkbox grid — commits one tick later, after the navigator
+    // animation has painted. Mirrors the deferral pattern that cut the Settings hub first_commit
+    // by 27 % and is needed here because TrainingSettings's first_commit was ~485 ms (over the
+    // 350 ms budget) on the harness.
+    const [showHeavySections, setShowHeavySections] = useState(false)
+    useEffect(() => {
+        const handle = InteractionManager.runAfterInteractions(() => {
+            setShowHeavySections(true)
+        })
+        return () => handle.cancel()
+    }, [])
 
     // Merge current training settings with defaults to handle missing properties.
     // Include local state values to ensure blacklist and prioritization are current.
@@ -495,16 +509,18 @@ const TrainingSettings = () => {
                             />
                         </SearchableItem>
 
-                        {renderStatSelector(
-                            "Blacklist",
-                            blacklistItems,
-                            (value) => setBlacklistItems(value),
-                            blacklistModalVisible,
-                            setBlacklistModalVisible,
-                            "Select which stats to exclude from training. These stats will be skipped during training sessions.",
-                            "checkbox",
-                            "training-blacklist"
-                        )}
+                        {showHeavySections && (
+                            <>
+                                {renderStatSelector(
+                                    "Blacklist",
+                                    blacklistItems,
+                                    (value) => setBlacklistItems(value),
+                                    blacklistModalVisible,
+                                    setBlacklistModalVisible,
+                                    "Select which stats to exclude from training. These stats will be skipped during training sessions.",
+                                    "checkbox",
+                                    "training-blacklist"
+                                )}
 
                         {renderStatSelector(
                             "Prioritization",
@@ -1066,6 +1082,8 @@ const TrainingSettings = () => {
                                 The bot will aim for this % of your stat targets during Classic Year. Default: 66%.
                             </Text>
                         </View>
+                            </>
+                        )}
                     </View>
                 </ScrollView>
             </SearchPageProvider>
