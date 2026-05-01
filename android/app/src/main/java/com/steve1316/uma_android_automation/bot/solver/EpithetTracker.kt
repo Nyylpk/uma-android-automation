@@ -13,11 +13,25 @@ enum class EpithetStatus { COMPLETED, IN_PROGRESS, DEAD, UNTOUCHED }
  * around them. All functions here are deterministic — same state in, same status out.
  */
 object EpithetTracker {
-    /** Reduces a [SolverState] to a per-epithet status map keyed by epithet name. */
+    /**
+     * Reduces a [SolverState] to a per-epithet status map keyed by epithet name.
+     *
+     * @param state Solver state to classify against.
+     * @return Map of epithet name to its current [EpithetStatus].
+     */
     fun classifyAll(state: SolverState): Map<String, EpithetStatus> =
         state.epithets.associate { it.name to classify(it, state) }
 
-    /** Classifies a single [epithet] against the given [state]. */
+    /**
+     * Classifies a single [epithet] against the given [state]. DEAD short-circuits over
+     * COMPLETED/IN_PROGRESS so a lost-prerequisite epithet stays DEAD even if other matchers
+     * would otherwise be satisfied.
+     *
+     * @param epithet Epithet to classify.
+     * @param state Solver state providing race history and completed/dead sets.
+     * @return One of [EpithetStatus.DEAD], [EpithetStatus.COMPLETED], [EpithetStatus.IN_PROGRESS],
+     *   or [EpithetStatus.UNTOUCHED].
+     */
     fun classify(epithet: Epithet, state: SolverState): EpithetStatus {
         if (epithet.name in state.deadEpithets) return EpithetStatus.DEAD
         if (epithet.name in state.completedEpithets || isCompleted(epithet, state)) {
@@ -26,15 +40,35 @@ object EpithetTracker {
         return if (hasAnyProgress(epithet, state)) EpithetStatus.IN_PROGRESS else EpithetStatus.UNTOUCHED
     }
 
-    /** True if every matcher on [epithet] is fully satisfied by [state]'s history. */
+    /**
+     * Returns true when every matcher on [epithet] is fully satisfied by [state]'s history.
+     * An epithet with no matchers is treated as not-completed since there is nothing to satisfy.
+     *
+     * @param epithet Epithet whose matchers should be evaluated.
+     * @param state Solver state providing the race history.
+     * @return True if all matchers are satisfied (and there is at least one), false otherwise.
+     */
     fun isCompleted(epithet: Epithet, state: SolverState): Boolean =
         epithet.matchers.isNotEmpty() && epithet.matchers.all { isMatcherSatisfied(it, state) }
 
-    /** True if any matcher has at least partial progress. */
+    /**
+     * Returns true if any of [epithet]'s matchers has at least fractional progress (> 0).
+     *
+     * @param epithet Epithet to check.
+     * @param state Solver state providing the race history and completed-epithet set.
+     * @return True if at least one matcher's [progress] is non-zero.
+     */
     private fun hasAnyProgress(epithet: Epithet, state: SolverState): Boolean =
         epithet.matchers.any { progress(it, state) > 0.0 }
 
-    /** Whole-matcher satisfaction check. */
+    /**
+     * Whole-matcher satisfaction check. Each [EpithetMatcher] subtype has its own predicate;
+     * see [Epithet] for the semantics of each.
+     *
+     * @param matcher The matcher to evaluate.
+     * @param state Solver state providing race history and completed-epithet set.
+     * @return True if [matcher]'s condition is fully met by the current state.
+     */
     fun isMatcherSatisfied(matcher: EpithetMatcher, state: SolverState): Boolean {
         return when (matcher) {
             is EpithetMatcher.WinRace ->
@@ -64,7 +98,15 @@ object EpithetTracker {
         }
     }
 
-    /** Continuous 0..1 progress for a matcher; used by the heuristic to break ties. */
+    /**
+     * Continuous 0..1 progress for [matcher]; used by the heuristic to break ties between beams
+     * that have not yet completed an epithet. Capped at 1.0 once satisfied so partial overshoot
+     * (e.g. 6 wins toward a 5-win matcher) does not skew tiebreaking.
+     *
+     * @param matcher The matcher to score.
+     * @param state Solver state providing race history and completed-epithet set.
+     * @return Progress in `[0.0, 1.0]`, where 1.0 means the matcher is fully satisfied.
+     */
     fun progress(matcher: EpithetMatcher, state: SolverState): Double {
         return when (matcher) {
             is EpithetMatcher.WinRace -> if (isMatcherSatisfied(matcher, state)) 1.0 else 0.0
@@ -99,7 +141,18 @@ object EpithetTracker {
         }
     }
 
-    /** Race-against-filter check used by [EpithetMatcher.WinCount]. */
+    /**
+     * Race-against-filter check used by [EpithetMatcher.WinCount]. [RaceWin] only carries the
+     * win's identity (key / name / class / turn), so this helper looks up the matching
+     * [RaceCandidate] in [SolverState.racesByTurn] to evaluate the structural fields the filter
+     * may gate on (terrain, grade, distance type, etc.).
+     *
+     * @param win The race win whose race attributes should be checked.
+     * @param filter The filter predicate from the matcher.
+     * @param state Solver state — used to look up the [RaceCandidate] for [win].
+     * @return True if [win]'s underlying race satisfies every non-null/non-empty field of [filter];
+     *   false if no matching candidate is found or any field rejects it.
+     */
     private fun matchesFilter(win: RaceWin, filter: EpithetFilter, state: SolverState): Boolean {
         // RaceWin only carries identity; filter checks need full RaceCandidate fields. Look up
         // the candidate pool for the win's turn and find the matching key (or fall back to name).
@@ -111,13 +164,11 @@ object EpithetTracker {
         if (filter.terrain != null && candidate.terrain != filter.terrain) return false
         if (filter.grade != null && candidate.grade != filter.grade) return false
         if (filter.gradeAtLeastOpen && candidate.grade.ordinal < RaceGrade.OP.ordinal) return false
-        if (filter.gradedOnly && candidate.grade !in GRADED_RACES) return false
+        if (filter.gradedOnly && candidate.grade !in setOf(RaceGrade.G1, RaceGrade.G2, RaceGrade.G3)) return false
         if (filter.distanceTypes.isNotEmpty() && candidate.distanceType !in filter.distanceTypes) return false
         if (filter.raceTracks.isNotEmpty() && candidate.raceTrack !in filter.raceTracks) return false
         if (filter.nameContains != null && !candidate.name.contains(filter.nameContains, ignoreCase = true)) return false
         if (filter.nameContainsCountry && !EpithetFilters.nameContainsCountry(candidate.name)) return false
         return true
     }
-
-    private val GRADED_RACES = setOf(RaceGrade.G1, RaceGrade.G2, RaceGrade.G3)
 }

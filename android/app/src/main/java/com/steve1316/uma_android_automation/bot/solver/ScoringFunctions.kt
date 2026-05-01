@@ -16,6 +16,9 @@ object ScoringFunctions {
      * Base stat reward per race grade, mirroring the reference Trackblazer solver's
      * `BASE_REWARD` table. Grades not in the table (Maiden, Debut, Finale, EX) score zero
      * gross reward, leaving them well below cost so the solver always trains over them.
+     *
+     * @param grade Race grade to look up.
+     * @return Base stat reward for [grade]; 0.0 for grades outside the BASE_REWARD table.
      */
     private fun baseStat(grade: RaceGrade): Double =
         when (grade) {
@@ -26,7 +29,12 @@ object ScoringFunctions {
             else -> 0.0
         }
 
-    /** Base skill-point reward per race grade. See [baseStat]. */
+    /**
+     * Base skill-point reward per race grade. See [baseStat] for the gating semantics.
+     *
+     * @param grade Race grade to look up.
+     * @return Base skill-point reward for [grade]; 0.0 for grades outside the BASE_REWARD table.
+     */
     private fun baseSp(grade: RaceGrade): Double =
         when (grade) {
             RaceGrade.G1 -> 35.0
@@ -49,6 +57,11 @@ object ScoringFunctions {
      *  - G2 baseline (used by G1/G2/G3): `1*12 + 1*37 = 49`
      *  - OP baseline:    `1*7 + 1*22 = 29`
      *  - Pre-OP baseline:`1*7 + 1*15 = 22`
+     *
+     * @param grade Race grade whose cost basis to compute.
+     * @param weights Weights providing [Weights.raceBonusPct], [Weights.statWeight], and
+     *   [Weights.spWeight].
+     * @return Weighted cost baseline in score units.
      */
     private fun costBaseline(grade: RaceGrade, weights: Weights): Double {
         val rb = weights.raceBonusPct.coerceAtLeast(0.0) / 100.0
@@ -81,6 +94,11 @@ object ScoringFunctions {
      * epithet pushes them positive. Maiden/Debut/Finale/EX have zero gross reward so they always
      * score well below Train. Fans participate only as a microscopic tiebreaker between two races
      * of identical grade on the same turn.
+     *
+     * @param race Race candidate to score.
+     * @param weights Active scoring weights.
+     * @return Net contribution to the objective if [race] is picked. Positive values prefer this
+     *   race over Train; negative values prefer Train.
      */
     fun raceValue(race: RaceCandidate, weights: Weights): Double {
         val rb = weights.raceBonusPct.coerceAtLeast(0.0) / 100.0
@@ -96,19 +114,32 @@ object ScoringFunctions {
      * possible [FANS_EPSILON] contribution from the most popular race) so that whenever a race's
      * gross reward equals its cost, Train wins the tie. The reference solver achieves the same
      * effect via GLPK's MILP picking `NO_RACE` on ties.
+     *
+     * @param weights Active weights (currently unused; reserved for future tuning).
+     * @return Constant `1.0`.
      */
     fun trainValue(
         @Suppress("UNUSED_PARAMETER") weights: Weights,
     ): Double = 1.0
 
-    /** Resting yields no scoring contribution; energy is not modelled in the static preview. */
+    /**
+     * Resting yields no scoring contribution; energy is not modelled in the static preview.
+     *
+     * @param weights Active weights (currently unused).
+     * @return Constant `0.0`.
+     */
     fun restValue(
         @Suppress("UNUSED_PARAMETER") weights: Weights,
     ): Double = 0.0
 
     /**
      * Reward magnitude of completing [epithet]. Stat rewards return [Epithet.amount]; hint
-     * rewards return [Weights.hintWeight]; unknown rewards return zero.
+     * rewards return [Weights.hintWeight]; unknown rewards return zero. The result is then
+     * scaled by [Weights.epithetValue].
+     *
+     * @param epithet Completed epithet whose reward should be valued.
+     * @param weights Active weights providing [Weights.hintWeight] and [Weights.epithetValue].
+     * @return Score contribution if [epithet] is completed.
      */
     fun epithetContribution(epithet: Epithet, weights: Weights): Double {
         val base =
@@ -135,6 +166,8 @@ object ScoringFunctions {
      *
      * @param consecutiveRaceCount Number of consecutive races including the current one.
      * @param turn Turn the third+ race lands on; checked against [LATE_DEC_FREE_TURNS].
+     * @param weights Active weights providing [Weights.consecutiveRacePenalty].
+     * @return The configured penalty when the chain is ≥3 and [turn] is not Late-Dec, else 0.0.
      */
     fun consecutiveRacePenalty(
         consecutiveRaceCount: Int,
@@ -146,7 +179,13 @@ object ScoringFunctions {
         return weights.consecutiveRacePenalty
     }
 
-    /** Penalty for racing on a turn flagged as a summer training block. */
+    /**
+     * Penalty for racing on a turn flagged as a summer training block.
+     *
+     * @param turn Turn the race lands on.
+     * @param state Solver state providing [SolverState.summerBlockTurns] and [SolverState.weights].
+     * @return [Weights.summerPenalty] when [turn] is in the summer block set, else 0.0.
+     */
     fun summerBlockPenalty(turn: TurnNumber, state: SolverState): Double =
         if (turn in state.summerBlockTurns) state.weights.summerPenalty else 0.0
 
@@ -156,8 +195,14 @@ object ScoringFunctions {
 
     /**
      * Hard eligibility check: a race is eligible only if both the matching distance aptitude
-     * and surface aptitude meet [Weights.aptitudeThreshold]. Below threshold, the race is
-     * dropped from the candidate set entirely.
+     * and surface aptitude meet [Weights.aptitudeThreshold]. OP/Pre-OP grades are also gated by
+     * [Weights.includeOpAndPreOp]. Below threshold, the race is dropped from the candidate set
+     * entirely.
+     *
+     * @param race Race candidate to test.
+     * @param state Solver state providing aptitudes and weights.
+     * @return True if the race passes the OP filter (when applicable) and both aptitudes meet
+     *   the threshold; false otherwise.
      */
     fun isEligible(race: RaceCandidate, state: SolverState): Boolean {
         if (race.grade in OP_GRADES && !state.weights.includeOpAndPreOp) return false
@@ -167,6 +212,12 @@ object ScoringFunctions {
         return distApt.atLeast(threshold) && surfApt.atLeast(threshold)
     }
 
-    /** True if [this] aptitude is at least as good as [other]. Higher ordinal = better grade. */
+    /**
+     * Returns true when the receiver aptitude is at least as good as [other]. Higher ordinal =
+     * better grade since [Aptitude] is ordered G,F,E,D,C,B,A,S.
+     *
+     * @param other Threshold aptitude to compare against.
+     * @return True if the receiver's ordinal is ≥ [other]'s ordinal.
+     */
     private fun Aptitude.atLeast(other: Aptitude): Boolean = this.ordinal >= other.ordinal
 }

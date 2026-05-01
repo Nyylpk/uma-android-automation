@@ -25,22 +25,36 @@ import org.json.JSONObject
 object SmartRaceSolverIntegration {
     private const val TAG: String = "[SMART_RACE_SOLVER]"
 
+    /** Race wins accumulated during the current bot run. Cleared by [reset]. Guarded by its own
+     *  monitor since [recordRaceWon] and [buildSolverState] can race on the bot/UI threads. */
     private val raceHistory: MutableList<RaceWin> = mutableListOf()
 
+    /** Memoised result of [parseEpithets] applied to the persisted `epithetsData` setting.
+     *  Populated lazily on the first solver call and reused thereafter. */
     @Volatile private var cachedEpithets: List<Epithet>? = null
 
+    /** Memoised result of [parsePresets] applied to the persisted `characterPresetsData`
+     *  setting. Populated lazily by [loadCharacterPresets]. */
     @Volatile private var cachedPresets: Map<String, Aptitudes>? = null
 
+    /** Memoised result of [parseRacesData] applied to the persisted `racesData` setting.
+     *  Used as a fallback when the JS bridge does not ship inline races JSON. */
     @Volatile private var cachedRaces: Map<TurnNumber, List<RaceCandidate>>? = null
 
     /**
-     * Content-keyed cache for races/epithets passed inline through [previewSchedule]'s configJson.
-     * The JS layer stringifies the bundled JSON once at module load and ships it on every preview
+     * Content-keyed cache for races passed inline through [previewSchedule]'s configJson. The
+     * JS layer stringifies the bundled JSON once at module load and ships it on every preview
      * call (~150KB), so without this cache we'd re-parse on every debounced re-solve. Keyed by
-     * `String.hashCode()` since the bundled JSON is identical across calls.
+     * `String.hashCode()` of the JSON payload since the bundled JSON is identical across calls;
+     * a hash mismatch invalidates the cache and re-parses. The pair is `(hash, parsedValue)`.
      */
     @Volatile private var cachedInlineRaces: Pair<Int, Map<TurnNumber, List<RaceCandidate>>>? = null
 
+    /**
+     * Content-keyed cache for epithets passed inline through [previewSchedule]'s configJson.
+     * Same omit-after-prime contract and hash-keying scheme as [cachedInlineRaces]; see that
+     * field's docstring for details. The pair is `(hash, parsedValue)`.
+     */
     @Volatile private var cachedInlineEpithets: Pair<Int, List<Epithet>>? = null
 
     /** Clears in-memory race history. Call at the start of a fresh bot run. */
@@ -48,7 +62,15 @@ object SmartRaceSolverIntegration {
         synchronized(raceHistory) { raceHistory.clear() }
     }
 
-    /** Records a winning race. Idempotent for the same `(raceKey, turn)` pair. */
+    /**
+     * Records a winning race in the in-memory history. Idempotent for the same
+     * `(raceKey, turnNumber)` pair so duplicate calls from retries don't double-count.
+     *
+     * @param raceKey Race key (matches [RaceCandidate.key]).
+     * @param raceName Race name (matches [RaceCandidate.name]).
+     * @param classYear Class-year prefix at the time of the win.
+     * @param turnNumber Turn the win occurred on.
+     */
     fun recordRaceWon(raceKey: String, raceName: String, classYear: String, turnNumber: TurnNumber) {
         synchronized(raceHistory) {
             if (raceHistory.none { it.raceKey == raceKey && it.turnNumber == turnNumber }) {
@@ -65,6 +87,9 @@ object SmartRaceSolverIntegration {
      * @param currentTurn The bot's current turn number.
      * @param scenario Active scenario name from `settings.general.scenario`.
      * @param candidates The on-screen [RaceData] list already matched by [Racing.lookupRaceInDatabase].
+     * @return The chosen [RaceData] from [candidates], or null when the solver cannot or should
+     *   not influence this turn (feature disabled, no on-screen candidates, missing data, the
+     *   solver picked Train/Rest, or its chosen race is not on screen).
      */
     fun pickRace(currentTurn: TurnNumber, scenario: String, candidates: List<RaceData>): RaceData? {
         if (!SettingsHelper.getBooleanSetting("racing", "enableSmartRaceSolver")) return null
@@ -162,6 +187,12 @@ object SmartRaceSolverIntegration {
      * Builds the solver state for [currentTurn]. Only the on-screen [candidates] populate the
      * candidate pool — the solver still receives the full epithet list so it can score
      * schedule-completing picks correctly relative to alternatives.
+     *
+     * @param currentTurn Turn the state is being built for.
+     * @param scenario Active scenario name.
+     * @param epithets Full list of epithets parsed from settings.
+     * @param candidates On-screen race candidates available on [currentTurn].
+     * @return Populated [SolverState], or null when state cannot be assembled.
      */
     private fun buildSolverState(
         currentTurn: TurnNumber,
@@ -184,12 +215,24 @@ object SmartRaceSolverIntegration {
         )
     }
 
+    /**
+     * Reads the user's saved aptitude configuration from settings.
+     *
+     * @return Parsed [Aptitudes], or [Aptitudes.DEFAULT_A] when the setting is empty or invalid.
+     */
     private fun readUserAptitudes(): Aptitudes {
         val json = SettingsHelper.getStringSetting("racing", "smartRaceSolverAptitudes")
         if (json.isEmpty()) return Aptitudes.DEFAULT_A
         return runCatching { parseAptitudesObj(JSONObject(json)) }.getOrElse { Aptitudes.DEFAULT_A }
     }
 
+    /**
+     * Parses an aptitudes JSON object with the keys `Sprint`, `Mile`, `Medium`, `Long`, `Turf`,
+     * `Dirt`. Missing keys default to "A".
+     *
+     * @param obj JSON object to parse, or null.
+     * @return Parsed [Aptitudes]; [Aptitudes.DEFAULT_A] when [obj] is null.
+     */
     private fun parseAptitudesObj(obj: JSONObject?): Aptitudes {
         if (obj == null) return Aptitudes.DEFAULT_A
         return Aptitudes(
@@ -202,6 +245,12 @@ object SmartRaceSolverIntegration {
         )
     }
 
+    /**
+     * Reads a JSON-array-of-strings setting and returns it as a [Set].
+     *
+     * @param key Settings key under the `racing` namespace.
+     * @return Parsed string set, or an empty set when missing or unparseable.
+     */
     private fun readStringSet(key: String): Set<String> {
         val json = SettingsHelper.getStringSetting("racing", key)
         if (json.isEmpty()) return emptySet()
@@ -211,12 +260,24 @@ object SmartRaceSolverIntegration {
         }.getOrElse { emptySet() }
     }
 
+    /**
+     * Reads the user's saved scoring weights from settings.
+     *
+     * @return Parsed [Weights], or default [Weights] when empty or unparseable.
+     */
     private fun readWeights(): Weights {
         val json = SettingsHelper.getStringSetting("racing", "smartRaceSolverWeights")
         if (json.isEmpty()) return Weights()
         return runCatching { parseWeightsObj(JSONObject(json)) }.getOrElse { Weights() }
     }
 
+    /**
+     * Parses a weights JSON object. Each field falls back to the corresponding [Weights]
+     * default when missing.
+     *
+     * @param obj JSON object to parse, or null.
+     * @return Parsed [Weights]; default [Weights] when [obj] is null.
+     */
     private fun parseWeightsObj(obj: JSONObject?): Weights {
         if (obj == null) return Weights()
         return Weights(
@@ -235,10 +296,21 @@ object SmartRaceSolverIntegration {
         )
     }
 
+    /**
+     * Parses a single aptitude letter (e.g. "S", "A", "C") into an [Aptitude] enum.
+     *
+     * @param s Aptitude letter.
+     * @return Parsed [Aptitude]; [Aptitude.A] on unrecognised input.
+     */
     private fun parseAptitude(s: String): Aptitude =
         Aptitude.fromName(s) ?: Aptitude.A
 
-    /** Lazy, cached parse of `epithetsData`. Returns null when unavailable. */
+    /**
+     * Lazy, cached parse of the `epithetsData` setting. Cached on first success so repeated
+     * solver runs don't re-parse the same JSON.
+     *
+     * @return Parsed epithet list, or null when the setting is empty or unparseable.
+     */
     private fun loadEpithets(): List<Epithet>? {
         cachedEpithets?.let { return it }
         val json = SettingsHelper.getStringSetting("racing", "epithetsData")
@@ -249,7 +321,11 @@ object SmartRaceSolverIntegration {
             ?.also { cachedEpithets = it }
     }
 
-    /** Lazy, cached parse of `racesData` into a turn-keyed candidate pool. Returns null on failure. */
+    /**
+     * Lazy, cached parse of the `racesData` setting into a turn-keyed candidate pool.
+     *
+     * @return Map of turn → eligible races, or null when the setting is empty or unparseable.
+     */
     private fun loadAllRaces(): Map<TurnNumber, List<RaceCandidate>>? {
         cachedRaces?.let { return it }
         val json = SettingsHelper.getStringSetting("racing", "racesData")
@@ -260,7 +336,12 @@ object SmartRaceSolverIntegration {
             ?.also { cachedRaces = it }
     }
 
-    // Invoked from JS via the React Native bridge; static analysis cannot see the callers.
+    /**
+     * Lazy, cached parse of the `characterPresetsData` setting. Invoked from JS via the React
+     * Native bridge, so static analysis cannot see the callers.
+     *
+     * @return Map of preset name → aptitudes, or null when the setting is empty or unparseable.
+     */
     fun loadCharacterPresets(): Map<String, Aptitudes>? {
         cachedPresets?.let { return it }
         val json = SettingsHelper.getStringSetting("racing", "characterPresetsData")
@@ -271,8 +352,19 @@ object SmartRaceSolverIntegration {
             ?.also { cachedPresets = it }
     }
 
-    // -------- JSON parsers --------
+    // //////////////////////////////////////////////////////////////////////////////////////////////////
+    // //////////////////////////////////////////////////////////////////////////////////////////////////
+    // JSON parsers
 
+    /**
+     * Parses an epithets JSON document into a list of [Epithet]. The JSON is expected to be a
+     * top-level object whose values are per-epithet entries with the schema produced by the
+     * gametora scraper.
+     *
+     * @param json Raw JSON string.
+     * @return Parsed epithet list. Throws if the JSON is structurally invalid; callers wrap
+     *   in `runCatching` to convert errors into a null fallback.
+     */
     internal fun parseEpithets(json: String): List<Epithet> {
         val obj = JSONObject(json)
         val out = ArrayList<Epithet>(obj.length())
@@ -297,6 +389,12 @@ object SmartRaceSolverIntegration {
         return out
     }
 
+    /**
+     * Parses an epithet's matcher array. Unrecognised matcher types are dropped silently.
+     *
+     * @param arr JSON array of matcher objects, or null.
+     * @return Parsed list of matchers; empty when [arr] is null.
+     */
     private fun parseMatchers(arr: JSONArray?): List<EpithetMatcher> {
         if (arr == null) return emptyList()
         val out = ArrayList<EpithetMatcher>(arr.length())
@@ -308,6 +406,12 @@ object SmartRaceSolverIntegration {
         return out
     }
 
+    /**
+     * Parses a single matcher JSON object into the matching [EpithetMatcher] subtype.
+     *
+     * @param m JSON object with at least a `type` field.
+     * @return Parsed matcher, or null when the type is unrecognised.
+     */
     private fun parseMatcher(m: JSONObject): EpithetMatcher? =
         when (m.optString("type")) {
             "winRace" ->
@@ -347,6 +451,13 @@ object SmartRaceSolverIntegration {
             else -> null
         }
 
+    /**
+     * Parses a `winCount` matcher's filter object. Each field defaults to the matching
+     * [EpithetFilter] default when missing.
+     *
+     * @param o Filter JSON object.
+     * @return Parsed [EpithetFilter].
+     */
     private fun parseFilter(o: JSONObject): EpithetFilter =
         EpithetFilter(
             terrain = o.optStringOrNull("terrain")?.let { TrackSurface.fromName(it) },
@@ -361,6 +472,12 @@ object SmartRaceSolverIntegration {
             nameContainsCountry = o.optBoolean("nameContainsCountry", false),
         )
 
+    /**
+     * Parses a character-presets JSON document into a name → aptitudes map.
+     *
+     * @param json Raw JSON string.
+     * @return Map of preset name to [Aptitudes]. Entries missing aptitude fields are skipped.
+     */
     private fun parsePresets(json: String): Map<String, Aptitudes> {
         val obj = JSONObject(json)
         val out = HashMap<String, Aptitudes>(obj.length())
@@ -390,6 +507,9 @@ object SmartRaceSolverIntegration {
      * marshalling per debounced re-solve, so once we've parsed any inline payload we keep using it
      * even when subsequent calls drop the field. Returns null only when nothing has ever been
      * shipped — callers fall back to [loadAllRaces] (SettingsHelper) in that case.
+     *
+     * @param json Inline races JSON, or null/empty to use the cached payload.
+     * @return Parsed turn-keyed candidate pool; null when no payload has ever been parsed.
      */
     private fun parseRacesJsonField(json: String?): Map<TurnNumber, List<RaceCandidate>>? {
         if (json.isNullOrEmpty()) return cachedInlineRaces?.second
@@ -401,7 +521,12 @@ object SmartRaceSolverIntegration {
             ?.also { cachedInlineRaces = hash to it }
     }
 
-    /** See [parseRacesJsonField] — same omit-after-prime contract for epithets data. */
+    /**
+     * See [parseRacesJsonField] — same omit-after-prime contract for epithets data.
+     *
+     * @param json Inline epithets JSON, or null/empty to use the cached payload.
+     * @return Parsed epithet list; null when no payload has ever been parsed.
+     */
     private fun parseEpithetsJsonField(json: String?): List<Epithet>? {
         if (json.isNullOrEmpty()) return cachedInlineEpithets?.second
         val hash = json.hashCode()
@@ -412,6 +537,13 @@ object SmartRaceSolverIntegration {
             ?.also { cachedInlineEpithets = hash to it }
     }
 
+    /**
+     * Parses a races JSON document into a turn-keyed candidate pool. Each entry must include
+     * a `turnNumber` field — entries with `turnNumber <= 0` are silently dropped.
+     *
+     * @param json Raw races JSON string.
+     * @return Map of turn → list of [RaceCandidate] for that turn.
+     */
     internal fun parseRacesData(json: String): Map<TurnNumber, List<RaceCandidate>> {
         val obj = JSONObject(json)
         val out = HashMap<TurnNumber, MutableList<RaceCandidate>>()
@@ -449,6 +581,10 @@ object SmartRaceSolverIntegration {
      * race name (forces that race) or the sentinel `"__TRAIN__"` (forces a Train turn). The
      * latter is used by the inline calendar UI to "delete" a scheduled race or lock a turn that
      * had no race so the solver leaves it alone.
+     *
+     * @param obj JSON object of `{turnNumber: raceName | "__TRAIN__"}` pairs, or null.
+     * @param racesByTurn Candidate pool used to resolve race-name locks back to keys.
+     * @return Map of turn → [Decision]. Entries referencing unknown race names are logged and dropped.
      */
     private fun parseManualLocks(
         obj: JSONObject?,
@@ -479,7 +615,13 @@ object SmartRaceSolverIntegration {
     /** Sentinel value the JS side writes to `manualLocks[turn]` when locking a turn to Train. */
     private const val TRAIN_LOCK_SENTINEL: String = "__TRAIN__"
 
-    /** Serialises a [Schedule] into the JSON shape the React Native preview UI expects. */
+    /**
+     * Serialises a [Schedule] into the JSON shape the React Native preview UI expects.
+     *
+     * @param schedule Schedule to serialise.
+     * @param racesByTurn Candidate pool used to enrich race decisions with name and grade fields.
+     * @return JSON string of `{decisions, projectedEpithets, totalScore}`.
+     */
     private fun serializeSchedule(
         schedule: Schedule,
         racesByTurn: Map<TurnNumber, List<RaceCandidate>>,
@@ -507,17 +649,38 @@ object SmartRaceSolverIntegration {
             .toString()
     }
 
-    // -------- Helpers --------
+    // //////////////////////////////////////////////////////////////////////////////////////////////////
+    // //////////////////////////////////////////////////////////////////////////////////////////////////
+    // Helpers
 
+    /**
+     * Converts a JSON array of strings into a Kotlin list.
+     *
+     * @param arr JSON array, or null.
+     * @return List of strings; empty when [arr] is null.
+     */
     private fun jsonStringList(arr: JSONArray?): List<String> {
         if (arr == null) return emptyList()
         return (0 until arr.length()).map { arr.getString(it) }
     }
 
+    /**
+     * Like [JSONObject.optString] but returns null instead of an empty string when the key is
+     * missing, JSON null, or the empty string. Avoids the empty-string-as-sentinel ambiguity.
+     *
+     * @param key Field name to read.
+     * @return Non-empty string value, or null.
+     */
     private fun JSONObject.optStringOrNull(key: String): String? =
         if (has(key) && !isNull(key)) optString(key, "").takeIf { it.isNotEmpty() } else null
 
-    /** Best-effort recovery of the human-readable race name from a races.json key. */
+    /**
+     * Best-effort recovery of the human-readable race name from a races.json key. Race keys
+     * follow the pattern `"<name> (<date>)"`, so we trim everything starting at the first ` (`.
+     *
+     * @param key Race key.
+     * @return Recovered race name.
+     */
     private fun raceNameFromKey(key: String): String =
         key.substringBefore(" (").trim()
 
@@ -526,6 +689,9 @@ object SmartRaceSolverIntegration {
      * into a [RaceCandidate] suitable for the solver. Several fields are best-effort: `key` falls
      * back to `name` when the bot lacks date context, and `classYear`/`raceTrack`/`distanceMeters`
      * are inferred or defaulted because the in-game [RaceData] does not carry them.
+     *
+     * @param turn Turn the on-screen race is being mapped to.
+     * @return A [RaceCandidate] suitable for the solver.
      */
     private fun RaceData.toRaceCandidate(turn: TurnNumber): RaceCandidate =
         RaceCandidate(

@@ -24,18 +24,38 @@ import org.ojalgo.optimisation.Variable
  * sum of r-variables and a history-derived constant.
  */
 object MilpSolver {
+    /** End-of-year halves (Junior/Classic/Senior Dec-2). The 3-race conditioning penalty is
+     *  waived on these turns to match the reference solver's exemption. */
     private val LATE_DEC_FREE_TURNS: Set<TurnNumber> = setOf(23, 47, 71)
 
     /** Classic + Senior summer race-blocked turns (Early Jul → Late Aug). */
     private val CLASSIC_SENIOR_SUMMER_TURNS: Set<TurnNumber> = setOf(37, 38, 39, 40, 61, 62, 63, 64)
+
+    /** Graded races (G1/G2/G3); used by [EpithetFilter.gradedOnly]. */
     private val GRADED: Set<RaceGrade> = setOf(RaceGrade.G1, RaceGrade.G2, RaceGrade.G3)
+
+    /** Graded plus Open-class races (G1/G2/G3/OP/Pre-OP); used by [EpithetFilter.gradeAtLeastOpen]. */
     private val GRADED_OR_OPEN: Set<RaceGrade> =
         setOf(RaceGrade.G1, RaceGrade.G2, RaceGrade.G3, RaceGrade.OP, RaceGrade.PRE_OP)
 
-    /** ojAlgo variable names accept only `[A-Za-z0-9_]`; replace anything else with `_`. */
+    /**
+     * ojAlgo variable names accept only `[A-Za-z0-9_]`; replace anything else with `_` so that
+     * race keys containing spaces, parentheses, or punctuation produce legal variable names.
+     *
+     * @param s String to sanitize.
+     * @return [s] with every non-alphanumeric, non-underscore character replaced by `_`.
+     */
     private fun sanitize(s: String): String = s.replace(Regex("[^A-Za-z0-9_]"), "_")
 
-    /** Solve [state] via exact MILP. Returns a [Schedule] equivalent to [Heuristic]'s contract. */
+    /**
+     * Solve [state] via exact MILP. Returns a [Schedule] equivalent to [Heuristic]'s contract.
+     * When the current turn is past [Heuristic.LAST_TURN] there is nothing to plan, so an empty
+     * schedule is returned without invoking the solver.
+     *
+     * @param state Solver state describing aptitudes, races-by-turn, epithets, and weights.
+     * @return Optimal [Schedule] under the modelled objective; an empty schedule on infeasibility
+     *   or when there are no remaining turns to plan.
+     */
     fun solve(state: SolverState): Schedule {
         if (state.currentTurn > Heuristic.LAST_TURN) return Schedule(emptyMap(), emptySet(), 0.0)
         return ModelBuilder(state).build()
@@ -83,6 +103,11 @@ object MilpSolver {
                 .filter { t -> (t - 2) in turns }
                 .associateWith { t -> model.newVariable("z_$t").binary() }
 
+        /**
+         * Wires every constraint and the objective onto [model] then solves it.
+         *
+         * @return Optimal [Schedule] when the model is feasible; an empty schedule otherwise.
+         */
         fun build(): Schedule {
             wireXrConsistency()
             wireSummerHardBlock()
@@ -100,7 +125,11 @@ object MilpSolver {
             return extractSchedule(result.value)
         }
 
-        /** Σ r[t][*] − x[t] = 0. With no eligible races, force x[t] = 0. */
+        /**
+         * Ties race-specific picks back to the per-turn race indicator: `Σ r[t][*] − x[t] = 0`.
+         * Turns with no eligible races have `x[t]` clamped to 0 so the solver cannot select a
+         * race there.
+         */
         private fun wireXrConsistency() {
             for (t in turns) {
                 val races = raceVars[t].orEmpty()
@@ -122,7 +151,12 @@ object MilpSolver {
             }
         }
 
-        /** Manual locks: a Race lock forces r[t][key]=1; Train/Rest forces x[t]=0. */
+        /**
+         * Applies user-provided manual locks from [SolverState.lockedDecisions]. A Race lock
+         * forces `r[turn][raceKey] = 1` (and transitively `x[turn] = 1`); Train/Rest locks force
+         * `x[turn] = 0`. A Race lock referencing a key that isn't in the eligible pool falls back
+         * to forcing `x[turn] = 0` so the lock still suppresses any other race on that turn.
+         */
         private fun wireManualLocks() {
             for ((turn, decision) in state.lockedDecisions) {
                 if (turn !in turns) continue
@@ -152,7 +186,12 @@ object MilpSolver {
             }
         }
 
-        /** Each matcher becomes a linear inequality `required · y ≤ progress + history_constant`. */
+        /**
+         * For every epithet, emits one linear inequality per matcher:
+         * `required · y[epithet] ≤ Σ progress_terms + history_constant`. With y binary, this
+         * forces `y = 1` only when every matcher's running tally (history + future picks) clears
+         * its required threshold.
+         */
         private fun wireEpithetMatchers() {
             for (epithet in state.epithets) {
                 val y = epithetVars[epithet.name] ?: continue
@@ -167,7 +206,10 @@ object MilpSolver {
             }
         }
 
-        /** y[child] ≤ y[prereq] for each `dependsOn` edge. */
+        /**
+         * Encodes [Epithet.dependsOn] as `y[child] ≤ y[prereq]` per edge so a child epithet
+         * cannot complete unless every prerequisite epithet does.
+         */
         private fun wireDependsOn() {
             for (epithet in state.epithets) {
                 val y = epithetVars[epithet.name] ?: continue
@@ -179,12 +221,23 @@ object MilpSolver {
             }
         }
 
-        /** y[name] = 1 for forced epithets that aren't dead. */
+        /**
+         * Forces `y[name] = 1` for every epithet in [SolverState.forcedEpithets]. Dead epithets
+         * have no y-variable, so a forced-but-dead entry is silently skipped — that combination
+         * ends up infeasible only when the dead epithet was load-bearing for the user's plan,
+         * which the caller can detect via the empty schedule and surface.
+         */
         private fun wireForcedEpithets() {
             for (name in state.forcedEpithets) epithetVars[name]?.lower(1.0)
         }
 
-        /** Sum race rewards, epithet rewards, and subtract penalties via variable weights. */
+        /**
+         * Builds the objective by setting per-variable weights. Each race r-variable gets its
+         * [ScoringFunctions.raceValue] minus the summer penalty when applicable; each epithet
+         * y-variable gets its [ScoringFunctions.epithetContribution]; each consecutive-race
+         * z-variable gets a negative weight equal to the configured penalty (zero on Late-Dec
+         * turns, mirroring the reference solver's exemption).
+         */
         private fun wireObjective() {
             for ((t, races) in raceVars) {
                 val byKey = state.racesByTurn[t]?.associateBy { it.key } ?: continue
@@ -205,6 +258,17 @@ object MilpSolver {
             }
         }
 
+        /**
+         * Reads the solved variable values back out of the model and packages them as a
+         * [Schedule]. Race turns whose r-variables didn't pin a specific race fall back to
+         * Train, which can happen when a manual lock forced x=1 against an empty pool.
+         *
+         * @param objectiveValue Final objective value reported by ojAlgo, returned as the
+         *   schedule's `totalScore`.
+         * @return [Schedule] containing per-turn decisions, projected epithet completions
+         *   (including any pre-existing completions from [SolverState.completedEpithets]),
+         *   and the objective value as the score.
+         */
         private fun extractSchedule(objectiveValue: Double): Schedule {
             val decisions = HashMap<TurnNumber, Decision>(turns.last - turns.first + 1)
             for (t in turns) {
@@ -227,12 +291,23 @@ object MilpSolver {
             return Schedule(decisions, projected, objectiveValue)
         }
 
-        // ---------------- Linearisation helpers ----------------
+        // //////////////////////////////////////////////////////////////////////////////////////////////////
+        // //////////////////////////////////////////////////////////////////////////////////////////////////
+        // Linearisation helpers
 
         /**
-         * Returns `(required, terms, constantBound)` such that the matcher is satisfied iff
-         * `required · y ≤ Σ coeff·var + constantBound`. Returns null when the matcher can't be
-         * linearised (e.g., reference to an epithet not in [epithetVars]).
+         * Reduces an [EpithetMatcher] to a linear-inequality triple
+         * `(required, terms, constantBound)` such that the matcher is satisfied iff
+         * `required · y ≤ Σ coeff·var + constantBound`. The constant absorbs the contribution
+         * of pre-existing race history so the inequality only constrains future picks.
+         *
+         * For dependency matchers (`epithetAnyOf`, `epithetAll`) referencing dead/missing
+         * epithets we emit an unreachable bound (`required=1, terms=∅, constantBound=-1`) so
+         * `y` is forced to 0.
+         *
+         * @param matcher Matcher to linearise.
+         * @return Triple `(required, terms, constantBound)`, or null when the matcher type has
+         *   no linearisation (currently always non-null for the supported types).
          */
         private fun linearise(matcher: EpithetMatcher): Triple<Int, Map<Variable, Double>, Double>? {
             return when (matcher) {
@@ -296,7 +371,15 @@ object MilpSolver {
             }
         }
 
-        /** All r-vars whose race name (and optional class) match. */
+        /**
+         * Collects every r-variable whose underlying race has the given [raceName] (and, when
+         * provided, the matching [atClass] year). Coefficients are 1.0 — duplicates across turns
+         * sum, which is what the matcher inequality wants for "win N races named X" semantics.
+         *
+         * @param raceName Race name to match against [RaceCandidate.name].
+         * @param atClass Optional class-year filter ("Junior", "Classic", "Senior"); null disables.
+         * @return Map of r-variable to its coefficient (always 1.0).
+         */
         private fun sumRaceVars(raceName: String, atClass: String? = null): Map<Variable, Double> {
             val out = HashMap<Variable, Double>()
             for (t in turns) {
@@ -312,7 +395,13 @@ object MilpSolver {
             return out
         }
 
-        /** All r-vars whose race matches the filter predicate. */
+        /**
+         * Collects every r-variable whose underlying race satisfies the [filter] predicate.
+         * Used for [EpithetMatcher.WinCount] linearisation.
+         *
+         * @param filter Filter predicate from a `winCount` matcher.
+         * @return Map of r-variable to its coefficient (always 1.0).
+         */
         private fun sumRaceVarsByFilter(filter: EpithetFilter): Map<Variable, Double> {
             val out = HashMap<Variable, Double>()
             for (t in turns) {
@@ -327,11 +416,30 @@ object MilpSolver {
             return out
         }
 
+        /**
+         * Looks up the [RaceCandidate] for [win] and tests it against [filter]. Used to compute
+         * the history-derived constant in `winCount` matcher linearisation.
+         *
+         * @param win Race win from [SolverState.raceHistory].
+         * @param filter Filter predicate from a `winCount` matcher.
+         * @return True if the win's underlying race matches; false when the candidate cannot be
+         *   resolved or any field rejects it.
+         */
         private fun historyMatchesFilter(win: RaceWin, filter: EpithetFilter): Boolean {
             val race = state.racesByTurn[win.turnNumber]?.firstOrNull { it.key == win.raceKey } ?: return false
             return matchesFilter(race, filter)
         }
 
+        /**
+         * Predicate equivalent to [EpithetTracker.matchesFilter] but operating directly on a
+         * resolved [RaceCandidate] (callers in this class already know the candidate). Kept in
+         * lockstep with the runtime tracker so the solver projects the same completions the
+         * runtime will actually award.
+         *
+         * @param c Race candidate to test.
+         * @param f Filter predicate.
+         * @return True if every non-null/non-empty field of [f] accepts [c].
+         */
         private fun matchesFilter(c: RaceCandidate, f: EpithetFilter): Boolean {
             if (f.terrain != null && c.terrain != f.terrain) return false
             if (f.grade != null && c.grade != f.grade) return false

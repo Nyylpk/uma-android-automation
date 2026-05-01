@@ -23,6 +23,7 @@ object SmartRaceSolver {
      *
      * @param state Immutable inputs. The search plans from `state.currentTurn` forward.
      * @param beamWidth Beam width forwarded to the heuristic fallback only. Ignored by MILP.
+     * @return Best [Schedule] found by MILP, or the heuristic's best beam when MILP is infeasible.
      */
     fun solve(state: SolverState, beamWidth: Int = Heuristic.DEFAULT_BEAM_WIDTH): Schedule {
         val milp = MilpSolver.solve(state)
