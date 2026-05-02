@@ -57,9 +57,17 @@ object SmartRaceSolverIntegration {
      */
     @Volatile private var cachedInlineEpithets: Pair<Int, List<Epithet>>? = null
 
-    /** Clears in-memory race history. Call at the start of a fresh bot run. */
+    /** Race staged by [markPendingRace] awaiting an outcome confirmation via [commitPendingRace]. */
+    @Volatile private var pendingRace: RaceWin? = null
+
+    /** True after [seedHistoryFromPreview] has populated [raceHistory] for the current run. */
+    @Volatile private var historySeeded: Boolean = false
+
+    /** Clears in-memory race history and pending state. Call at the start of a fresh bot run. */
     fun reset() {
         synchronized(raceHistory) { raceHistory.clear() }
+        pendingRace = null
+        historySeeded = false
     }
 
     /**
@@ -77,6 +85,38 @@ object SmartRaceSolverIntegration {
                 raceHistory.add(RaceWin(raceKey, raceName, classYear, turnNumber))
             }
         }
+    }
+
+    /**
+     * Stages an in-progress race so the runtime can decide later whether to commit it to
+     * [raceHistory] based on the post-race results screen. Overwrites any prior pending entry
+     * (a stale pending entry is treated as "lost" by the next [commitPendingRace] call).
+     *
+     * @param raceKey Race key (matches [RaceCandidate.key]).
+     * @param raceName Race name (matches [RaceCandidate.name]).
+     * @param classYear Class-year prefix at the time of the attempt.
+     * @param turnNumber Turn the race is being attempted on.
+     */
+    fun markPendingRace(raceKey: String, raceName: String, classYear: String, turnNumber: TurnNumber) {
+        pendingRace = RaceWin(raceKey, raceName, classYear, turnNumber)
+    }
+
+    /**
+     * Commits the most recent [markPendingRace] entry to [raceHistory] when [won] is true,
+     * or discards it when false (e.g. retries disabled or exhausted). No-op when no race
+     * is pending. Idempotent on `(raceKey, turnNumber)` via [recordRaceWon].
+     *
+     * @param won True when the race ended in 1st place (LabelCongratulations detected).
+     */
+    fun commitPendingRace(won: Boolean) {
+        val pending = pendingRace ?: return
+        pendingRace = null
+        if (!won) {
+            MessageLog.i(TAG, "Race \"${pending.name}\" on turn ${pending.turnNumber} did not finish 1st; not adding to history.")
+            return
+        }
+        recordRaceWon(pending.raceKey, pending.name, pending.classYear, pending.turnNumber)
+        MessageLog.i(TAG, "Race \"${pending.name}\" on turn ${pending.turnNumber} confirmed 1st; added to history.")
     }
 
     /**
@@ -133,6 +173,11 @@ object SmartRaceSolverIntegration {
         if (!SettingsHelper.getBooleanSetting("racing", "enableSmartRaceSolver")) return null
         val epithets = loadEpithets() ?: return null
         val racesByTurn = loadAllRaces() ?: return null
+
+        if (!historySeeded) {
+            seedHistoryFromPreview(currentTurn, scenario, epithets, racesByTurn)
+            historySeeded = true
+        }
 
         val state =
             SolverState(
@@ -262,6 +307,58 @@ object SmartRaceSolverIntegration {
             targetEpithets = readStringSet("smartRaceSolverTargetEpithets"),
             weights = readWeights(),
         )
+    }
+
+    /**
+     * Replays the Preview's schedule for turns before [currentTurn] into [raceHistory] under
+     * the assumption that every Race-decision was won. Used when the bot starts mid-career
+     * and there is no persisted ground-truth race history to recover from. The schedule is
+     * computed with the same inputs [previewSchedule] uses (currentTurn=1, empty raceHistory,
+     * `manualLocks` from settings) so the seeded history matches what the user has been
+     * watching in the UI.
+     *
+     * @param currentTurn The turn the bot is currently on; only turns strictly before this
+     *   are seeded.
+     * @param scenario Active scenario name from `settings.general.scenario`.
+     * @param epithets Full list of epithets parsed from settings.
+     * @param racesByTurn Full race calendar from settings.
+     */
+    private fun seedHistoryFromPreview(
+        currentTurn: TurnNumber,
+        scenario: String,
+        epithets: List<Epithet>,
+        racesByTurn: Map<TurnNumber, List<RaceCandidate>>,
+    ) {
+        if (currentTurn <= 1) return
+        val manualLocksJson = SettingsHelper.getStringSetting("racing", "smartRaceSolverManualLocks")
+        val manualLocksObj = runCatching { if (manualLocksJson.isEmpty()) null else JSONObject(manualLocksJson) }.getOrNull()
+        val state =
+            SolverState(
+                currentTurn = 1,
+                scenario = scenario,
+                characterPreset = SettingsHelper.getStringSetting("racing", "smartRaceSolverCharacterPreset").ifEmpty { null },
+                aptitudes = readUserAptitudes(),
+                racesByTurn = racesByTurn,
+                epithets = epithets,
+                forcedEpithets = readStringSet("smartRaceSolverForcedEpithets"),
+                targetEpithets = readStringSet("smartRaceSolverTargetEpithets"),
+                lockedDecisions = parseManualLocks(manualLocksObj, racesByTurn),
+                weights = readWeights(),
+            )
+        val schedule = SmartRaceSolver.solve(state)
+        var seeded = 0
+        for ((turn, decision) in schedule.decisions) {
+            if (turn >= currentTurn) continue
+            if (decision !is Decision.RaceDecision) continue
+            val candidate = racesByTurn[turn]?.firstOrNull { it.key == decision.raceKey }
+            val raceName = candidate?.name ?: raceNameFromKey(decision.raceKey)
+            val classYear = candidate?.classYear ?: ""
+            recordRaceWon(decision.raceKey, raceName, classYear, turn)
+            seeded += 1
+        }
+        if (seeded > 0) {
+            MessageLog.i(TAG, "Seeded raceHistory with $seeded assumed wins from Preview for turns 1..${currentTurn - 1} (mid-run restart recovery).")
+        }
     }
 
     /**
