@@ -93,7 +93,7 @@ const APTITUDE_RANKS = ["S", "A", "B", "C", "D", "E", "F", "G"]
  */
 interface AptitudeRowProps {
     /** The aptitude slot this row controls (e.g. "Sprint", "Mile"). */
-    slot: string
+    slot: keyof AptitudeMap
     /** Display label (typically same as `slot`). */
     label: string
     /** Currently selected rank for this slot. */
