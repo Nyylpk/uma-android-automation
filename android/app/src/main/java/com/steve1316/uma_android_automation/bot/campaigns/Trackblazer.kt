@@ -10,6 +10,7 @@ import com.steve1316.uma_android_automation.bot.Game
 import com.steve1316.uma_android_automation.bot.MainScreenAction
 import com.steve1316.uma_android_automation.bot.Racing
 import com.steve1316.uma_android_automation.bot.SelectionSource
+import com.steve1316.uma_android_automation.bot.solver.SmartRaceSolverIntegration
 import com.steve1316.uma_android_automation.components.ButtonBack
 import com.steve1316.uma_android_automation.components.ButtonCancel
 import com.steve1316.uma_android_automation.components.ButtonClose
@@ -501,6 +502,15 @@ class Trackblazer(game: Game) : Campaign(game) {
 
         val allSuitableRaces = mutableListOf<Candidate>()
 
+        // Peek the Solver's planned race so the scrollList scan can short-circuit as soon as it surfaces.
+        val solverPlannedKey =
+            if (racing.enableSmartRaceSolver && racing.enableFarmingFans && !racing.enableForceRacing) {
+                SmartRaceSolverIntegration.peekRaceKeyForTurn(currentTurn = date.day, scenario = game.scenario)
+            } else {
+                null
+            }
+        var solverMatchedCandidate: Candidate? = null
+
         val scrollList = ScrollList.create(game)
         if (scrollList != null) {
             MessageLog.i(TAG, "[RACE] Scanning the whole race list for suitable races...")
@@ -565,14 +575,18 @@ class Trackblazer(game: Game) : Campaign(game) {
                         }
 
                         if (isSuitable) {
-                            allSuitableRaces.add(Candidate(screenPoint, race, detectedName, rivalFound))
+                            val candidate = Candidate(screenPoint, race, detectedName, rivalFound)
+                            allSuitableRaces.add(candidate)
                             sb.appendLine("\n- Found Suitable Race: \"${race.name}\" (${race.grade}) Rival: $rivalFound")
+                            if (solverPlannedKey != null && SmartRaceSolverIntegration.isRaceKeyMatch(race, solverPlannedKey)) {
+                                solverMatchedCandidate = candidate
+                            }
                         } else {
                             sb.appendLine("\n- Ignored Race: \"${race.name}\" (${race.grade}). Reason: ${reasons.joinToString(", ")}")
                         }
                     }
                 }
-                false
+                solverMatchedCandidate != null
             }
         } else {
             MessageLog.w(TAG, "[WARN] findSuitableRace:: Failed to create ScrollList. Falling back to single-page detection.")
@@ -634,6 +648,16 @@ class Trackblazer(game: Game) : Campaign(game) {
             sb.appendLine("================================================")
             MessageLog.v(TAG, sb.toString())
             return null
+        }
+
+        // If the Solver's planned race surfaced during the scan, short-circuit straight to it — its on-screen point is still current because the scrollList stopped on that entry.
+        if (solverMatchedCandidate != null) {
+            val match = solverMatchedCandidate!!
+            sb.appendLine("\nSelected Race: ${match.race.name} (${match.race.grade}) Rival: ${match.isRival} [Smart Race Solver pick]")
+            sb.appendLine("================================================")
+            MessageLog.v(TAG, sb.toString())
+            MessageLog.i(TAG, "[RACE] Smart Race Solver match \"${match.race.name}\" found during scan. Skipping the rest of the scan.")
+            return match.point to match.race
         }
 
         val gradePriority =
@@ -1031,6 +1055,19 @@ class Trackblazer(game: Game) : Campaign(game) {
                     "[WARN] decideNextAction:: Energy is low (${trainee.energy}%) with $consecutiveRaceCount consecutive races and no energy items available. Resting to avoid -30 stat penalty.",
                 )
                 return MainScreenAction.REST
+            }
+        }
+
+        // Smart Race Solver pre-check: if the solver has a race planned for this turn, defer straight to racing logic instead of evaluating irregular training.
+        if (racing.enableSmartRaceSolver && racing.enableFarmingFans && !racing.enableForceRacing) {
+            val plannedKey =
+                SmartRaceSolverIntegration.peekRaceKeyForTurn(
+                    currentTurn = date.day,
+                    scenario = game.scenario,
+                )
+            if (plannedKey != null) {
+                MessageLog.i(TAG, "[TRACKBLAZER] Smart Race Solver has \"$plannedKey\" planned for turn ${date.day}; deferring to racing flow.")
+                return MainScreenAction.RACE
             }
         }
 
