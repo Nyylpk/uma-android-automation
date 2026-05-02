@@ -61,7 +61,7 @@ import org.opencv.core.Point
  */
 class Racing(private val game: Game, private val campaign: Campaign) {
     /** Whether to enable farming fans through extra races. */
-    private val enableFarmingFans = SettingsHelper.getBooleanSetting("racing", "enableFarmingFans")
+    val enableFarmingFans = SettingsHelper.getBooleanSetting("racing", "enableFarmingFans")
 
     /** Whether to ignore the warning that appears when racing three times in a row. */
     val ignoreConsecutiveRaceWarning = SettingsHelper.getBooleanSetting("racing", "ignoreConsecutiveRaceWarning")
@@ -84,7 +84,8 @@ class Racing(private val game: Game, private val campaign: Campaign) {
     /** Whether to force the bot to race extra races regardless of other conditions. */
     val enableForceRacing = SettingsHelper.getBooleanSetting("racing", "enableForceRacing")
 
-    private val enableSmartRaceSolver =
+    /** Whether the Smart Race Solver schedules extra races for the trainee. */
+    val enableSmartRaceSolver =
         SettingsHelper.getBooleanSetting("racing", "enableSmartRaceSolver").also {
             if (it) SmartRaceSolverIntegration.reset()
         }
@@ -1982,6 +1983,46 @@ class Racing(private val game: Game, private val campaign: Campaign) {
             return false
         }
 
+        // Peek the Solver's planned race up front so we can short-circuit OCR as soon as we find it on screen, instead of OCR-scanning every candidate first.
+        val plannedKey =
+            SmartRaceSolverIntegration.peekRaceKeyForTurn(currentTurn = campaign.date.day, scenario = game.scenario)
+
+        if (plannedKey != null) {
+            MessageLog.i(TAG, "[RACE] Smart Race Solver wants \"$plannedKey\" for turn ${campaign.date.day} — scanning until matched.")
+            for (location in doublePredictionLocations) {
+                val raceName = game.imageUtils.extractRaceName(location)
+                val raceDataList = lookupRaceInDatabase(campaign.date.day, raceName)
+                if (raceDataList.isEmpty()) {
+                    MessageLog.i(TAG, "[RACE] ✗ No match found in database for \"$raceName\".")
+                    continue
+                }
+                raceDataList.forEach { raceData ->
+                    MessageLog.i(TAG, "[RACE] ✓ Matched in database: ${raceData.name} (Grade: ${raceData.grade}, Fans: ${raceData.fans}, Track Surface: ${raceData.trackSurface}).")
+                }
+                val match = raceDataList.firstOrNull { SmartRaceSolverIntegration.isRaceKeyMatch(it, plannedKey) }
+                if (match != null) {
+                    MessageLog.v(TAG, "[RACE] Smart Race Solver selected \"${match.name}\". Selecting it.")
+                    SmartRaceSolverIntegration.recordRaceWon(
+                        raceKey = match.name,
+                        raceName = match.name,
+                        classYear = campaign.date.year.name,
+                        turnNumber = campaign.date.day,
+                    )
+                    game.tap(location.x, location.y, IconRaceListPredictionDoubleStar.template.path, ignoreWaiting = true)
+                    lastRaceGrade = match.grade
+                    lastRaceFans = match.fans
+                    lastRaceDistance = match.trackDistance
+                    lastRaceIsRival = match.isRival
+                    return true
+                }
+            }
+            MessageLog.i(TAG, "[RACE] Smart Race Solver's planned race \"$plannedKey\" was not found among on-screen candidates. Canceling racing process.")
+            return false
+        }
+
+        // Fallback: solver picked Train/Rest or the peek API had no data. Preserve the
+        // original scan-all-then-consult flow so warning logs and no-pick handling stay
+        // identical to the pre-early-exit behavior.
         val currentRaces =
             doublePredictionLocations.flatMap { location ->
                 val raceName = game.imageUtils.extractRaceName(location)
@@ -2004,7 +2045,7 @@ class Racing(private val game: Game, private val campaign: Campaign) {
         val solverPick =
             SmartRaceSolverIntegration.pickRace(
                 currentTurn = campaign.date.day,
-                scenario = SettingsHelper.getStringSetting("general", "scenario"),
+                scenario = game.scenario,
                 candidates = currentRaces,
             )
         if (solverPick == null) {
