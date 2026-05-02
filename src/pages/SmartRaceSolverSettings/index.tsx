@@ -1112,6 +1112,17 @@ const SmartRaceSolverSettings = () => {
         )
     }
 
+    /**
+     * Memoized calendar grid (3 year cards × 24 cells = 72 cells). Without this, every aptitude
+     * or epithet tap triggered ~411 ms of cell reconciliation even though none of those changes
+     * affect the cells' visible content (cells only depend on `preview`, `manualLocks`, the
+     * summer-blackout weight, and the epithet highlight). Aptitude / epithet / weight changes
+     * still update the popover content the next time a cell is opened, but the static grid no
+     * longer rebuilds.
+     */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const calendarYearCards = useMemo(() => YEAR_LABELS.map(renderYearCard), [preview, manualLocks, weights.allowSummerRacing, highlightedEpithet])
+
     // -------- Render --------
 
     const sectionsDisabledStyle = enableSmartRaceSolver ? undefined : ({ opacity: 0.4 } as const)
@@ -1483,7 +1494,7 @@ const SmartRaceSolverSettings = () => {
                                                 </View>
                                             </View>
                                         )}
-                                        {YEAR_LABELS.map(renderYearCard)}
+                                        {calendarYearCards}
                                     </View>
                                 </SearchableItem>
 
