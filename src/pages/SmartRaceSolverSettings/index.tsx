@@ -1,4 +1,4 @@
-import { useMemo, useContext, useState, useEffect, useRef } from "react"
+import { memo, useMemo, useContext, useState, useEffect, useRef, useCallback } from "react"
 import { InteractionManager, View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native"
 import { Divider } from "react-native-paper"
 import { previewSchedule, SchedulePreview, ScheduleEntry, SolverConfigSnapshot } from "../../lib/solver/preview"
@@ -82,6 +82,43 @@ let lastPreviewCache: { key: string; preview: SchedulePreview } | null = null
 let bridgeDataPrimed = false
 
 const APTITUDE_RANKS = ["S", "A", "B", "C", "D", "E", "F", "G"]
+
+/**
+ * Memoized aptitude row. Six of these mount simultaneously (Sprint, Mile, Medium, Long, Turf,
+ * Dirt). Tapping any rank only changes the slice key for one slot, so the other five rows pass
+ * identical props and skip reconciliation entirely.
+ *
+ * `onChange` is the parent's `setAptitude` callback — kept stable via `useCallback` with a
+ * functional updater, so the shallow comparison succeeds for unchanged rows.
+ */
+interface AptitudeRowProps {
+    /** The aptitude slot this row controls (e.g. "Sprint", "Mile"). */
+    slot: string
+    /** Display label (typically same as `slot`). */
+    label: string
+    /** Currently selected rank for this slot. */
+    currentRank: string
+    /** Called when the user picks a rank. */
+    onChange: (slot: any, rank: string) => void
+    /** Style sheet from the parent (stable across renders). */
+    styles: any
+}
+const AptitudeRow = memo(({ slot, label, currentRank, onChange, styles }: AptitudeRowProps) => (
+    <View style={styles.aptRow}>
+        <Text style={styles.aptLabel}>{label}</Text>
+        <View style={styles.aptButtons}>
+            {APTITUDE_RANKS.map((rank) => {
+                const active = currentRank === rank
+                return (
+                    <TouchableOpacity key={rank} style={[styles.aptBtn, active && styles.aptBtnActive]} onPress={() => onChange(slot, rank)}>
+                        <Text style={active ? styles.aptBtnTextActive : styles.aptBtnText}>{rank}</Text>
+                    </TouchableOpacity>
+                )
+            })}
+        </View>
+    </View>
+))
+AptitudeRow.displayName = "AptitudeRow"
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 const YEAR_LABELS: Array<{ name: string; startTurn: number }> = [
     { name: "Junior", startTurn: 1 },
@@ -292,9 +329,18 @@ const SmartRaceSolverSettings = () => {
         updateRacing({ [key]: value } as any)
     }
 
-    const setAptitude = (slot: keyof AptitudeMap, rank: string) => {
-        updateRacingSetting("smartRaceSolverAptitudes", JSON.stringify({ ...aptitudes, [slot]: rank }))
-    }
+    // Functional updater so this callback's identity stays stable across renders. The
+    // memoized `<AptitudeRow>` and `<EpithetChip>` children rely on stable `onChange` props to
+    // skip reconciliation when their own data hasn't changed.
+    const setAptitude = useCallback(
+        (slot: keyof AptitudeMap, rank: string) => {
+            updateRacing((prev) => {
+                const prevAptitudes = JSON.parse(prev.smartRaceSolverAptitudes || "{}") as AptitudeMap
+                return { ...prev, smartRaceSolverAptitudes: JSON.stringify({ ...prevAptitudes, [slot]: rank }) }
+            })
+        },
+        [updateRacing]
+    )
 
     const applyPreset = (preset: CharacterPresetEntry) => {
         const startedAt = Date.now()
@@ -674,19 +720,7 @@ const SmartRaceSolverSettings = () => {
     // -------- Helpers --------
 
     const renderAptitudeRow = (slot: keyof AptitudeMap, label: string) => (
-        <View style={styles.aptRow} key={slot}>
-            <Text style={styles.aptLabel}>{label}</Text>
-            <View style={styles.aptButtons}>
-                {APTITUDE_RANKS.map((rank) => {
-                    const active = aptitudes[slot] === rank
-                    return (
-                        <TouchableOpacity key={rank} style={[styles.aptBtn, active && styles.aptBtnActive]} onPress={() => setAptitude(slot, rank)}>
-                            <Text style={active ? styles.aptBtnTextActive : styles.aptBtnText}>{rank}</Text>
-                        </TouchableOpacity>
-                    )
-                })}
-            </View>
-        </View>
+        <AptitudeRow key={slot} slot={slot} label={label} currentRank={aptitudes[slot]} onChange={setAptitude} styles={styles} />
     )
 
     const renderEpithetChip = (epithet: EpithetEntry, selected: boolean, onPress: () => void) => (
