@@ -119,6 +119,39 @@ const AptitudeRow = memo(({ slot, label, currentRank, onChange, styles }: Aptitu
     </View>
 ))
 AptitudeRow.displayName = "AptitudeRow"
+
+/**
+ * Memoized epithet chip. The Selected and Projected lists each render up to 36 of these. With
+ * a stable `onToggle` callback (the parent uses `useCallback` + functional updater) and a
+ * stable `epithet` reference (the data files are loaded once at module scope), only the chips
+ * whose `selected` flag flipped reconcile on a target/forced toggle.
+ */
+interface EpithetChipProps {
+    /** The epithet entry to render (data file row). */
+    epithet: { name: string; reward_text?: string; condition_text?: string; [k: string]: any }
+    /** Whether this chip is currently in the parent's selected list. */
+    selected: boolean
+    /** Stable parent callback that flips the chip's selection state by name. */
+    onToggle: (name: string) => void
+    /** Style sheet from the parent (stable across renders). */
+    styles: any
+}
+const EpithetChip = memo(({ epithet, selected, onToggle, styles }: EpithetChipProps) => (
+    <TouchableOpacity style={[styles.chip, selected && styles.chipActive]} onPress={() => onToggle(epithet.name)}>
+        <Text style={selected ? styles.chipTextActive : styles.chipText}>{epithet.name}</Text>
+        {epithet.reward_text ? (
+            <Text style={selected ? styles.chipRewardActive : styles.chipReward} numberOfLines={2}>
+                {epithet.reward_text}
+            </Text>
+        ) : null}
+        {epithet.condition_text ? (
+            <Text style={selected ? styles.chipConditionActive : styles.chipCondition} numberOfLines={3}>
+                {epithet.condition_text}
+            </Text>
+        ) : null}
+    </TouchableOpacity>
+))
+EpithetChip.displayName = "EpithetChip"
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 const YEAR_LABELS: Array<{ name: string; startTurn: number }> = [
     { name: "Junior", startTurn: 1 },
@@ -360,15 +393,30 @@ const SmartRaceSolverSettings = () => {
         console.log(`[SmartRaceSolver] applyPreset:end ${Date.now() - startedAt}ms`)
     }
 
-    const toggleTargetEpithet = (name: string) => {
-        const next = targetEpithets.includes(name) ? targetEpithets.filter((n) => n !== name) : [...targetEpithets, name]
-        updateRacingSetting("smartRaceSolverTargetEpithets", JSON.stringify(next))
-    }
+    // Functional-updater form keeps these callbacks identity-stable so the memoized
+    // `<EpithetChip>` children below skip re-rendering on unrelated changes (aptitude taps,
+    // weight changes, etc.).
+    const toggleTargetEpithet = useCallback(
+        (name: string) => {
+            updateRacing((prev) => {
+                const list = JSON.parse(prev.smartRaceSolverTargetEpithets || "[]") as string[]
+                const next = list.includes(name) ? list.filter((n) => n !== name) : [...list, name]
+                return { ...prev, smartRaceSolverTargetEpithets: JSON.stringify(next) }
+            })
+        },
+        [updateRacing]
+    )
 
-    const toggleForcedEpithet = (name: string) => {
-        const next = forcedEpithets.includes(name) ? forcedEpithets.filter((n) => n !== name) : [...forcedEpithets, name]
-        updateRacingSetting("smartRaceSolverForcedEpithets", JSON.stringify(next))
-    }
+    const toggleForcedEpithet = useCallback(
+        (name: string) => {
+            updateRacing((prev) => {
+                const list = JSON.parse(prev.smartRaceSolverForcedEpithets || "[]") as string[]
+                const next = list.includes(name) ? list.filter((n) => n !== name) : [...list, name]
+                return { ...prev, smartRaceSolverForcedEpithets: JSON.stringify(next) }
+            })
+        },
+        [updateRacing]
+    )
 
     const addManualLock = (turn: number, raceName: string) => {
         const next = { ...manualLocks, [String(turn)]: raceName }
@@ -1304,7 +1352,11 @@ const SmartRaceSolverSettings = () => {
                                             completion use Forced Epithets instead.
                                         </Text>
                                         <Input style={styles.input} value={epithetSearch} onChangeText={setEpithetSearch} placeholder="Search 36 epithets…" />
-                                        <View style={styles.row}>{filteredEpithets.map((ep) => renderEpithetChip(ep, targetEpithets.includes(ep.name), () => toggleTargetEpithet(ep.name)))}</View>
+                                        <View style={styles.row}>
+                                            {filteredEpithets.map((ep) => (
+                                                <EpithetChip key={ep.name} epithet={ep} selected={targetEpithets.includes(ep.name)} onToggle={toggleTargetEpithet} styles={styles} />
+                                            ))}
+                                        </View>
                                     </View>
                                 </SearchableItem>
 
@@ -1325,7 +1377,9 @@ const SmartRaceSolverSettings = () => {
                                         </Text>
                                         <Input style={styles.input} value={forcedEpithetSearch} onChangeText={setForcedEpithetSearch} placeholder="Search 36 epithets…" />
                                         <View style={styles.row}>
-                                            {filteredForcedEpithets.map((ep) => renderEpithetChip(ep, forcedEpithets.includes(ep.name), () => toggleForcedEpithet(ep.name)))}
+                                            {filteredForcedEpithets.map((ep) => (
+                                                <EpithetChip key={ep.name} epithet={ep} selected={forcedEpithets.includes(ep.name)} onToggle={toggleForcedEpithet} styles={styles} />
+                                            ))}
                                         </View>
                                     </View>
                                 </SearchableItem>
