@@ -381,7 +381,10 @@ const SmartRaceSolverSettings = () => {
      * the only path that triggers a fresh `previewSchedule` call; auto-recalculate was removed
      * because picking epithets etc. caused noticeable bridge lag on every keystroke.
      */
-    const [dirty, setDirty] = useState(false)
+    // Derived from the snapshot-key comparison below. Storing this as state used to require an
+    // extra useEffect → setDirty(true) hop, which committed the entire SRS subtree a SECOND time
+    // on every aptitude/epithet tap (~411 ms × 2 in the harness). Deriving it inline removes
+    // that round trip — the page still renders once with the new dirty value, but only once.
 
     /** Snapshot key of the settings that produced [preview]. Used to detect whether the
      *  current preview is stale relative to the live settings. */
@@ -402,12 +405,9 @@ const SmartRaceSolverSettings = () => {
     )
 
     // Mark the preview stale whenever the settings diverge from what produced the current
-    // preview. Tapping Recalculate clears this flag.
-    useEffect(() => {
-        if (previewSnapshotKey != null && currentSnapshotKey !== previewSnapshotKey) {
-            setDirty(true)
-        }
-    }, [currentSnapshotKey, previewSnapshotKey])
+    // preview. Tapping Recalculate (which calls `setPreviewSnapshotKey(currentSnapshotKey)`)
+    // makes this falsy again automatically.
+    const dirty = previewSnapshotKey != null && currentSnapshotKey !== previewSnapshotKey
 
     /** Force a fresh solve. Surfaced as the Recalculate button in the Schedule Preview section. */
     const runPreview = async () => {
@@ -419,7 +419,6 @@ const SmartRaceSolverSettings = () => {
             setPreview(lastPreviewCache.preview)
             setPreviewError(lastPreviewCache.preview.error ?? null)
             setPreviewSnapshotKey(key)
-            setDirty(false)
             return
         }
         setPreviewLoading(true)
@@ -435,7 +434,6 @@ const SmartRaceSolverSettings = () => {
             setPreview(result)
             setPreviewError(result.error ?? null)
             setPreviewSnapshotKey(key)
-            setDirty(false)
             lastPreviewCache = { key, preview: result }
         } catch (e: any) {
             setPreview(null)
@@ -452,7 +450,10 @@ const SmartRaceSolverSettings = () => {
         if (!enableSmartRaceSolver) {
             setPreview(null)
             setPreviewError(null)
-            setDirty(false)
+            // Reset the snapshot key too so derived `dirty` doesn't stay stuck "true" if the
+            // user re-enables the feature later with a different config than what was previously
+            // previewed.
+            setPreviewSnapshotKey(null)
             return
         }
         if (preview == null) runPreview()
