@@ -33,6 +33,7 @@ import com.steve1316.uma_android_automation.components.IconRaceListPredictionDou
 import com.steve1316.uma_android_automation.components.IconRaceListSelectionBracketBottomRight
 import com.steve1316.uma_android_automation.components.IconScrollListBottomRight
 import com.steve1316.uma_android_automation.components.IconScrollListTopLeft
+import com.steve1316.uma_android_automation.components.LabelCongratulations
 import com.steve1316.uma_android_automation.components.LabelRaceCriteriaFans
 import com.steve1316.uma_android_automation.components.LabelRaceCriteriaG3OrAbove
 import com.steve1316.uma_android_automation.components.LabelRaceCriteriaMaiden
@@ -1161,8 +1162,17 @@ class Racing(private val game: Game, private val campaign: Campaign) {
         // Bot should be at the screen where it shows the final positions of all participants.
         if (!ButtonNext.check(game.imageUtils, tries = 30)) {
             MessageLog.e(TAG, "[ERROR] finalizeRaceResults:: Cannot start the cleanup process for finishing the race. Moving on...")
+            SmartRaceSolverIntegration.commitPendingRace(won = false)
             return false
         }
+
+        // Detect 1st place via the Congratulations banner on the results screen so the Smart
+        // Race Solver only credits actual wins to its raceHistory. Failed retries (or losses
+        // when retries are exhausted/disabled) drop the pending entry so the next solve sees
+        // the unchanged history and can re-plan around the loss.
+        val firstPlace = LabelCongratulations.check(game.imageUtils)
+        MessageLog.i(TAG, "[RACE] Race result detected — 1st place: $firstPlace.")
+        SmartRaceSolverIntegration.commitPendingRace(won = firstPlace)
 
         // Max time limit for the while loop to attempt to finalize race results.
         // It really shouldn't ever take this long.
@@ -2002,7 +2012,7 @@ class Racing(private val game: Game, private val campaign: Campaign) {
                 val match = raceDataList.firstOrNull { SmartRaceSolverIntegration.isRaceKeyMatch(it, plannedKey) }
                 if (match != null) {
                     MessageLog.v(TAG, "[RACE] Smart Race Solver selected \"${match.name}\". Selecting it.")
-                    SmartRaceSolverIntegration.recordRaceWon(
+                    SmartRaceSolverIntegration.markPendingRace(
                         raceKey = match.name,
                         raceName = match.name,
                         classYear = campaign.date.year.name,
@@ -2060,7 +2070,7 @@ class Racing(private val game: Game, private val campaign: Campaign) {
         }
 
         MessageLog.v(TAG, "[RACE] Smart Race Solver selected \"${solverPick.name}\". Selecting it.")
-        SmartRaceSolverIntegration.recordRaceWon(
+        SmartRaceSolverIntegration.markPendingRace(
             raceKey = solverPick.name,
             raceName = solverPick.name,
             classYear = campaign.date.year.name,
