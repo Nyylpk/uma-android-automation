@@ -1166,10 +1166,9 @@ class Racing(private val game: Game, private val campaign: Campaign) {
             return false
         }
 
-        // Detect 1st place via the Congratulations banner on the results screen so the Smart
-        // Race Solver only credits actual wins to its raceHistory. Failed retries (or losses
-        // when retries are exhausted/disabled) drop the pending entry so the next solve sees
-        // the unchanged history and can re-plan around the loss.
+        // Use the Congratulations banner to confirm 1st place — only real wins should land
+        // in the solver's history. Losses drop the pending entry so the next plan sees the
+        // unchanged history.
         val firstPlace = LabelCongratulations.check(game.imageUtils)
         MessageLog.i(TAG, "[RACE] Race result detected — 1st place: $firstPlace.")
         SmartRaceSolverIntegration.commitPendingRace(won = firstPlace)
@@ -2030,9 +2029,8 @@ class Racing(private val game: Game, private val campaign: Campaign) {
             return false
         }
 
-        // Fallback: solver picked Train/Rest or the peek API had no data. Preserve the
-        // original scan-all-then-consult flow so warning logs and no-pick handling stay
-        // identical to the pre-early-exit behavior.
+        // Fallback when the solver had no plan or chose Train/Rest: scan every on-screen
+        // race and let pickRace decide.
         val currentRaces =
             doublePredictionLocations.flatMap { location ->
                 val raceName = game.imageUtils.extractRaceName(location)
