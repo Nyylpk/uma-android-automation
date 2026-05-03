@@ -24,8 +24,8 @@ This project is purely for educational purposes to learn about Android automatio
         - Bluestacks itself needs to be updated to the latest version to avoid Uma Musume crashing.
         - In the Bluestacks Settings > Phone, the predefined profile needs to be set to a modern high-end phone like the Samsung Galaxy S22.
         - Setup for both BlueStacks and MuMu:
-            - 4 CPU Cores
-            - 4GB Memory
+            - 6 CPU Cores
+            - 6GB Memory
             - 1080 x 1920 (width x height)
             - 240 DPI (This is important)
             - Disable the equivalent of "Keep alive in background" in the emulator settings to prevent the overlay button from not showing up.
