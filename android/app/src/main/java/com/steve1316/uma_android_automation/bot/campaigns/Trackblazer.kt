@@ -658,6 +658,12 @@ class Trackblazer(game: Game) : Campaign(game) {
             sb.appendLine("================================================")
             MessageLog.v(TAG, sb.toString())
             MessageLog.i(TAG, "[RACE] Smart Race Solver match \"${match.race.name}\" found during scan. Skipping the rest of the scan.")
+            SmartRaceSolverIntegration.markPendingRace(
+                raceKey = match.race.name,
+                raceName = match.race.name,
+                classYear = date.year.name,
+                turnNumber = date.day,
+            )
             return match.point to match.race
         }
 
