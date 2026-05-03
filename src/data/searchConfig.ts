@@ -17,12 +17,6 @@ const searchConfig: SearchOption[] = [
     // Settings (SettingsMain)
     // ============================================================
     {
-        id: "settings-popup-check",
-        title: "Stop on Unexpected Popups",
-        description: "Stops the bot when an unexpected popup with a Cancel button is detected (e.g. lack of fans or trophies). You will need to dismiss the popup and restart the bot manually.",
-        page: "SettingsMain",
-    },
-    {
         id: "settings-stop-before-finals",
         title: "Stop before Finals",
         description: "Stops the bot on turn 72 so you can purchase skills before the final races.",

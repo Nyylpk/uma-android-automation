@@ -230,17 +230,6 @@ const Settings = () => {
                 <CustomTitle title="Misc Settings" description="General settings for the bot that don't fit into the other categories." />
 
                 <CustomCheckbox
-                    searchId="settings-popup-check"
-                    checked={general.enablePopupCheck}
-                    onCheckedChange={(checked) => {
-                        updateGeneral({ enablePopupCheck: checked })
-                    }}
-                    label="Stop on Unexpected Popups"
-                    description="Stops the bot when an unexpected popup with a Cancel button is detected (e.g. lack of fans or trophies). You will need to dismiss the popup and restart the bot manually."
-                    className="mt-4"
-                />
-
-                <CustomCheckbox
                     searchId="settings-stop-before-finals"
                     checked={general.enableStopBeforeFinals}
                     onCheckedChange={(checked) => {

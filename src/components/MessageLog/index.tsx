@@ -385,7 +385,6 @@ ${longTargetsString}
 🏇 Trackblazer Preferred Surfaces: ${settings.scenarioOverrides?.trackblazerPreferredSurfaces?.length === 0 ? "None" : settings.scenarioOverrides?.trackblazerPreferredSurfaces?.join(", ")}
 
 ---------- Misc Options ----------
-🛑 Stop on Unexpected Popups: ${settings.general.enablePopupCheck ? "✅" : "❌"}
 🔍 Enable Crane Game Attempt: ${settings.general.enableCraneGameAttempt ? "✅" : "❌"}
 🛑 Stop Before Finals: ${settings.general.enableStopBeforeFinals ? "✅" : "❌"}
 🛑 Stop At Date: ${settings.general.enableStopAtDate ? `✅ (${settings.general.stopAtDates.join(", ")})` : "❌"}

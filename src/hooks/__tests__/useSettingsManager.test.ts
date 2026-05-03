@@ -69,11 +69,11 @@ describe("deepMerge", () => {
 
 describe("convertSettingsToBatch", () => {
     it("converts single category with two keys to batch entries", () => {
-        const settings = { general: { scenario: "URA", enablePopupCheck: true } } as any
+        const settings = { general: { scenario: "URA", enableCraneGameAttempt: true } } as any
         const batch = convertSettingsToBatch(settings)
         expect(batch).toHaveLength(2)
         expect(batch).toContainEqual({ category: "general", key: "scenario", value: "URA" })
-        expect(batch).toContainEqual({ category: "general", key: "enablePopupCheck", value: true })
+        expect(batch).toContainEqual({ category: "general", key: "enableCraneGameAttempt", value: true })
     })
 
     it("converts multiple categories", () => {

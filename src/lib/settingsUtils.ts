@@ -162,5 +162,12 @@ export const applyMigrations = (settings: any, rawSettings?: any): { settings: a
         logWithTimestamp("[SettingsManager] Migrated stopAtDate to stopAtDates array.")
     }
 
+    // Migration: Drop the removed enablePopupCheck setting.
+    if (general?.enablePopupCheck !== undefined) {
+        delete general.enablePopupCheck
+        anyMigrated = true
+        logWithTimestamp("[SettingsManager] Dropped removed setting enablePopupCheck.")
+    }
+
     return { settings: migratedSettings, anyMigrated }
 }
