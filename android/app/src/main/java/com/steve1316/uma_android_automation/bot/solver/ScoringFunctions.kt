@@ -133,7 +133,8 @@ object ScoringFunctions {
     ): Double = 0.0
 
     /**
-     * Reward magnitude of completing [epithet]. Stat rewards return [Epithet.amount]; hint
+     * Reward magnitude of completing [epithet]. Stat rewards return the amount derived from
+     * the reward bullet via [EpithetFilters.rewardFromBullets]; hint
      * rewards return [Weights.hintWeight]; unknown rewards return zero. The result is then
      * scaled by [Weights.epithetValue].
      *
@@ -142,9 +143,10 @@ object ScoringFunctions {
      * @return Score contribution if [epithet] is completed.
      */
     fun epithetContribution(epithet: Epithet, weights: Weights): Double {
+        val (kind, amount) = EpithetFilters.rewardFromBullets(epithet.bullets)
         val base =
-            when (epithet.rewardKind) {
-                "stat" -> epithet.amount.toDouble()
+            when (kind) {
+                "stat" -> amount.toDouble()
                 "hint" -> weights.hintWeight
                 else -> 0.0
             }

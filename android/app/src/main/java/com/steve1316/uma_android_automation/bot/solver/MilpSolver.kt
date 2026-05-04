@@ -207,16 +207,40 @@ object MilpSolver {
         }
 
         /**
-         * Encodes [Epithet.dependsOn] as `y[child] ≤ y[prereq]` per edge so a child epithet
-         * cannot complete unless every prerequisite epithet does.
+         * Encodes prerequisite epithet edges so a child epithet cannot complete unless its
+         * prerequisites do. Prereqs are read from each child's structured matchers — the
+         * legacy `dependsOn` field has been retired now that `EpithetAll` / `EpithetAnyOf`
+         * are the source of truth.
+         *
+         * Each `EpithetAll(names)` adds `y[child] <= y[name]` per name (every prereq is
+         * mandatory). Each `EpithetAnyOf(names)` adds the disjunctive `y[child] <= sum y[name]`
+         * so completing any one of the candidates is enough; treating those names individually
+         * as hard prereqs would over-constrain the model.
          */
         private fun wireDependsOn() {
             for (epithet in state.epithets) {
                 val y = epithetVars[epithet.name] ?: continue
-                for (prereq in epithet.dependsOn) {
-                    val parent = epithetVars[prereq] ?: continue
-                    val expr = model.newExpression("dep_${sanitize(epithet.name)}_${sanitize(prereq)}")
-                    expr.set(y, 1.0).set(parent, -1.0).upper(0.0)
+                for (matcher in epithet.matchers) {
+                    when (matcher) {
+                        is EpithetMatcher.EpithetAll -> {
+                            for (prereq in matcher.names) {
+                                val parent = epithetVars[prereq] ?: continue
+                                val expr = model.newExpression("dep_${sanitize(epithet.name)}_${sanitize(prereq)}")
+                                expr.set(y, 1.0).set(parent, -1.0).upper(0.0)
+                            }
+                        }
+                        is EpithetMatcher.EpithetAnyOf -> {
+                            val parents = matcher.names.mapNotNull { epithetVars[it] }
+                            if (parents.isEmpty()) continue
+                            val expr = model.newExpression("depAny_${sanitize(epithet.name)}")
+                            expr.set(y, 1.0)
+                            for (parent in parents) {
+                                expr.set(parent, -1.0)
+                            }
+                            expr.upper(0.0)
+                        }
+                        else -> Unit
+                    }
                 }
             }
         }

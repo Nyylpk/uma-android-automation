@@ -130,8 +130,17 @@ class CalendarPrintTest {
             raceSp += Math.floor(baseSp(r.grade) * (1.0 + rb)).toInt()
         }
         val byName = epithets.associateBy { it.name }
-        val epithetStats = schedule.projectedEpithets.sumOf { name -> if (byName[name]?.rewardKind == "stat") byName[name]?.amount ?: 0 else 0 }
-        val hints = schedule.projectedEpithets.count { name -> byName[name]?.rewardKind == "hint" }
+        val epithetStats =
+            schedule.projectedEpithets.sumOf { name ->
+                val ep = byName[name] ?: return@sumOf 0
+                val (kind, amount) = EpithetFilters.rewardFromBullets(ep.bullets)
+                if (kind == "stat") amount else 0
+            }
+        val hints =
+            schedule.projectedEpithets.count { name ->
+                val ep = byName[name] ?: return@count false
+                EpithetFilters.rewardFromBullets(ep.bullets).first == "hint"
+            }
 
         println("=== Schedule: $label (beam=$BEAM_WIDTH) ===")
         println("Race=$raceCount Train=$trainCount Rest=$restCount Total=${schedule.decisions.size} Score=${"%.2f".format(schedule.totalScore)}")

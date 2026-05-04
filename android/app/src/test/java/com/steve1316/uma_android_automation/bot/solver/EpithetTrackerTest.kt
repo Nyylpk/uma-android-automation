@@ -86,7 +86,6 @@ class EpithetTrackerTest {
                         EpithetMatcher.EpithetAll(listOf("Stunning")),
                         EpithetMatcher.WinAnyOf(listOf("Japan Cup", "Arima Kinen"), atClass = "Classic"),
                     ),
-                dependsOn = listOf("Stunning"),
             )
         val arima = race("Arima Kinen", 48, classYear = "Classic")
 

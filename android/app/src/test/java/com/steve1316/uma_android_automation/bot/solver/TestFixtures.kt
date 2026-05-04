@@ -25,6 +25,7 @@ internal object TestFixtures {
         RaceCandidate(
             key = "$name ($date)",
             name = name,
+            nameFormatted = name,
             date = date,
             classYear = classYear,
             raceTrack = raceTrack,
@@ -39,22 +40,23 @@ internal object TestFixtures {
     fun epithet(
         name: String,
         matchers: List<EpithetMatcher>,
-        dependsOn: List<String> = emptyList(),
         rewardKind: String = "stat",
         amount: Int = 20,
         displayAmount: Int = 10,
-    ): Epithet =
-        Epithet(
-            name = name,
-            category = "$amount stat reward",
-            rewardText = "+$displayAmount to 2 random stats",
-            rewardKind = rewardKind,
-            amount = amount,
-            displayAmount = displayAmount,
-            conditionText = "(test)",
-            dependsOn = dependsOn,
-            matchers = matchers,
-        )
+        scenarios: List<String> = emptyList(),
+    ): Epithet {
+        val rewardBullet =
+            when (rewardKind) {
+                "stat" -> "+$displayAmount to 2 random stats"
+                "hint" -> "Skill hint +$amount"
+                else -> "+$amount unknown reward"
+            }
+        val bullets = mutableListOf<String>()
+        for (s in scenarios) bullets.add("$s scenario only.")
+        bullets.add("(test)")
+        bullets.add(rewardBullet)
+        return Epithet(name = name, bullets = bullets, matchers = matchers)
+    }
 
     fun win(race: RaceCandidate): RaceWin =
         RaceWin(

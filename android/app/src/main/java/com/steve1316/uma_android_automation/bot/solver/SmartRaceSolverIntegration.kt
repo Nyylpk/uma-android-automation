@@ -456,13 +456,44 @@ object SmartRaceSolverIntegration {
             characterPreset = SettingsHelper.getStringSetting("racing", "smartRaceSolverCharacterPreset").ifEmpty { null },
             aptitudes = readUserAptitudes(),
             racesByTurn = racesByTurn,
-            epithets = epithets,
+            epithets = epithetsForActiveContext(epithets, scenario),
             raceHistory = raceHistorySnapshot,
             forcedEpithets = readStringSet("smartRaceSolverForcedEpithets"),
             targetEpithets = readStringSet("smartRaceSolverTargetEpithets"),
             lockedDecisions = lockedDecisions,
             weights = readWeights(),
         )
+
+    /**
+     * Filters [epithets] down to those obtainable in the active scenario AND for the active
+     * character preset. Both gates are independent; an epithet must pass each one whose
+     * restriction it carries. Restrictions are parsed from the bullet list — see
+     * [EpithetFilters.scenariosFromBullets] and [EpithetFilters.charactersFromBullets].
+     *
+     * Defends against stale snapshots that still list a Trackblazer-only or character-only
+     * target after the user switches scenario / preset.
+     *
+     * @param epithets Full epithet list parsed from epithets.json.
+     * @param scenario Active scenario name (e.g. "Trackblazer", "URA Finale", "Unity Cup"). Blank
+     *   disables the scenario gate so test contexts and the preview history seed keep working.
+     * @return Subset of [epithets] usable for the active scenario / preset.
+     */
+    private fun epithetsForActiveContext(epithets: List<Epithet>, scenario: String): List<Epithet> {
+        val preset = SettingsHelper.getStringSetting("racing", "smartRaceSolverCharacterPreset")
+        return epithets.filter {
+            val scenarioRestrictions = EpithetFilters.scenariosFor(it)
+            val scenarioOk =
+                scenarioRestrictions.isEmpty() ||
+                    scenario.isBlank() ||
+                    scenarioRestrictions.any { s -> s.equals(scenario, ignoreCase = true) }
+            if (!scenarioOk) return@filter false
+
+            val characterRestrictions = EpithetFilters.charactersFor(it)
+            characterRestrictions.isEmpty() ||
+                preset.isBlank() ||
+                characterRestrictions.any { c -> c.equals(preset, ignoreCase = true) }
+        }
+    }
 
     /**
      * Computes the Preview-equivalent schedule for the current configuration, logs it, and
@@ -751,14 +782,10 @@ object SmartRaceSolverIntegration {
             out.add(
                 Epithet(
                     name = e.optString("name", name),
-                    category = e.optString("category", ""),
-                    rewardText = e.optString("reward_text", ""),
-                    rewardKind = e.optString("reward_kind", "unknown"),
-                    amount = e.optInt("amount", 0),
-                    displayAmount = e.optInt("display_amount", e.optInt("amount", 0)),
-                    conditionText = e.optString("condition_text", ""),
-                    dependsOn = jsonStringList(e.optJSONArray("dependsOn")),
+                    bullets = jsonStringList(e.optJSONArray("bullet_points")),
                     matchers = parseMatchers(e.optJSONArray("matchers")),
+                    scenarios = jsonStringList(e.optJSONArray("scenarios")),
+                    characters = jsonStringList(e.optJSONArray("characters")),
                 ),
             )
         }
