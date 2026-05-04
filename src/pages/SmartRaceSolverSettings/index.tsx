@@ -790,8 +790,9 @@ const SmartRaceSolverSettings = () => {
                             <Text style={styles.popoverEmpty}>None — this race does not match any tracked epithet matcher.</Text>
                         ) : (
                             matched.map((ep) => {
-                                const prog = preview ? epithetProgress(turn, ep, preview, racesByKey) : null
-                                const progLabel = prog ? `(${prog.current}/${prog.required}) ` : ""
+                                const before = preview ? epithetProgress(turn - 1, ep, preview, racesByKey) : null
+                                const after = preview ? epithetProgress(turn, ep, preview, racesByKey) : null
+                                const progLabel = before && after ? `(${before.current}/${before.required} -> ${after.current}/${after.required}) ` : ""
                                 const rewardBullet = (ep.bullet_points ?? []).slice(-1)[0] ?? ""
                                 return (
                                     <Text key={ep.name} style={styles.popoverEpithet}>
@@ -864,7 +865,6 @@ const SmartRaceSolverSettings = () => {
         const isPreDebut = turn <= 13
         const isSummerBlocked = !weights.allowSummerRacing && ((turn >= 37 && turn <= 40) || (turn >= 61 && turn <= 64))
         const isLocked = manualLocks[String(turn)] != null
-        const cellRace = isRace && entry?.raceKey ? racesByKey[entry.raceKey] : undefined
         const highlightHit = isRace && contributingTurnsForHighlight.has(turn)
 
         if (isPreDebut || isSummerBlocked) {
