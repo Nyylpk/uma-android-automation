@@ -2919,7 +2919,7 @@
                     for (var i = 0; i < contribs.length; i++) {
                         var c = contribs[i]
                         var prog = "(" + c.beforeCurrent + "/" + c.beforeRequired + " → " + c.afterCurrent + "/" + c.afterRequired + ") "
-                        var line = "— " + prog + c.name
+                        var line = "• " + prog + c.name
                         var conds = Array.isArray(c.conditions) ? c.conditions.filter(function (s) { return s }) : []
                         if (conds.length > 0) line += " — " + conds.join("; ")
                         content += '<div class="tooltip-row">' + escapeHtml(line) + '</div>'
