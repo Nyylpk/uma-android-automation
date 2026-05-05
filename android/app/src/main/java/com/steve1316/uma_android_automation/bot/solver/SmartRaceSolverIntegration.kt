@@ -1131,7 +1131,7 @@ object SmartRaceSolverIntegration {
             val entry = JSONObject()
             when (decision) {
                 is Decision.RaceDecision -> {
-                    val race = racesByTurn[turn]?.firstOrNull { it.key == decision.raceKey }
+                    val race = findCandidate(turn, decision.raceKey, decision.raceKey, racesByTurn)
                     entry.put("type", "Race")
                     entry.put("raceKey", decision.raceKey)
                     entry.put("name", race?.name ?: decision.raceKey)
@@ -1181,16 +1181,32 @@ object SmartRaceSolverIntegration {
         outcome: RaceOutcome,
         contributions: JSONArray?,
     ): JSONObject {
-        val race = racesByTurn[turn]?.firstOrNull { it.key == raceKey }
-        val obj = JSONObject()
-            .put("turn", turn)
-            .put("raceKey", raceKey)
-            .put("name", race?.name ?: raceName)
-            .put("grade", race?.grade?.name ?: "")
-            .put("outcome", outcome.name)
+        val race = findCandidate(turn, raceKey, raceName, racesByTurn)
+        val obj =
+            JSONObject()
+                .put("turn", turn)
+                .put("raceKey", raceKey)
+                .put("name", race?.name ?: raceName)
+                .put("grade", race?.grade?.name ?: "")
+                .put("outcome", outcome.name)
         if (race != null) addRaceDetails(obj, race)
         if (contributions != null) obj.put("contributions", contributions)
         return obj
+    }
+
+    /**
+     * Looks up a [RaceCandidate] for the given turn by key first, then by name. The key-first path matches OCR-seeded history (which already records
+     * `candidate.key`). The name fallback recovers in-run commits that pass `match.name` / `solverPick.name` as the raceKey.
+     *
+     * @param turn Turn the race ran on.
+     * @param raceKey raceKey recorded at write time. May be the canonical dated key or the bare race name.
+     * @param raceName Race display name recorded alongside the key.
+     * @param racesByTurn Candidate pool.
+     * @return The matching candidate, or null if neither lookup found anything.
+     */
+    private fun findCandidate(turn: TurnNumber, raceKey: String, raceName: String, racesByTurn: Map<TurnNumber, List<RaceCandidate>>): RaceCandidate? {
+        val pool = racesByTurn[turn] ?: return null
+        return pool.firstOrNull { it.key == raceKey } ?: pool.firstOrNull { it.name == raceName }
     }
 
     /**
@@ -1230,35 +1246,37 @@ object SmartRaceSolverIntegration {
 
         val winsByTurn = mutableMapOf<TurnNumber, RaceCandidate>()
         for (win in winsSnapshot) {
-            val race = racesByTurn[win.turnNumber]?.firstOrNull { it.key == win.raceKey } ?: continue
+            val race = findCandidate(win.turnNumber, win.raceKey, win.name, racesByTurn) ?: continue
             winsByTurn[win.turnNumber] = race
         }
         for ((turn, decision) in schedule.decisions) {
             if (turn in winsByTurn || decision !is Decision.RaceDecision) continue
             if (turn < currentRunTurn) continue
-            val race = racesByTurn[turn]?.firstOrNull { it.key == decision.raceKey } ?: continue
+            val race = findCandidate(turn, decision.raceKey, decision.raceKey, racesByTurn) ?: continue
             winsByTurn[turn] = race
         }
 
         val contributions = mutableMapOf<TurnNumber, JSONArray>()
         val cumulativeWins = mutableListOf<RaceWin>()
-        var statePrev = newSolverState(
-            currentTurn = 1,
-            scenario = currentRunScenario,
-            epithets = epithets,
-            racesByTurn = racesByTurn,
-            raceHistorySnapshot = emptyList(),
-        )
-        for (turn in 1..72) {
-            val race = winsByTurn[turn] ?: continue
-            cumulativeWins.add(RaceWin(race.key, race.name, race.classYear, turn))
-            val stateNow = newSolverState(
+        var statePrev =
+            newSolverState(
                 currentTurn = 1,
                 scenario = currentRunScenario,
                 epithets = epithets,
                 racesByTurn = racesByTurn,
-                raceHistorySnapshot = cumulativeWins.toList(),
+                raceHistorySnapshot = emptyList(),
             )
+        for (turn in 1..72) {
+            val race = winsByTurn[turn] ?: continue
+            cumulativeWins.add(RaceWin(race.key, race.name, race.classYear, turn))
+            val stateNow =
+                newSolverState(
+                    currentTurn = 1,
+                    scenario = currentRunScenario,
+                    epithets = epithets,
+                    racesByTurn = racesByTurn,
+                    raceHistorySnapshot = cumulativeWins.toList(),
+                )
 
             val arr = JSONArray()
             for (epi in epithets) {
