@@ -209,7 +209,7 @@ object SmartRaceSolverIntegration {
      * @param historyAfter Snapshot of [raceHistory] after [recordRaceWon] added this win.
      */
     private fun logEpithetProgressAfterWin(raceName: String, turnNumber: TurnNumber, historyBefore: List<RaceWin>, historyAfter: List<RaceWin>) {
-        val epithets = cachedEpithets ?: loadEpithets() ?: return
+        val epithets = epithetsForActiveContext(cachedEpithets ?: loadEpithets() ?: return, currentRunScenario)
         val racesByTurn = cachedRaces ?: loadAllRaces() ?: return
         val race = racesByTurn[turnNumber]?.firstOrNull { it.name == raceName }
         val candidates = epithets.filter { epi -> epi.matchers.any { matcherReferencesRace(it, raceName, race) } }
@@ -1200,7 +1200,7 @@ object SmartRaceSolverIntegration {
 
         val winsSnapshot = synchronized(raceHistory) { raceHistory.toList() }
         val lossesSnapshot = synchronized(raceLosses) { raceLosses.toList() }
-        val contributionsByTurn = computeEpithetContributionsByTurn(epithets, racesByTurn, schedule, winsSnapshot)
+        val contributionsByTurn = computeEpithetContributionsByTurn(state.epithets, racesByTurn, schedule, winsSnapshot)
 
         val decisions = JSONObject()
         for ((turn, decision) in schedule.decisions) {
