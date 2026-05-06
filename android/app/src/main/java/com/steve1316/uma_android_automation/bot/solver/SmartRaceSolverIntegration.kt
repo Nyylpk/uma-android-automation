@@ -1408,7 +1408,13 @@ object SmartRaceSolverIntegration {
         fun findBulletContaining(needle: String): String? {
             if (needle.isEmpty()) return null
             val lower = needle.lowercase()
-            return bullets.firstOrNull { it.lowercase().contains(lower) }
+            return bullets.firstOrNull {
+                val l = it.lowercase()
+                // Inheritance-prereq bullets often contain the matcher's race name (e.g. "Inherit memories from a parent that won the Arima Kinen") but
+                // describe an unverifiable parent condition, not the matcher's actual race. Skip them so the matcher's own displayLabel wins.
+                if (l.startsWith("inherit memories") || l.startsWith("inherit the memories")) return@firstOrNull false
+                l.contains(lower)
+            }
         }
         val keywords: List<String> =
             when (matcher) {

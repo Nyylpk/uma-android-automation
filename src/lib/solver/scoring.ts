@@ -238,7 +238,15 @@ const matcherConditionLabel = (matcher: Record<string, unknown>, race: RaceEntry
     const findBulletContaining = (needle: string): string | null => {
         if (!needle) return null
         const lower = needle.toLowerCase()
-        return bullets.find((b) => b.toLowerCase().includes(lower)) ?? null
+        return (
+            bullets.find((b) => {
+                const l = b.toLowerCase()
+                // Inheritance-prereq bullets often contain the matcher's race name (e.g. "Inherit memories from a parent that won the Arima Kinen") but
+                // describe an unverifiable parent condition, not the matcher's actual race. Skip them so the matcher's own displayLabel wins.
+                if (l.startsWith("inherit memories") || l.startsWith("inherit the memories")) return false
+                return l.includes(lower)
+            }) ?? null
+        )
     }
     const keywords: string[] = []
     switch (type) {
