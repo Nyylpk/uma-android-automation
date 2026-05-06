@@ -38,19 +38,37 @@ data class EpithetFilter(
  * ("Junior", "Classic", or "Senior") for matchers that gate by class (e.g. "Japan Cup (Classic)").
  */
 sealed class EpithetMatcher {
+    /** Pre-computed canonical condition label produced by `scripts/precompute-epithet-labels.ts`. Null for dependency matchers
+     *  ([EpithetAnyOf] / [EpithetAll]) and for legacy snapshots persisted before the field was added. */
+    abstract val displayLabel: String?
+
+    /** Pre-computed label template containing a literal `{race}` placeholder substituted at runtime with the contributing race name.
+     *  Only [WinAnyOf] / [WinAtLeast] populate this. */
+    abstract val displayLabelTemplate: String?
+
     /**
      * Satisfied when the named race has been won.
      * @property name Exact race name to match.
      * @property atClass Optional class-year prefix ("Junior", "Classic", "Senior") gating the win.
      */
-    data class WinRace(val name: String, val atClass: String? = null) : EpithetMatcher()
+    data class WinRace(
+        val name: String,
+        val atClass: String? = null,
+        override val displayLabel: String? = null,
+        override val displayLabelTemplate: String? = null,
+    ) : EpithetMatcher()
 
     /**
      * Satisfied when the named race has been won at least [times] separate times.
      * @property name Exact race name to match.
      * @property times Minimum number of distinct wins required.
      */
-    data class WinRaceTimes(val name: String, val times: Int) : EpithetMatcher()
+    data class WinRaceTimes(
+        val name: String,
+        val times: Int,
+        override val displayLabel: String? = null,
+        override val displayLabelTemplate: String? = null,
+    ) : EpithetMatcher()
 
     /**
      * Satisfied when at least [count] of the listed races have been won.
@@ -62,6 +80,8 @@ sealed class EpithetMatcher {
         val names: List<String>,
         val count: Int = 1,
         val atClass: String? = null,
+        override val displayLabel: String? = null,
+        override val displayLabelTemplate: String? = null,
     ) : EpithetMatcher()
 
     /**
@@ -69,26 +89,44 @@ sealed class EpithetMatcher {
      * @property names Candidate race names.
      * @property count Minimum number of distinct races from [names] that must be won.
      */
-    data class WinAtLeast(val names: List<String>, val count: Int) : EpithetMatcher()
+    data class WinAtLeast(
+        val names: List<String>,
+        val count: Int,
+        override val displayLabel: String? = null,
+        override val displayLabelTemplate: String? = null,
+    ) : EpithetMatcher()
 
     /**
      * Satisfied when at least [count] races matching [filter] have been won.
      * @property count Minimum tally of qualifying wins.
      * @property filter Predicate evaluated against each win to decide if it counts.
      */
-    data class WinCount(val count: Int, val filter: EpithetFilter) : EpithetMatcher()
+    data class WinCount(
+        val count: Int,
+        val filter: EpithetFilter,
+        override val displayLabel: String? = null,
+        override val displayLabelTemplate: String? = null,
+    ) : EpithetMatcher()
 
     /**
      * Satisfied when at least one of the listed prerequisite epithets has been completed.
      * @property names Names of candidate prerequisite epithets.
      */
-    data class EpithetAnyOf(val names: List<String>) : EpithetMatcher()
+    data class EpithetAnyOf(
+        val names: List<String>,
+        override val displayLabel: String? = null,
+        override val displayLabelTemplate: String? = null,
+    ) : EpithetMatcher()
 
     /**
      * Satisfied when every listed prerequisite epithet has been completed.
      * @property names Names of required prerequisite epithets.
      */
-    data class EpithetAll(val names: List<String>) : EpithetMatcher()
+    data class EpithetAll(
+        val names: List<String>,
+        override val displayLabel: String? = null,
+        override val displayLabelTemplate: String? = null,
+    ) : EpithetMatcher()
 }
 
 /**

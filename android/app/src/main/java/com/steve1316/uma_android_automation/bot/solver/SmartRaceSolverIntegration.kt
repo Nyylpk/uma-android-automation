@@ -238,23 +238,41 @@ object SmartRaceSolverIntegration {
                 if (label != null && seenLabels.add(label)) sb.append("\n      * $label")
             }
             if (status != EpithetStatus.COMPLETED) {
-                val seenPending = mutableSetOf<String>()
-                for (m in epi.matchers) {
-                    val pending: List<String> =
-                        when (m) {
-                            is EpithetMatcher.EpithetAnyOf -> if (m.names.any { isDepCompleted(it, epithets, stateAfter) }) emptyList() else m.names
-                            is EpithetMatcher.EpithetAll -> m.names.filter { !isDepCompleted(it, epithets, stateAfter) }
-                            else -> emptyList()
-                        }
-                    for (name in pending) {
-                        if (!seenPending.add(name)) continue
-                        val bullet = epi.bullets.firstOrNull { it.lowercase().contains(name.lowercase()) }
-                        sb.append("\n      * Still pending: ${bullet ?: "Get the $name epithet"}")
-                    }
+                for (line in pendingPrerequisitesFor(epi, epithets, stateAfter)) {
+                    sb.append("\n      * Still pending: $line")
                 }
             }
         }
         MessageLog.i(TAG, sb.toString())
+    }
+
+    /**
+     * Lists the unmet dependency-prerequisite phrases for [epi] under [state]. Each entry is the verbatim bullet from the epithet's
+     * `bullet_points` whose text references the prerequisite name, falling back to `"Get the <name> epithet"` when no bullet matches.
+     * Used by both the win log and the contribution JSON so the popover, tooltip, and Kotlin log show identical pending text.
+     *
+     * @param epi Epithet whose dependency matchers to inspect.
+     * @param allEpithets All epithets, used for completion lookups.
+     * @param state Solver state in which to evaluate dependency completion.
+     * @return Pending-prerequisite phrases in matcher order, deduplicated by referenced epithet name. Empty when [epi] has no unmet prerequisites.
+     */
+    private fun pendingPrerequisitesFor(epi: Epithet, allEpithets: List<Epithet>, state: SolverState): List<String> {
+        val out = mutableListOf<String>()
+        val seen = mutableSetOf<String>()
+        for (m in epi.matchers) {
+            val pending: List<String> =
+                when (m) {
+                    is EpithetMatcher.EpithetAnyOf -> if (m.names.any { isDepCompleted(it, allEpithets, state) }) emptyList() else m.names
+                    is EpithetMatcher.EpithetAll -> m.names.filter { !isDepCompleted(it, allEpithets, state) }
+                    else -> emptyList()
+                }
+            for (name in pending) {
+                if (!seen.add(name)) continue
+                val bullet = epi.bullets.firstOrNull { it.lowercase().contains(name.lowercase()) }
+                out.add(bullet ?: "Get the $name epithet")
+            }
+        }
+        return out
     }
 
     /**
@@ -890,44 +908,61 @@ object SmartRaceSolverIntegration {
      * @param m JSON object with at least a `type` field.
      * @return Parsed matcher, or null when the type is unrecognised.
      */
-    private fun parseMatcher(m: JSONObject): EpithetMatcher? =
-        when (m.optString("type")) {
+    private fun parseMatcher(m: JSONObject): EpithetMatcher? {
+        val displayLabel = m.optStringOrNull("displayLabel")
+        val displayLabelTemplate = m.optStringOrNull("displayLabelTemplate")
+        return when (m.optString("type")) {
             "winRace" ->
                 EpithetMatcher.WinRace(
                     name = m.getString("name"),
                     atClass = m.optStringOrNull("atClass"),
+                    displayLabel = displayLabel,
+                    displayLabelTemplate = displayLabelTemplate,
                 )
             "winRaceTimes" ->
                 EpithetMatcher.WinRaceTimes(
                     name = m.getString("name"),
                     times = m.getInt("times"),
+                    displayLabel = displayLabel,
+                    displayLabelTemplate = displayLabelTemplate,
                 )
             "winAnyOf" ->
                 EpithetMatcher.WinAnyOf(
                     names = jsonStringList(m.getJSONArray("names")),
                     count = m.optInt("count", 1),
                     atClass = m.optStringOrNull("atClass"),
+                    displayLabel = displayLabel,
+                    displayLabelTemplate = displayLabelTemplate,
                 )
             "winAtLeast" ->
                 EpithetMatcher.WinAtLeast(
                     names = jsonStringList(m.getJSONArray("names")),
                     count = m.getInt("count"),
+                    displayLabel = displayLabel,
+                    displayLabelTemplate = displayLabelTemplate,
                 )
             "winCount" ->
                 EpithetMatcher.WinCount(
                     count = m.getInt("count"),
                     filter = parseFilter(m.getJSONObject("filter")),
+                    displayLabel = displayLabel,
+                    displayLabelTemplate = displayLabelTemplate,
                 )
             "epithetAnyOf" ->
                 EpithetMatcher.EpithetAnyOf(
                     names = jsonStringList(m.getJSONArray("names")),
+                    displayLabel = displayLabel,
+                    displayLabelTemplate = displayLabelTemplate,
                 )
             "epithetAll" ->
                 EpithetMatcher.EpithetAll(
                     names = jsonStringList(m.getJSONArray("names")),
+                    displayLabel = displayLabel,
+                    displayLabelTemplate = displayLabelTemplate,
                 )
             else -> null
         }
+    }
 
     /**
      * Parses a `winCount` matcher's filter object. Each field defaults to the matching [EpithetFilter] default when missing.
@@ -1275,7 +1310,7 @@ object SmartRaceSolverIntegration {
      * @param racesByTurn Candidate pool used to resolve race keys to candidates.
      * @param schedule Solver schedule supplying the planned future wins.
      * @param winsSnapshot Authoritative past wins.
-     * @return Map of turn -> JSON array of `{name, beforeCurrent, beforeRequired, afterCurrent, afterRequired, reward}` entries.
+     * @return Map of turn -> JSON array of `{name, beforeCurrent, beforeRequired, afterCurrent, afterRequired, conditions, pending}` entries.
      */
     private fun computeEpithetContributionsByTurn(
         epithets: List<Epithet>,
@@ -1336,6 +1371,11 @@ object SmartRaceSolverIntegration {
                     if (seen.add(label)) conditions.put(label)
                 }
 
+                val pending = JSONArray()
+                if (EpithetTracker.classify(epi, stateNow) != EpithetStatus.COMPLETED) {
+                    for (line in pendingPrerequisitesFor(epi, epithets, stateNow)) pending.put(line)
+                }
+
                 arr.put(
                     JSONObject()
                         .put("name", epi.name)
@@ -1343,7 +1383,8 @@ object SmartRaceSolverIntegration {
                         .put("beforeRequired", aggBefore.second)
                         .put("afterCurrent", aggAfter.first)
                         .put("afterRequired", aggAfter.second)
-                        .put("conditions", conditions),
+                        .put("conditions", conditions)
+                        .put("pending", pending),
                 )
             }
             if (arr.length() > 0) contributions[turn] = arr
@@ -1355,7 +1396,8 @@ object SmartRaceSolverIntegration {
     /**
      * Builds a short, human-readable label describing which condition of an epithet a race advanced.
      * Prefers a verbatim bullet from [bullets] so the label matches gametora's authored phrasing in the rest of the UI.
-     * Falls back to a synthesized phrase when no bullet matches the matcher.
+     * Falls back to the pre-computed `displayLabel` / `displayLabelTemplate` carried on the matcher
+     * (populated by `scripts/precompute-epithet-labels.ts`), so the React popover and Race History tooltip render identical text.
      *
      * @param matcher The matcher whose count just incremented.
      * @param race The contributing race.
@@ -1368,42 +1410,22 @@ object SmartRaceSolverIntegration {
             val lower = needle.lowercase()
             return bullets.firstOrNull { it.lowercase().contains(lower) }
         }
-        return when (matcher) {
-            is EpithetMatcher.WinRace -> findBulletContaining(matcher.name) ?: "Win the ${matcher.name}"
-            is EpithetMatcher.WinRaceTimes -> findBulletContaining(matcher.name) ?: "Win the ${matcher.name} (${matcher.times} times)"
-            is EpithetMatcher.WinAnyOf -> findBulletContaining(race.name) ?: "Win the ${race.name}"
-            is EpithetMatcher.WinAtLeast -> findBulletContaining(race.name) ?: "Win the ${race.name}"
-            is EpithetMatcher.WinCount -> {
-                val keywords =
+        val keywords: List<String> =
+            when (matcher) {
+                is EpithetMatcher.WinRace -> listOf(matcher.name)
+                is EpithetMatcher.WinRaceTimes -> listOf(matcher.name)
+                is EpithetMatcher.WinAnyOf, is EpithetMatcher.WinAtLeast -> listOf(race.name)
+                is EpithetMatcher.WinCount ->
                     buildList {
                         matcher.filter.terrain?.let { add(it.name.lowercase()) }
                         matcher.filter.grade?.let { add(it.name) }
                         matcher.filter.distanceTypes.forEach { add(it.name.lowercase()) }
                     }
-                keywords.firstNotNullOfOrNull { findBulletContaining(it) } ?: "Win ${matcher.count} ${describeFilter(matcher.filter)}${if (matcher.count == 1) "" else "s"}"
+                is EpithetMatcher.EpithetAnyOf, is EpithetMatcher.EpithetAll -> return null
             }
-            is EpithetMatcher.EpithetAnyOf, is EpithetMatcher.EpithetAll -> null
-        }
-    }
-
-    /**
-     * Formats an [EpithetFilter] into a short noun phrase (e.g. `"G1 Turf race"`) used by the synthesized fallback in [matcherConditionLabel].
-     *
-     * @param filter Filter to describe.
-     * @return Short label suitable for the tooltip.
-     */
-    private fun describeFilter(filter: EpithetFilter): String {
-        val parts = mutableListOf<String>()
-        filter.grade?.let { parts.add(it.name) }
-        if (filter.gradeAtLeastOpen) parts.add("OP+")
-        if (filter.gradedOnly) parts.add("graded")
-        if (filter.distanceTypes.isNotEmpty()) {
-            parts.add(filter.distanceTypes.joinToString("/") { it.name.lowercase().replaceFirstChar(Char::uppercase) })
-        }
-        filter.terrain?.let { parts.add(it.name.lowercase().replaceFirstChar(Char::uppercase)) }
-        if (filter.nameContainsCountry) parts.add("country-named")
-        parts.add("race")
-        return parts.joinToString(" ")
+        keywords.firstNotNullOfOrNull { findBulletContaining(it) }?.let { return it }
+        matcher.displayLabelTemplate?.let { return it.replace("{race}", race.name) }
+        return matcher.displayLabel
     }
 
     // //////////////////////////////////////////////////////////////////////////////////////////////////
