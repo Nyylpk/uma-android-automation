@@ -1414,7 +1414,9 @@ const SmartRaceSolverSettings = () => {
                                             Preview of the schedule the solver would start with. Tap a cell to lock it, delete its pick, or switch to an alternative race. Does not reflect mid-run
                                             dynamic re-planning.
                                         </Text>
-                                        {dirty && <WarningContainer>Settings have changed - the calendar needs to be regenerated. Tap Recalculate to refresh the preview and apply changes.</WarningContainer>}
+                                        {dirty && (
+                                            <WarningContainer>Settings have changed - the calendar needs to be regenerated. Tap Recalculate to refresh the preview and apply changes.</WarningContainer>
+                                        )}
                                         {previewLoading && (
                                             <View style={{ flexDirection: "row", alignItems: "center" }}>
                                                 <ActivityIndicator size="small" color={colors.primary} />
