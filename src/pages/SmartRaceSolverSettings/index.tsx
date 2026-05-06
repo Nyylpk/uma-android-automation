@@ -114,8 +114,11 @@ const EpithetChip = memo(({ epithet, selected, onToggle, styles }: EpithetChipPr
     // Last bullet is the reward; earlier bullets are conditions.
     const conditionBullets = bullets.length > 1 ? bullets.slice(0, -1) : []
     const rewardBullet = bullets.length > 0 ? bullets[bullets.length - 1] : null
+    // Red dot in the corner flags epithets the solver can't track or advance (see "Epithets without matchers" info block).
+    const hasMatchers = (epithet.matchers ?? []).length > 0
     return (
         <TouchableOpacity style={[styles.chip, selected && styles.chipActive]} onPress={() => onToggle(epithet.name)}>
+            {hasMatchers ? null : <View style={styles.chipNoMatcherDot} />}
             <Text style={selected ? styles.chipTextActive : styles.chipText}>{epithet.name}</Text>
             {conditionBullets.map((b, idx) => (
                 <Text key={idx} style={selected ? styles.chipConditionActive : styles.chipCondition} numberOfLines={2}>
@@ -589,6 +592,7 @@ const SmartRaceSolverSettings = () => {
                 chipRewardActive: { color: colors.background, fontSize: 10, marginTop: 2, opacity: 0.9 },
                 chipCondition: { color: colors.mutedForeground, fontSize: 10, fontStyle: "italic", marginTop: 2 },
                 chipConditionActive: { color: colors.background, fontSize: 10, fontStyle: "italic", marginTop: 2, opacity: 0.8 },
+                chipNoMatcherDot: { position: "absolute", top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.destructive },
                 aptRow: { flexDirection: "row", alignItems: "center", marginVertical: 4 },
                 aptLabel: { width: 70, color: colors.foreground, fontSize: 13 },
                 aptButtons: { flexDirection: "row", gap: 4, flex: 1 },
@@ -1071,9 +1075,9 @@ const SmartRaceSolverSettings = () => {
                                                 <Text style={styles.infoLabel}>Epithets without matchers</Text>
                                                 <Text style={styles.infoDescription}>
                                                     Some epithets in the data set have no structured matchers in the code - usually because the in-game condition (like "Win your first G1 in Senior
-                                                    class") is difficult to be modeled as a per-race rule. The solver treats these as untouched and never picks races to advance them, so they won't be auto-completed.
-                                                    Adding one to Forced makes every candidate schedule infeasible since the condition can never be satisfied, so leave them out of Forced even if you plan to
-                                                    earn them yourself in-game.
+                                                    class") is difficult to be modeled as a per-race rule. These are marked with a small red dot in the top-right corner of their chip. The
+                                                    solver treats them as untouched and never picks races to advance them, so they won't be auto-completed. Adding one to Forced makes every candidate
+                                                    schedule infeasible since the condition can never be satisfied, so leave them out of Forced even if you plan to earn them yourself in-game.
                                                 </Text>
                                             </View>
                                         </View>
