@@ -727,20 +727,7 @@ const SmartRaceSolverSettings = () => {
                 popoverAltName: { fontSize: 12, fontWeight: "600", color: colors.foreground },
                 popoverAltMeta: { fontSize: 10, color: colors.mutedForeground },
                 popoverHint: { fontSize: 10, color: colors.mutedForeground, fontStyle: "italic", marginTop: 8, textAlign: "center" },
-                staleBanner: {
-                    backgroundColor: colors.muted,
-                    borderRadius: 6,
-                    paddingVertical: 8,
-                    paddingHorizontal: 12,
-                    marginVertical: 8,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    flexWrap: "wrap",
-                    borderLeftWidth: 3,
-                    borderLeftColor: colors.primary,
-                },
-                staleBannerText: { color: colors.foreground, fontSize: 12, flexShrink: 1, marginRight: 8 },
+                recalcFab: { position: "absolute", bottom: 16, right: 16, elevation: 6, zIndex: 10 },
                 epithetCard: {
                     paddingVertical: 6,
                     paddingHorizontal: 8,
@@ -1025,7 +1012,7 @@ const SmartRaceSolverSettings = () => {
             <PageHeader title="Smart Race Solver" />
 
             <SearchPageProvider page="SmartRaceSolverSettings" scrollViewRef={scrollViewRef}>
-                <ScrollView ref={scrollViewRef} nestedScrollEnabled={true} showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+                <ScrollView ref={scrollViewRef} nestedScrollEnabled={true} showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }}>
                     <View className="m-1">
                         {/* Master toggle */}
                         <SearchableItem
@@ -1075,9 +1062,9 @@ const SmartRaceSolverSettings = () => {
                                                 <Text style={styles.infoLabel}>Epithets without matchers</Text>
                                                 <Text style={styles.infoDescription}>
                                                     Some epithets in the data set have no structured matchers in the code - usually because the in-game condition (like "Win your first G1 in Senior
-                                                    class") is difficult to be modeled as a per-race rule. These are marked with a small red dot in the top-right corner of their chip. The
-                                                    solver treats them as untouched and never picks races to advance them, so they won't be auto-completed. Adding one to Forced makes every candidate
-                                                    schedule infeasible since the condition can never be satisfied, so leave them out of Forced even if you plan to earn them yourself in-game.
+                                                    class") is difficult to be modeled as a per-race rule. These are marked with a small red dot in the top-right corner of their chip. The solver
+                                                    treats them as untouched and never picks races to advance them, so they won't be auto-completed. Adding one to Forced makes every candidate schedule
+                                                    infeasible since the condition can never be satisfied, so leave them out of Forced even if you plan to earn them yourself in-game.
                                                 </Text>
                                             </View>
                                         </View>
@@ -1385,21 +1372,6 @@ const SmartRaceSolverSettings = () => {
                                             Preview of the schedule the solver would start with. Tap a cell to lock it, delete its pick, or switch to an alternative race. Does not reflect mid-run
                                             dynamic re-planning.
                                         </Text>
-                                        {dirty && (
-                                            <View style={styles.staleBanner}>
-                                                <Text style={styles.staleBannerText}>Settings changed — tap Recalculate to update the preview.</Text>
-                                                <CustomButton size="sm" onPress={runPreview} disabled={previewLoading}>
-                                                    Recalculate
-                                                </CustomButton>
-                                            </View>
-                                        )}
-                                        {!dirty && (
-                                            <View style={{ flexDirection: "row", justifyContent: "flex-end", marginVertical: 4 }}>
-                                                <CustomButton size="sm" variant="secondary" onPress={runPreview} disabled={previewLoading}>
-                                                    Recalculate
-                                                </CustomButton>
-                                            </View>
-                                        )}
                                         {previewLoading && (
                                             <View style={{ flexDirection: "row", alignItems: "center" }}>
                                                 <ActivityIndicator size="small" color={colors.primary} />
@@ -1580,6 +1552,13 @@ const SmartRaceSolverSettings = () => {
                     </View>
                 </ScrollView>
             </SearchPageProvider>
+            {(dirty || previewLoading) && (
+                <View style={styles.recalcFab} pointerEvents="box-none">
+                    <CustomButton onPress={runPreview} disabled={previewLoading}>
+                        {previewLoading ? "Recalculating…" : "Recalculate"}
+                    </CustomButton>
+                </View>
+            )}
         </View>
     )
 }
