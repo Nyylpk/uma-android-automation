@@ -45,6 +45,7 @@ import characterPresetsData from "../../data/characterPresets.json"
 import PageHeader from "../../components/PageHeader"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
 import SearchableItem from "../../components/SearchableItem"
+import { useNavigation, useFocusEffect } from "@react-navigation/native"
 
 // Stringify the bundled JSON once at module load so we don't pay the serialisation cost on every debounced preview call.
 const RACES_DATA_JSON = JSON.stringify(racesData)
@@ -186,6 +187,16 @@ const SmartRaceSolverSettings = () => {
     const { racing, updateRacing } = useContext(RacingContext)
     const { general } = useContext(GeneralMiscContext)
     const scrollViewRef = useRef<ScrollView>(null)
+    const navigation = useNavigation<any>()
+
+    // Refs backing the auto-scroll-to-active-preset behaviour on page focus. The character preset list can be long, so we remember each row's
+    // measured y-offset via onLayout and snap the nested ScrollView to the active preset on first focus. didInitialPresetScrollRef prevents
+    // the snap from re-firing while the user is browsing the page. presetForFocusRef holds the latest active preset name in a ref so the
+    // snap helper can read it without taking a React-state dep, which keeps useFocusEffect from re-running on every preset selection.
+    const presetScrollRef = useRef<ScrollView>(null)
+    const presetLayoutsRef = useRef<Map<string, number>>(new Map())
+    const didInitialPresetScrollRef = useRef(false)
+    const presetForFocusRef = useRef<string>("")
 
     // Merge with defaults so partially-saved profiles keep working when fields are added.
     const racingSettings = { ...defaultSettings.racing, ...racing }
@@ -535,6 +546,51 @@ const SmartRaceSolverSettings = () => {
      * The Recalculate button is the only way to refresh - auto-recalculate was removed because it lagged the bridge on every keystroke.
      */
     const dirty = previewSnapshotKey != null && currentSnapshotKey !== previewSnapshotKey
+
+    /**
+     * Pulls the user's eye to the in-page Calendar Preview by reusing the global Search highlight contract. Clearing targetId first and
+     * setting it on the next frame is required because React Navigation no-ops setParams when the value is identical, which would prevent
+     * SearchableItem's effect from re-firing on a repeat Apply Changes press.
+     */
+    const triggerCalendarHighlight = useCallback(() => {
+        navigation.setParams({ targetId: undefined, fallbackTargetId: undefined })
+        requestAnimationFrame(() => {
+            navigation.setParams({ targetId: "smart-solver-calendar-preview" })
+        })
+    }, [navigation])
+
+    /**
+     * Snaps the nested Character Presets ScrollView to the currently-selected preset on first focus. Reads the target preset name from
+     * `presetForFocusRef` so this callback's identity is stable and useFocusEffect does not re-run when the user picks a different preset.
+     * Bails until the active row's onLayout has measured a y-offset; once the snap fires it locks itself off so the user's own scrolling
+     * on the page is not yanked back.
+     */
+    const maybeScrollToActivePreset = useCallback(() => {
+        if (didInitialPresetScrollRef.current) return
+        const target = presetForFocusRef.current
+        if (!target) return
+        const y = presetLayoutsRef.current.get(target)
+        if (y == null) return
+        presetScrollRef.current?.scrollTo({ y: Math.max(0, y - 8), animated: false })
+        didInitialPresetScrollRef.current = true
+    }, [])
+
+    // Mirror the active preset into a ref so `maybeScrollToActivePreset` can read it without taking a state dep. Without this, picking a
+    // preset would re-create the snap callback, re-create useFocusEffect's effect, and re-snap the list - which is exactly what the user
+    // does not want.
+    useEffect(() => {
+        presetForFocusRef.current = smartRaceSolverCharacterPreset || ""
+    }, [smartRaceSolverCharacterPreset])
+
+    // Re-arm the auto-scroll each time the page gains focus so navigating away and back re-snaps to the active preset.
+    useFocusEffect(
+        useCallback(() => {
+            didInitialPresetScrollRef.current = false
+            // Try once immediately in case layouts have already settled (e.g. returning to the page with the list cached).
+            maybeScrollToActivePreset()
+            return () => {}
+        }, [maybeScrollToActivePreset])
+    )
 
     /**
      * Force a fresh solve. Surfaced as the Recalculate button.
@@ -1133,11 +1189,19 @@ const SmartRaceSolverSettings = () => {
                                         <Text style={styles.sectionTitle}>Character Preset</Text>
                                         <Text style={styles.description}>Selected: {smartRaceSolverCharacterPreset || "(none)"}</Text>
                                         <Input style={styles.input} value={presetSearch} onChangeText={setPresetSearch} placeholder="Search characters..." />
-                                        <ScrollView style={styles.presetList} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                                        <ScrollView ref={presetScrollRef} style={styles.presetList} nestedScrollEnabled keyboardShouldPersistTaps="handled">
                                             {filteredPresets.map((p) => {
                                                 const active = smartRaceSolverCharacterPreset === p.name
                                                 return (
-                                                    <TouchableOpacity key={p.name} style={[styles.presetItem, active && styles.presetItemActive]} onPress={() => applyPreset(p)}>
+                                                    <TouchableOpacity
+                                                        key={p.name}
+                                                        style={[styles.presetItem, active && styles.presetItemActive]}
+                                                        onPress={() => applyPreset(p)}
+                                                        onLayout={(e) => {
+                                                            presetLayoutsRef.current.set(p.name, e.nativeEvent.layout.y)
+                                                            if (active) maybeScrollToActivePreset()
+                                                        }}
+                                                    >
                                                         <Text style={active ? styles.presetNameActive : styles.presetName}>{p.name}</Text>
                                                         <Text style={styles.presetAptitudes}>
                                                             Sprint {p.distanceAptitudes.Sprint} · Mile {p.distanceAptitudes.Mile} · Med {p.distanceAptitudes.Medium} · Long {p.distanceAptitudes.Long} ·
@@ -1604,7 +1668,17 @@ const SmartRaceSolverSettings = () => {
                     </View>
                 </ScrollView>
             </SearchPageProvider>
-            {dirty && <RecalcFab onPress={runPreview} loading={previewLoading} styles={styles} colors={colors} />}
+            {dirty && (
+                <RecalcFab
+                    onPress={() => {
+                        triggerCalendarHighlight()
+                        runPreview()
+                    }}
+                    loading={previewLoading}
+                    styles={styles}
+                    colors={colors}
+                />
+            )}
         </View>
     )
 }
