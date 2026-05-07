@@ -1274,6 +1274,16 @@
                 overflow: hidden;
             }
 
+            /* Hide the panel's content when the Smart Race Solver is disabled. Uses
+               `visibility: hidden` rather than `display: none` so the section keeps occupying its
+               flex slot - that way the other dashboard tiles (aptitudes, conditions, info) do not
+               shift across the row. Kotlin pushes the SRS_STATE message via LogStreamServer at run
+               start; the section keeps this class as its initial state so the empty grid never
+               flashes before the first message arrives. */
+            .race-history-section.srs-disabled {
+                visibility: hidden;
+            }
+
             .race-history-body {
                 position: absolute;
                 top: 36px;
@@ -1472,6 +1482,12 @@
                 .race-history-section.collapsed .race-history-body {
                     display: none;
                 }
+                /* On mobile the panel takes its own row, so hiding it via `display: none` is fine -
+                   no adjacent tile shifts. Override the desktop `visibility: hidden` rule so the
+                   empty band does not stay reserved on narrow viewports. */
+                .race-history-section.srs-disabled {
+                    display: none;
+                }
                 .year-cards {
                     grid-template-columns: 1fr;
                 }
@@ -1657,7 +1673,7 @@
             <!-- Race History calendar (Smart Race Solver). Sits inside the dashboard row so it
                  occupies the empty space that .dashboard-info used to consume via flex:1, without
                  changing the widths or positions of the existing 3 blocks. -->
-            <div id="raceHistorySection" class="race-history-section collapsed">
+            <div id="raceHistorySection" class="race-history-section collapsed srs-disabled">
                 <div class="race-history-header" onclick="toggleRaceHistory()">
                     <div class="race-history-header-left">
                         <span class="race-history-chevron">v</span>
@@ -2080,6 +2096,10 @@
                         } catch (e) {
                             console.error("Error parsing calendar snapshot:", e)
                         }
+                    } else if (event.data.startsWith("SRS_STATE:")) {
+                        // Smart Race Solver enabled flag pushed by Racing.kt at run start. Toggles
+                        // the .srs-disabled class on the panel so it disappears when SRS is off.
+                        setSmartRaceSolverEnabled(event.data.substring(10) === "true")
                     } else {
                         // Process individual log messages, images or unknown formats.
                         try {
@@ -2856,6 +2876,25 @@
              */
             function resetCalendar() {
                 renderCalendar(null)
+            }
+
+            /**
+             * Toggles whether the Race History panel is shown based on the Smart Race Solver
+             * enabled flag pushed by `Racing.kt` at run start. When SRS is off, the panel is
+             * hidden via the `srs-disabled` CSS class and any cached snapshot is cleared so a
+             * later re-enable starts from a clean slate.
+             *
+             * @param {boolean} enabled True when SRS is enabled for the current run.
+             */
+            function setSmartRaceSolverEnabled(enabled) {
+                var section = document.getElementById("raceHistorySection")
+                if (!section) return
+                if (enabled) {
+                    section.classList.remove("srs-disabled")
+                } else {
+                    section.classList.add("srs-disabled")
+                    resetCalendar()
+                }
             }
 
             /**

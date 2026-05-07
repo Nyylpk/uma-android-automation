@@ -142,6 +142,11 @@ object LogStreamServer {
      *  snapshot arrives this run. */
     @Volatile private var latestCalendarSnapshot: String? = null
 
+    /** Latest Smart Race Solver enabled flag pushed by `Racing.kt` at run start. Replayed to
+     *  each new client so the viewer can hide its Race History panel when SRS is off without
+     *  waiting for any other signal. Null until the first run reports a value. */
+    @Volatile private var latestSmartRaceSolverEnabled: Boolean? = null
+
     /**
      * Represents a parsed log entry for structured transmission.
      *
@@ -206,6 +211,14 @@ object LogStreamServer {
          * @property json Pre-serialized calendar snapshot JSON sent verbatim to clients with a `CAL:` prefix.
          */
         data class BroadcastCalendar(val json: String) : LogAction()
+
+        /**
+         * Broadcasts the Smart Race Solver enabled flag to all connected clients. Distinct from
+         * [Broadcast] so the framing message never lands in the log replay buffer.
+         *
+         * @property enabled True when SRS is enabled for the current run.
+         */
+        data class BroadcastSmartRaceSolverState(val enabled: Boolean) : LogAction()
     }
 
     // //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -399,6 +412,17 @@ object LogStreamServer {
                     session.send(Frame.Text("CAL:$snapshot"))
                 } catch (e: Exception) {
                     Log.w(TAG, "[WARN] handleNewClientAction:: Failed to replay calendar snapshot: ${e.message}")
+                }
+            }
+
+            // Replay the most recent Smart Race Solver enabled flag (if any) so the viewer can
+            // hide its Race History panel immediately when SRS is off, without flashing the
+            // empty calendar grid first.
+            latestSmartRaceSolverEnabled?.let { enabled ->
+                try {
+                    session.send(Frame.Text("SRS_STATE:$enabled"))
+                } catch (e: Exception) {
+                    Log.w(TAG, "[WARN] handleNewClientAction:: Failed to replay SRS state: ${e.message}")
                 }
             }
 
@@ -743,6 +767,9 @@ object LogStreamServer {
         // Drop the cached calendar so the new run starts with no replay.
         latestCalendarSnapshot = null
 
+        // Drop the cached SRS-enabled flag so the next run's Racing init is the source of truth.
+        latestSmartRaceSolverEnabled = null
+
         // Ensure we are unmuted for the new run.
         isMuted = false
 
@@ -812,6 +839,38 @@ object LogStreamServer {
     private suspend fun handleCalendarBroadcast(json: String) {
         if (clients.isEmpty()) return
         val frame = "CAL:$json"
+        for (client in clients) {
+            try {
+                client.send(Frame.Text(frame))
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    /**
+     * Pushes the Smart Race Solver enabled flag to all connected clients and caches it for replay
+     * to clients that connect later. Called once per run by `Racing.kt` when the captured value
+     * is read from settings.
+     *
+     * @param enabled True when the Smart Race Solver feature is on for the current run.
+     */
+    fun broadcastSmartRaceSolverEnabled(enabled: Boolean) {
+        latestSmartRaceSolverEnabled = enabled
+        if (!isRunning) return
+        serverScope?.launch {
+            actionChannel?.send(LogAction.BroadcastSmartRaceSolverState(enabled))
+        }
+    }
+
+    /**
+     * Sends the Smart Race Solver state to all currently connected clients with the `SRS_STATE:`
+     * framing prefix. Payload is the lowercase boolean (`true` or `false`).
+     *
+     * @param enabled The enabled flag to broadcast.
+     */
+    private suspend fun handleSmartRaceSolverStateBroadcast(enabled: Boolean) {
+        if (clients.isEmpty()) return
+        val frame = "SRS_STATE:$enabled"
         for (client in clients) {
             try {
                 client.send(Frame.Text(frame))
@@ -898,6 +957,10 @@ object LogStreamServer {
 
                             is LogAction.BroadcastCalendar -> {
                                 handleCalendarBroadcast(action.json)
+                            }
+
+                            is LogAction.BroadcastSmartRaceSolverState -> {
+                                handleSmartRaceSolverStateBroadcast(action.enabled)
                             }
                         }
                     }

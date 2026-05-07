@@ -49,6 +49,7 @@ import com.steve1316.uma_android_automation.types.RunningStyle
 import com.steve1316.uma_android_automation.types.TrackDistance
 import com.steve1316.uma_android_automation.types.TrackSurface
 import com.steve1316.uma_android_automation.utils.CustomImageUtils.RaceDetails
+import com.steve1316.uma_android_automation.utils.LogStreamServer
 import net.ricecode.similarity.JaroWinklerStrategy
 import net.ricecode.similarity.StringSimilarityServiceImpl
 import org.json.JSONObject
@@ -88,6 +89,8 @@ class Racing(private val game: Game, private val campaign: Campaign) {
     /** Whether the Smart Race Solver schedules extra races for the trainee. */
     val enableSmartRaceSolver =
         SettingsHelper.getBooleanSetting("racing", "enableSmartRaceSolver").also {
+            // Pushes the flag to the Remote Log Viewer so it can hide the Race History panel when SRS is off.
+            LogStreamServer.broadcastSmartRaceSolverEnabled(it)
             if (it) SmartRaceSolverIntegration.reset()
         }
 
