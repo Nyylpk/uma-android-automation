@@ -25,6 +25,6 @@ module.exports = {
         "src/lib/logger.ts",
         "src/lib/performanceLogger.ts",
         "src/components/**/helpers.ts",
-        "src/data/searchConfig.ts",
+        "src/context/searchConfig.ts",
     ],
 }

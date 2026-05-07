@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -477,8 +478,8 @@ def detectScrollBar(
 
 
 if __name__ == "__main__":
-    fp = "./imageDetectionSample.png"
-    # fp = "./imageDetectionSample2.png"
+    fp = str(Path(__file__).parent / "imageDetectionSample.png")
+    # fp = str(Path(__file__).parent / "imageDetectionSample2.png")
 
     detectRectangles(
         fp,

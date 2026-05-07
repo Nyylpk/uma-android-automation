@@ -8,6 +8,7 @@ import re
 import time
 import logging
 import os
+from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple, Union
 from difflib import SequenceMatcher
 import bisect
@@ -15,6 +16,10 @@ import requests
 
 IS_DELTA = True
 DELTA_BACKLOG_COUNT = 5
+
+# Resolve the JSON output directory relative to this file so the scraper can be invoked from any CWD.
+# Layout: <repo>/scripts/data-scraper/main.py -> parents[2] is the repo root, then src/data.
+DATA_DIR = Path(__file__).resolve().parents[2] / "src" / "data"
 
 GAMETORA_DATA_URL = "https://gametora.com/data"
 GAMETORA_MANIFESTS_URL = f"{GAMETORA_DATA_URL}/manifests/umamusume.json"
@@ -51,7 +56,7 @@ def load_after_race_events() -> Dict[str, List[str]]:
     """
     after_race_events: Dict[str, List[str]] = {}
 
-    characters_file = os.path.join(os.path.dirname(__file__), "characters.json")
+    characters_file = str(DATA_DIR / "characters.json")
     if not os.path.exists(characters_file):
         logging.warning('characters.json not found. Cannot load "After a Race" events.')
         return after_race_events
@@ -250,7 +255,7 @@ class BaseScraper:
 
     def __init__(self, url: str, output_filename: str):
         self.url = url
-        self.output_filename = output_filename
+        self.output_filename = str(DATA_DIR / output_filename)
         self.data = self.load_existing_data()
         self.initial_data_count = len(self.data) if IS_DELTA else 0
         self.cookie_accepted = False

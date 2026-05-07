@@ -1138,7 +1138,7 @@ groundingVerifier.overlap()
 The corpus is built **at compile time** by [scripts/build-doc-index.ts](scripts/build-doc-index.ts) and shipped as a binary asset that the app loads on first chat call. Sources covered:
 
 - `README.md` and `HOW_IT_WORKS.md` (this file).
-- The static option descriptions from [src/data/searchConfig.ts](src/data/searchConfig.ts) — same strings used by the in-app settings search.
+- The static option descriptions from [src/context/searchConfig.ts](src/context/searchConfig.ts) — same strings used by the in-app settings search.
 - The Kotlin source under [android/app/src/main/java/com/steve1316/uma_android_automation/](android/app/src/main/java/com/steve1316/uma_android_automation/), so questions about implementation are grounded in the actual code rather than docs only.
 
 The script splits each source into roughly section-sized **chunks** (each chunk keeps its `source` and hierarchical `heading` so citations stay readable), embeds them, and writes the binary index consumed by [DocIndex.kt](android/app/src/main/java/com/steve1316/uma_android_automation/llm/DocIndex.kt). The index format stores chunk metadata followed by a contiguous block of L2-normalized 384-dim float vectors — small enough to load fully into memory.

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useCallback, useMemo } from "react"
 import { startTiming } from "../lib/performanceLogger"
-import searchConfig from "../data/searchConfig"
+import searchConfig from "./searchConfig"
 
 export interface SearchOption {
     /** The unique identifier for this item. */

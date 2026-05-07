@@ -1,7 +1,7 @@
 /**
  * Build-time documentation indexer for the on-device chatbot.
  *
- * Reads README.md, HOW_IT_WORKS.md, and src/data/searchConfig.ts; chunks them into ~200-token pieces with heading
+ * Reads README.md, HOW_IT_WORKS.md, and src/context/searchConfig.ts; chunks them into ~200-token pieces with heading
  * context preserved; embeds each chunk with the same MiniLM-L6-v2 int8 ONNX model shipped in the APK via
  * onnxruntime-node; writes a packed binary index to android/app/src/main/assets/llm/doc_index.bin in the format
  * consumed by DocIndex.kt.
@@ -509,7 +509,7 @@ async function sourceHash(sources: string[]): Promise<string> {
 async function main() {
     const readme = path.join(REPO_ROOT, "README.md")
     const howItWorks = path.join(REPO_ROOT, "HOW_IT_WORKS.md")
-    const searchConfig = path.join(REPO_ROOT, "src/data/searchConfig.ts")
+    const searchConfig = path.join(REPO_ROOT, "src/context/searchConfig.ts")
     const kotlinFiles = findKotlinFiles(KOTLIN_SRC_DIR)
     const sources = [readme, howItWorks, searchConfig, ...kotlinFiles]
     for (const s of sources) if (!fs.existsSync(s)) throw new Error(`missing source: ${s}`)
