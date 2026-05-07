@@ -3,7 +3,7 @@ import { View, ScrollView, StyleSheet, TextInput, Text, NativeModules, Pressable
 import { useFocusEffect } from "@react-navigation/native"
 import { type MarkedStyles } from "react-native-marked"
 import type { UserTheme } from "react-native-marked/dist/typescript/theme/types"
-import { KotlinCode, DARK_PALETTE, LIGHT_PALETTE } from "../../lib/llm/kotlinHighlight"
+import { KotlinCode, DARK_PALETTE, LIGHT_PALETTE } from "../../components/KotlinCode"
 import { useTheme } from "../../context/ThemeContext"
 import CustomButton from "../../components/CustomButton"
 import CustomSelect from "../../components/CustomSelect"

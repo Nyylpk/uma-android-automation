@@ -708,6 +708,30 @@ const searchConfig: SearchOption[] = [
     },
 
     // ============================================================
+    // Discord Settings
+    // ============================================================
+    {
+        id: "enableDiscordNotifications",
+        title: "Enable Discord Notifications",
+        description: "When enabled, the Discord bot will send a DM notification when it stops, including the run status and any error messages.",
+        page: "DiscordSettings",
+    },
+    {
+        id: "discordBotToken",
+        title: "Discord Bot Token",
+        description: "The token generated from the Discord Developer Portal. Your Discord bot must share a server with you.",
+        page: "DiscordSettings",
+        parentId: "enableDiscordNotifications",
+    },
+    {
+        id: "discordUserID",
+        title: "Discord User ID",
+        description: "Your Discord user ID. Enable Developer Mode in Discord settings, then click your name and select 'Copy User ID'.",
+        page: "DiscordSettings",
+        parentId: "enableDiscordNotifications",
+    },
+
+    // ============================================================
     // Debug Settings
     // ============================================================
     {
@@ -806,8 +830,7 @@ const searchConfig: SearchOption[] = [
     {
         id: "debug-main-screen-update-test",
         title: "Start Main Screen Update Test",
-        description:
-            "Disables normal bot operations and starts the Main Screen update test. This test will go through all Main Screen updates and then print the Trainee information.",
+        description: "Disables normal bot operations and starts the Main Screen update test. This test will go through all Main Screen updates and then print the Trainee information.",
         page: "DebugSettings",
     },
     {
@@ -881,15 +904,13 @@ const searchConfig: SearchOption[] = [
     {
         id: "llm-model-url",
         title: "Chat Model URL",
-        description:
-            "Hugging Face URL of the GGUF chat model to download. Pick a preset (Qwen 2.5, etc.) or choose Custom and paste any GGUF model URL.",
+        description: "Hugging Face URL of the GGUF chat model to download. Pick a preset (Qwen 2.5, etc.) or choose Custom and paste any GGUF model URL.",
         page: "LLMSettings",
     },
     {
         id: "llm-hf-token",
         title: "Hugging Face Access Token",
-        description:
-            "Optional bearer token sent with the model download request. Required for gated repos. Persisted under the chat category so it is never included in settings exports.",
+        description: "Optional bearer token sent with the model download request. Required for gated repos. Persisted under the chat category so it is never included in settings exports.",
         page: "LLMSettings",
     },
     {
@@ -902,8 +923,7 @@ const searchConfig: SearchOption[] = [
     {
         id: "llm-download-chat-model",
         title: "Download Chat Model",
-        description:
-            "Downloads the selected GGUF chat model file (Qwen 2.5 1.5B Instruct ~1.1 GB by default) for llama.rn generation. Stored in app-private storage; can be deleted later.",
+        description: "Downloads the selected GGUF chat model file (Qwen 2.5 1.5B Instruct ~1.1 GB by default) for llama.rn generation. Stored in app-private storage; can be deleted later.",
         page: "LLMSettings",
     },
     {

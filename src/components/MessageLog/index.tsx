@@ -1,8 +1,9 @@
 import { useContext, useState, useMemo, useCallback, memo, useEffect, useRef } from "react"
 import { MessageLogDataContext } from "../../context/MessageLogContext"
-import { BotMetaContext, Settings, useSettingsSnapshot } from "../../context/BotStateContext"
+import { BotMetaContext, useSettingsSnapshot } from "../../context/BotStateContext"
 import { useSettings } from "../../context/SettingsContext"
 import { databaseManager } from "../../lib/database"
+import { buildSettingsBanner } from "../../lib/messageLog/buildSettingsBanner"
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Animated } from "react-native"
 import * as Clipboard from "expo-clipboard"
 import { Copy, Plus, Minus, Type, X, ArrowUp, ArrowDown, ArrowUpAZ, ArrowDownZA } from "lucide-react-native"
@@ -236,225 +237,24 @@ const MessageLog = () => {
         setShowErrorDialog(true)
     }, [])
 
-    // Build the formatted settings welcome banner. Pure function of the settings snapshot;
-    // the surrounding effect defers invocation so the heavy template-literal work stays off
-    // the synchronous toggle path.
-    const buildFormattedSettings = useCallback((settings: Settings): string => {
-        // Training stat targets by distance.
-        const sprintTargetsString = `Sprint: \n\t\tSpeed: ${settings.trainingStatTarget.trainingSprintStatTarget_speedStatTarget}\t\tStamina: ${settings.trainingStatTarget.trainingSprintStatTarget_staminaStatTarget}\t\tPower: ${settings.trainingStatTarget.trainingSprintStatTarget_powerStatTarget}\n\t\tGuts: ${settings.trainingStatTarget.trainingSprintStatTarget_gutsStatTarget}\t\t\tWit: ${settings.trainingStatTarget.trainingSprintStatTarget_witStatTarget}`
-        const mileTargetsString = `Mile: \n\t\tSpeed: ${settings.trainingStatTarget.trainingMileStatTarget_speedStatTarget}\t\tStamina: ${settings.trainingStatTarget.trainingMileStatTarget_staminaStatTarget}\t\tPower: ${settings.trainingStatTarget.trainingMileStatTarget_powerStatTarget}\n\t\tGuts: ${settings.trainingStatTarget.trainingMileStatTarget_gutsStatTarget}\t\t\tWit: ${settings.trainingStatTarget.trainingMileStatTarget_witStatTarget}`
-        const mediumTargetsString = `Medium: \n\t\tSpeed: ${settings.trainingStatTarget.trainingMediumStatTarget_speedStatTarget}\t\tStamina: ${settings.trainingStatTarget.trainingMediumStatTarget_staminaStatTarget}\t\tPower: ${settings.trainingStatTarget.trainingMediumStatTarget_powerStatTarget}\n\t\tGuts: ${settings.trainingStatTarget.trainingMediumStatTarget_gutsStatTarget}\t\t\tWit: ${settings.trainingStatTarget.trainingMediumStatTarget_witStatTarget}`
-        const longTargetsString = `Long: \n\t\tSpeed: ${settings.trainingStatTarget.trainingLongStatTarget_speedStatTarget}\t\tStamina: ${settings.trainingStatTarget.trainingLongStatTarget_staminaStatTarget}\t\tPower: ${settings.trainingStatTarget.trainingLongStatTarget_powerStatTarget}\n\t\tGuts: ${settings.trainingStatTarget.trainingLongStatTarget_gutsStatTarget}\t\t\tWit: ${settings.trainingStatTarget.trainingLongStatTarget_witStatTarget}`
-
-        // Smart Race Solver settings — counts derived from JSON-string fields.
-        const safeJsonLength = (json: string): number => {
-            try {
-                const parsed = JSON.parse(json || "[]")
-                return Array.isArray(parsed) ? parsed.length : Object.keys(parsed).length
-            } catch {
-                return 0
-            }
-        }
-        const smartRaceSolverTargetCount = safeJsonLength(settings.racing.smartRaceSolverTargetEpithets)
-        const smartRaceSolverForcedCount = safeJsonLength(settings.racing.smartRaceSolverForcedEpithets)
-        const smartRaceSolverLockCount = safeJsonLength(settings.racing.smartRaceSolverManualLocks)
-        const smartRaceSolverWeightsObj = (() => {
-            try {
-                return JSON.parse(settings.racing.smartRaceSolverWeights || "{}") as Record<string, number | string>
-            } catch {
-                return {} as Record<string, number | string>
-            }
-        })()
-        const smartRaceSolverAptitudesObj = (() => {
-            try {
-                return JSON.parse(settings.racing.smartRaceSolverAptitudes || "{}") as Record<string, string>
-            } catch {
-                return {} as Record<string, string>
-            }
-        })()
-
-        return `🏁 Campaign Selected: ${settings.general.scenario !== "" ? `${settings.general.scenario}` : "Please select one in the Select Campaign option"}
-👤 Profile Selected: ${settings.misc.currentProfileName ? `${settings.misc.currentProfileName}` : "Default Profile"}
-
----------- Training Event Options ----------
-🎭 Special Event Overrides: ${
-            Object.keys(settings.trainingEvent.specialEventOverrides).length === 0
-                ? "No Special Event Overrides"
-                : `${Object.keys(settings.trainingEvent.specialEventOverrides).length} Special Event Overrides applied`
-        }
-👤 Character Event Overrides: ${
-            Object.keys(settings.trainingEvent.characterEventOverrides).length === 0
-                ? "No Character Event Overrides"
-                : `${Object.keys(settings.trainingEvent.characterEventOverrides).length} Character Event Override(s) applied`
-        }
-💪 Support Event Overrides: ${
-            Object.keys(settings.trainingEvent.supportEventOverrides).length === 0
-                ? "No Support Event Overrides"
-                : `${Object.keys(settings.trainingEvent.supportEventOverrides).length} Support Event Override(s) applied`
-        }
-🎭 Scenario Event Overrides: ${
-            Object.keys(settings.trainingEvent.scenarioEventOverrides).length === 0
-                ? "No Scenario Event Overrides"
-                : `${Object.keys(settings.trainingEvent.scenarioEventOverrides).length} Scenario Event Override(s) applied`
-        }
-🔋 Prioritize Energy Options: ${settings.trainingEvent.enablePrioritizeEnergyOptions ? "✅" : "❌"}
-🔍 Enable Automatic OCR retry: ${settings.trainingEvent.enableAutomaticOCRRetry ? "✅" : "❌"}
-🔍 Minimum OCR Confidence: ${settings.trainingEvent.ocrConfidence}
-🔍 Hide OCR String Comparison Results: ${settings.trainingEvent.enableHideOCRComparisonResults ? "✅" : "❌"}
-
----------- Training Options ----------
-🚫 Training Blacklist: ${settings.training.trainingBlacklist.length === 0 ? "No Trainings blacklisted" : `${settings.training.trainingBlacklist.join(", ")}`}
-📊 Stat Prioritization: ${
-            settings.training.statPrioritization.length === 0 ? "Using Default Stat Prioritization: Speed, Stamina, Power, Wit, Guts" : `${settings.training.statPrioritization.join(", ")}`
-        }
-🎴 Event Choice Stat Priority: ${
-            settings.training.eventChoiceStatPriority.length === 0
-                ? "Using Default Event Choice Stat Priority: Speed, Stamina, Power, Wit, Guts"
-                : `${settings.training.eventChoiceStatPriority.join(", ")}`
-        }
-☀️ Summer Training Stat Priority: ${
-            settings.training.summerTrainingStatPriority.length === 0
-                ? "Using Default Summer Training Stat Priority: Speed, Stamina, Power, Wit, Guts"
-                : `${settings.training.summerTrainingStatPriority.join(", ")}`
-        }
-🔍 Maximum Failure Chance Allowed: ${settings.training.maximumFailureChance}%
-⚠️ Enable Riskier Training: ${settings.training.enableRiskyTraining ? "✅" : "❌"}${
-            settings.training.enableRiskyTraining
-                ? `\n   📊 Minimum Main Stat Gain Threshold: ${settings.training.riskyTrainingMinStatGain}\n   🎯 Risky Training Maximum Failure Chance: ${settings.training.riskyTrainingMaxFailureChance}%`
-                : ""
-        }
-🔄 Disable Training on Maxed Stat: ${settings.training.disableTrainingOnMaxedStat ? "✅" : "❌"}
-✨ Focus on Sparks for Stat Targets: ${settings.training.focusOnSparkStatTarget.length === 0 ? "None" : settings.training.focusOnSparkStatTarget.join(", ")}
-📏 Preferred Distance Override: ${settings.training.preferredDistanceOverride === "Default" ? "Default" : settings.training.preferredDistanceOverride}
-🌈 Enable Rainbow Training Bonus: ${settings.training.enableRainbowTrainingBonus ? "✅" : "❌"}
-💡 Prioritize Skill Hints: ${settings.training.enablePrioritizeSkillHints ? "✅" : "❌"}
-☀️ Must Rest Before Summer: ${settings.training.mustRestBeforeSummer ? "✅" : "❌"}
-🎯 Train Wit During Finale: ${settings.training.trainWitDuringFinale ? "✅" : "❌"}
-🔍 Training Analysis Validation: ${settings.training.enableTrainingAnalysisValidation ? "✅" : "❌"}
-🤖 Enable YOLO Stat Detection: ${settings.training.enableYoloStatDetection ? "✅" : "❌"}
-
----------- Training Stat Targets by Distance ----------
-${sprintTargetsString}
-${mileTargetsString}
-${mediumTargetsString}
-${longTargetsString}
-
----------- Racing Options ----------
-👥 Prioritize Farming Fans: ${settings.racing.enableFarmingFans ? "✅" : "❌"}
-⏰ Modulo Days to Farm Fans: ${settings.racing.enableFarmingFans ? `${settings.racing.daysToRunExtraRaces} days` : "❌"}
-🚫 Ignore Consecutive Race Warning: ${settings.racing.ignoreConsecutiveRaceWarning ? "✅" : "❌"}
-⚡ Ignore Low Energy Racing Block: ${settings.racing.ignoreLowEnergyRacingBlock ? "✅" : "❌"}
-🔄 Disable Race Retries: ${settings.racing.disableRaceRetries ? "✅" : "❌"}
-\t🔄 Allow Daily Free Race Retry: ${settings.racing.enableFreeRaceRetry ? "✅" : "❌"}
-🏁 Stop on Mandatory Race: ${settings.racing.enableStopOnMandatoryRaces ? "✅" : "❌"}
-🏃 Force Racing Every Day: ${settings.racing.enableForceRacing ? "✅" : "❌"}
-🏁 Enable User In-Game Race Agenda: ${settings.racing.enableUserInGameRaceAgenda ? "✅" : "❌"}
-🏁 Limit Extra Races to Agenda: ${settings.racing.limitRacesToInGameAgenda ? "✅" : "❌"}
-🏁 Skip Summer Training for Agenda: ${settings.racing.skipSummerTrainingForAgenda ? "✅" : "❌"}
-🏁 Selected User In-Game Race Agenda: ${settings.racing.selectedUserAgenda}
-🏁 Custom Agenda Title: ${settings.racing.customAgendaTitle || "(none)"}
-🎯 Per-Distance Strategy: ${settings.racing.enablePerDistanceStrategy ? "Enabled" : "Disabled"}
-🎯 Junior Year Race Strategy: ${settings.racing.enablePerDistanceStrategy ? `[Short: ${settings.racing.juniorYearPerDistanceStrategies?.Short ?? "Default"}, Mile: ${settings.racing.juniorYearPerDistanceStrategies?.Mile ?? "Default"}, Medium: ${settings.racing.juniorYearPerDistanceStrategies?.Medium ?? "Default"}, Long: ${settings.racing.juniorYearPerDistanceStrategies?.Long ?? "Default"}]` : settings.racing.juniorYearRaceStrategy}
-🎯 Classic/Senior Year Race Strategy: ${settings.racing.enablePerDistanceStrategy ? `[Short: ${settings.racing.originalPerDistanceStrategies?.Short ?? "Default"}, Mile: ${settings.racing.originalPerDistanceStrategies?.Mile ?? "Default"}, Medium: ${settings.racing.originalPerDistanceStrategies?.Medium ?? "Default"}, Long: ${settings.racing.originalPerDistanceStrategies?.Long ?? "Default"}]` : settings.racing.originalRaceStrategy}
-
----------- Smart Race Solver Options ----------
-🤖 Enable Smart Race Solver: ${settings.racing.enableSmartRaceSolver ? "✅" : "❌"}
-🎭 Solver Character Preset: ${settings.racing.smartRaceSolverCharacterPreset || "(none)"}
-🐎 Solver Aptitudes: Spr ${smartRaceSolverAptitudesObj.Sprint ?? "?"}, Mile ${smartRaceSolverAptitudesObj.Mile ?? "?"}, Med ${smartRaceSolverAptitudesObj.Medium ?? "?"}, Lng ${smartRaceSolverAptitudesObj.Long ?? "?"}, Trf ${smartRaceSolverAptitudesObj.Turf ?? "?"}, Drt ${smartRaceSolverAptitudesObj.Dirt ?? "?"}
-⚖️ Solver Weights: race ${smartRaceSolverWeightsObj.raceValue ?? "?"}, epithet ${smartRaceSolverWeightsObj.epithetValue ?? "?"}, hint ${smartRaceSolverWeightsObj.hintWeight ?? "?"}, consec −${smartRaceSolverWeightsObj.consecutiveRacePenalty ?? "?"}, summer −${smartRaceSolverWeightsObj.summerPenalty ?? "?"}, raceBonus ${smartRaceSolverWeightsObj.raceBonusPct ?? "?"}%, raceCost ${smartRaceSolverWeightsObj.raceCostPct ?? "?"}%, threshold ${smartRaceSolverWeightsObj.aptitudeThreshold ?? "?"}, includeOP ${smartRaceSolverWeightsObj.includeOpAndPreOp ? "✅" : "❌"}, summerRacing ${smartRaceSolverWeightsObj.allowSummerRacing ? "✅" : "❌"}
-🎯 Solver Target Epithets: ${smartRaceSolverTargetCount} selected
-🚨 Solver Forced Epithets: ${smartRaceSolverForcedCount} selected
-🔒 Solver Manual Turn Locks: ${smartRaceSolverLockCount} locked turn(s)
-
----------- Skill Options ----------
-🔍 Skill Point Check: ${settings.skills.enableSkillPointCheck ? `Stop on ${settings.skills.skillPointCheck} Skill Points or more` : "❌"}
-🏃 Running Style Override: ${settings.skills.preferredRunningStyle}
-🛣️ Track Distance Override: ${settings.skills.preferredTrackDistance}
-🛣️ Track Surface Override: ${settings.skills.preferredTrackSurface}
-📅 Pre-Finals Skill Plan: ${settings.skills.plans.preFinals.enabled ? "✅" : "❌"}${
-            settings.skills.plans.preFinals.enabled
-                ? `\n\t💲 Buy All Inherited Unique Skills: ${settings.skills.plans.preFinals.enableBuyInheritedUniqueSkills ? "✅" : "❌"}\n\t💲 Buy All Negative Skills: ${
-                      settings.skills.plans.preFinals.enableBuyNegativeSkills ? "✅" : "❌"
-                  }\n\t💸 Spending Strategy: ${settings.skills.plans.preFinals.strategy ? "✅" : "❌"}`
-                : ""
-        }
-📅 CareerComplete Skill Plan: ${settings.skills.plans.careerComplete.enabled ? "✅" : "❌"}${
-            settings.skills.plans.careerComplete.enabled
-                ? `\n\t💲 Buy All Inherited Unique Skills: ${settings.skills.plans.careerComplete.enableBuyInheritedUniqueSkills ? "✅" : "❌"}\n\t💲 Buy All Negative Skills: ${
-                      settings.skills.plans.careerComplete.enableBuyNegativeSkills ? "✅" : "❌"
-                  }\n\t💸 Spending Strategy: ${settings.skills.plans.careerComplete.strategy ? "✅" : "❌"}`
-                : ""
-        }
-
----------- Scenario Overrides ----------
-🏁 Trackblazer Consecutive Races Limit: ${settings.scenarioOverrides?.trackblazerConsecutiveRacesLimit}
-🔋 Trackblazer Energy Threshold: ${settings.scenarioOverrides?.trackblazerEnergyThreshold}
-🛍️ Trackblazer Shop Check Grades: ${settings.scenarioOverrides?.trackblazerShopCheckGrades?.join(", ")}
-🛍️ Trackblazer Shop Check Frequency: ${settings.scenarioOverrides?.trackblazerShopCheckFrequency}
-🛍️ Trackblazer Excluded Items: ${settings.scenarioOverrides?.trackblazerExcludedItems?.length === 0 ? "None" : settings.scenarioOverrides?.trackblazerExcludedItems?.join(", ")}
-✨ Trackblazer Min Stat Gain for Charm: ${settings.scenarioOverrides?.trackblazerMinStatGainForCharm}
-✨ Trackblazer Low Main Stat Gain Item Floor: ${settings.scenarioOverrides?.trackblazerLowMainStatGainItemFloor}
-🔄 Trackblazer Max Retries per Race: ${settings.scenarioOverrides?.trackblazerMaxRetriesPerRace}
-🔄 Trackblazer Whistle Forces Training: ${settings.scenarioOverrides?.trackblazerWhistleForcesTraining ? "✅" : "❌"}
-🔄 Trackblazer Retry Grades: ${settings.scenarioOverrides?.trackblazerRetryRacesBeforeFinalGrades?.join(", ")}
-✨ Trackblazer Enable Irregular Training: ${settings.scenarioOverrides?.trackblazerEnableIrregularTraining ? "✅" : "❌"}
-✨ Trackblazer Irregular Training Min Gain: ${settings.scenarioOverrides?.trackblazerIrregularTrainingMinStatGain}
-🏇 Trackblazer Preferred Distances: ${settings.scenarioOverrides?.trackblazerPreferredDistances?.length === 0 ? "None" : settings.scenarioOverrides?.trackblazerPreferredDistances?.join(", ")}
-🏇 Trackblazer Preferred Surfaces: ${settings.scenarioOverrides?.trackblazerPreferredSurfaces?.length === 0 ? "None" : settings.scenarioOverrides?.trackblazerPreferredSurfaces?.join(", ")}
-
----------- Misc Options ----------
-🔍 Enable Crane Game Attempt: ${settings.general.enableCraneGameAttempt ? "✅" : "❌"}
-🛑 Stop Before Finals: ${settings.general.enableStopBeforeFinals ? "✅" : "❌"}
-🛑 Stop At Date: ${settings.general.enableStopAtDate ? `✅ (${settings.general.stopAtDates.join(", ")})` : "❌"}
-⏰ Wait Delay: ${settings.general.waitDelay}s
-⏰ Dialog Wait Delay: ${settings.general.dialogWaitDelay}s
-
----------- Debug Options ----------
-🐛 Debug Mode: ${settings.debug.enableDebugMode ? "✅" : "❌"}
-🔍 OCR Threshold: ${settings.debug.ocrThreshold}
-🔍 Minimum Template Match Confidence: ${settings.debug.templateMatchConfidence}
-🔍 Custom Scale: ${settings.debug.templateMatchCustomScale}
-💻 Remote Log Viewer: ${settings.debug.enableRemoteLogViewer ? "✅" : "❌"}
-📹 Enable Screen Recording: ${
-            settings.debug.enableScreenRecording ? `✅ (${settings.debug.recordingBitRate} Mbps, ${settings.debug.recordingFrameRate} FPS, ${settings.debug.recordingResolutionScale}x scale)` : "❌"
-        }
-🔍 Start Template Matching Test: ${settings.debug.debugMode_startTemplateMatchingTest ? "✅" : "❌"}
-🔍 Start Single Training OCR Test: ${settings.debug.debugMode_startSingleTrainingOCRTest ? "✅" : "❌"}
-🔍 Start Comprehensive Training OCR Test: ${settings.debug.debugMode_startComprehensiveTrainingOCRTest ? "✅" : "❌"}
-🔍 Start Race List Detection Test: ${settings.debug.debugMode_startRaceListDetectionTest ? "✅" : "❌"}
-🔍 Start Main Screen Update Test: ${settings.debug.debugMode_startMainScreenUpdateTest ? "✅" : "❌"}
-🔍 Start Skill List Buy Test: ${settings.debug.debugMode_startSkillListBuyTest ? "✅" : "❌"}
-🔍 Start Scrollbar Detection Test: ${settings.debug.debugMode_startScrollBarDetectionTest ? "✅" : "❌"}
-🔍 Start Trackblazer Race Selection Test: ${settings.debug.debugMode_startTrackblazerRaceSelectionTest ? "✅" : "❌"}
-🔍 Start Trackblazer Inventory Sync Test: ${settings.debug.debugMode_startTrackblazerInventorySyncTest ? "✅" : "❌"}
-🔍 Start Trackblazer Buy Items Test: ${settings.debug.debugMode_startTrackblazerBuyItemsTest ? "✅" : "❌"}
-
----------- Discord Options ----------
-🔔 Discord Notifications: ${settings.discord?.enableDiscordNotifications ? "✅" : "❌"}
-👤 Discord User ID: ${settings.discord?.discordUserID ? "Configured" : "Not Set"}
-🔑 Discord Bot Token: ${settings.discord?.discordToken ? "Configured" : "Not Set"}
-
-****************************************`
-    }, [])
-
     // Debounced state for the formatted settings banner. Recomputing the ~30-line template
     // literal (including `JSON.parse` calls on the smart-race-solver fields and `Object.keys(...)`
     // over each override map) synchronously on every settings change was making toggles feel
     // sluggish once the user imported a populated settings file. We now compute it 250ms after the last settings
     // change, off the toggle's render commit. The intro/log path keeps using the previous
     // value until the new one lands; downstream memos bail out via `Object.is`.
-    const [formattedSettingsString, setFormattedSettingsString] = useState<string>(() => buildFormattedSettings(settings))
+    const [formattedSettingsString, setFormattedSettingsString] = useState<string>(() => buildSettingsBanner(settings))
     const formattedStringTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     useEffect(() => {
         if (formattedStringTimerRef.current) clearTimeout(formattedStringTimerRef.current)
         formattedStringTimerRef.current = setTimeout(() => {
-            const next = buildFormattedSettings(settings)
+            const next = buildSettingsBanner(settings)
             setFormattedSettingsString((prev) => (prev === next ? prev : next))
         }, 250)
         return () => {
             if (formattedStringTimerRef.current) clearTimeout(formattedStringTimerRef.current)
         }
-    }, [settings, buildFormattedSettings])
+    }, [settings])
 
     // Persist the formatted string directly to SQLite. The Kotlin runtime is the only consumer
     // (via SettingsHelper.getStringSetting), so writing through `setSettings` would just trigger
