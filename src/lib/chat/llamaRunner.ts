@@ -48,6 +48,12 @@ export interface ChatOptions {
     topK?: number
     /** Nucleus (top-P) sampling cutoff. Default 0.95. */
     topP?: number
+    /** Minimum probability mass relative to the most likely token. Default 0.05. Quality floor on top of top-k/top-p. */
+    minP?: number
+    /** Repetition penalty over the last `penaltyLastN` tokens. Default 1.1 - breaks paragraph-cycling on small models like qwen2.5-0.5b. */
+    penaltyRepeat?: number
+    /** Window of recent tokens that the repetition penalty looks at. Default 128. */
+    penaltyLastN?: number
     /** Strings that, when emitted, halt generation. Defaults cover Gemma + Qwen + Llama EOS markers. */
     stop?: string[]
 }
@@ -164,6 +170,9 @@ export async function chat(opts: ChatOptions, onToken?: (token: string) => void)
             temperature: opts.temperature ?? 0.35,
             top_k: opts.topK ?? 40,
             top_p: opts.topP ?? 0.95,
+            min_p: opts.minP ?? 0.05,
+            penalty_repeat: opts.penaltyRepeat ?? 1.1,
+            penalty_last_n: opts.penaltyLastN ?? 128,
             stop: opts.stop ?? DEFAULT_STOP,
         },
         (data: { token: string }) => {

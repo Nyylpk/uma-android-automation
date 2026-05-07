@@ -13,7 +13,7 @@ export interface DeviceCapabilities {
     availRamBytes: number
     /** Tokens from `/proc/cpuinfo`'s `Features:` line (e.g. `["fp", "asimd", "asimddp", "i8mm", ...]`). */
     cpuFeatures: string[]
-    /** Primary supported ABI (`Build.SUPPORTED_ABIS[0]`); should always be `arm64-v8a` after our split. */
+    /** Primary supported ABI (`Build.SUPPORTED_ABIS[0]`). Either `arm64-v8a` on real devices or `x86_64` on the Android emulator. */
     abi: string
 }
 
@@ -22,7 +22,7 @@ export interface DeviceCapabilities {
  * device's CPU features satisfy. `unknown` is a defensive fallback for parse failures - treated as the slow
  * baseline by the UI.
  */
-export type AccelerationTier = "v8.2-dotprod" | "v8-baseline" | "unknown"
+export type AccelerationTier = "v8.2-dotprod" | "v8-baseline" | "x86_64" | "unknown"
 
 /** Approximate free-RAM requirement for each chat-model preset, keyed by a substring of the preset URL. */
 export const PRESET_RAM_REQUIREMENTS_BYTES: Array<{ urlSubstring: string; requiredAvailRamBytes: number; label: string }> = [
@@ -58,7 +58,8 @@ export async function loadDeviceCapabilities(): Promise<DeviceCapabilities | nul
  * `v8_2` variants. The `i8mm` and `hexagon_opencl` variants are not in the APK (trimmed for size), so the
  * presence of `i8mm` is informational only and doesn't change the tier.
  */
-export function accelerationTier(features: string[]): AccelerationTier {
+export function accelerationTier(features: string[], abi?: string): AccelerationTier {
+    if (abi === "x86_64") return "x86_64"
     if (!features || features.length === 0) return "unknown"
     if (features.includes("asimddp")) return "v8.2-dotprod"
     return "v8-baseline"
@@ -73,6 +74,8 @@ export function accelerationTierLabel(tier: AccelerationTier): string {
             return "v8.2 + dotprod (fast)"
         case "v8-baseline":
             return "v8 baseline (slow)"
+        case "x86_64":
+            return "x86_64 native"
         case "unknown":
             return "unknown"
     }

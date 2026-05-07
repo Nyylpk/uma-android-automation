@@ -265,7 +265,7 @@ const LLMSettings = () => {
             .catch(() => undefined)
     }, [])
 
-    const tier = useMemo(() => accelerationTier(deviceCaps?.cpuFeatures ?? []), [deviceCaps])
+    const tier = useMemo(() => accelerationTier(deviceCaps?.cpuFeatures ?? [], deviceCaps?.abi), [deviceCaps])
     const recommended = useMemo(() => recommendedPreset(deviceCaps), [deviceCaps])
 
     const handleDownload = useCallback(async () => {

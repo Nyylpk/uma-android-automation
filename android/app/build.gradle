@@ -163,9 +163,14 @@ android {
             enable true
             reset()
             //noinspection ChromeOsAbiSupport
-            include("arm64-v8a")
+            include("arm64-v8a", "x86_64")
             // armeabi-v7a dropped: llama.rn 0.12+ ships arm64-v8a only and 32-bit ARM Android phones are
             // effectively extinct (Google Play has required 64-bit since 2019).
+            // x86_64 included so the Android emulator (running on x86_64 hosts) loads native llama.rn
+            // binaries instead of running arm64-v8a through QEMU TCG translation. Must stay paired with
+            // `reactNativeArchitectures=arm64-v8a,x86_64` in android/gradle.properties - that property
+            // controls which ABIs RN actually compiles native modules for. Adding x86_64 here without
+            // it produces an x86_64 split that's missing libexpo-modules-core.so and crashes on launch.
             universalApk false
         }
     }
