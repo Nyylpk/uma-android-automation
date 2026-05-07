@@ -2325,36 +2325,6 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
         }
     }
 
-    /**
-     * Print the current training map details for debugging.
-     *
-     * This method logs the stat gains, relationship bars, and other properties for all analyzed trainings.
-     */
-    fun printTrainingMap() {
-        MessageLog.v(TAG, "================ Training Map Details ================")
-        if (trainingMap.isEmpty()) {
-            MessageLog.v(TAG, "Training map is currently empty.")
-            return
-        }
-
-        for ((statName, training) in trainingMap) {
-            val sb = StringBuilder()
-            sb.append("[$statName] Gains: ")
-            val gains = training.statGains.entries.filter { it.value > 0 }.joinToString(", ") { "${it.key}=${it.value}" }
-            sb.append(gains.ifEmpty { "None" })
-            sb.append(" | Fail: ${training.failureChance}%")
-            sb.append(" | Rainbow: ${training.numRainbow}")
-            for (field in getExtraLogFields(training)) {
-                sb.append(" | $field")
-            }
-            if (training.relationshipBars.isNotEmpty()) {
-                sb.append(" | Bars: ${training.relationshipBars.size}")
-            }
-            MessageLog.v(TAG, sb.toString())
-        }
-        MessageLog.v(TAG, "======================================================")
-    }
-
     // //////////////////////////////////////////////////////////////////////////////////////////////////
     // //////////////////////////////////////////////////////////////////////////////////////////////////
 
