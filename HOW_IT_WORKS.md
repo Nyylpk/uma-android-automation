@@ -1,6 +1,6 @@
 # How It Works
 
-*Last updated: 2026-04-27*
+*Last updated: 2026-05-07*
 
 A comprehensive guide to the inner workings of the app. This document explains what the bot does at each step of a campaign, how it makes decisions, and how each scenario differs.
 
@@ -17,7 +17,8 @@ A comprehensive guide to the inner workings of the app. This document explains w
 - [9. Scenario: URA Finale](#9-scenario-ura-finale)
 - [10. Scenario: Unity Cup](#10-scenario-unity-cup)
 - [11. Scenario: Trackblazer](#11-scenario-trackblazer)
-- [12. Ask the Docs Chatbot](#12-ask-the-docs-chatbot)
+- [12. Smart Race Solver](#12-smart-race-solver)
+- [13. Ask the Docs Chatbot](#13-ask-the-docs-chatbot)
 
 ---
 
@@ -28,6 +29,8 @@ The bot is an Android app built with a **React Native** frontend (settings UI, m
 **How it sees the screen:** A `MediaProjectionService` captures the device screen. The bot then uses **OpenCV template matching** (TM_CCOEFF_NORMED with multi-scale search) to detect buttons, icons, and dialogs, **OCR** (Google ML Kit + Tesseract) to read text like stat values, event names, and race names, and optionally **YOLOv8 object detection** (via ONNX Runtime) to detect training stat gain digits with higher accuracy than template matching.
 
 **How it interacts:** An `AccessibilityService` performs tap and swipe gestures on the device.
+
+**How it bootstraps:** On first launch the Home page surfaces a unified `PermissionSetupDialog` that walks the user through the screen-overlay, accessibility, battery-optimization, and app-info permissions in one place. A small native bridge exposes those system settings as React Native methods so the dialog can deep-link directly to each toggle instead of expecting the user to find them in the Android settings tree.
 
 **How it decides:** The bot runs a `process()` loop that is called repeatedly by the `Game` class. Each call handles one "tick" — detecting which screen the game is on and taking the appropriate action.
 
@@ -144,6 +147,9 @@ flowchart TD
 
 > [!TIP]
 > The main loop is designed to be **idempotent** — each call to `process()` handles exactly one screen transition. If the game is between screens or in an animation, the bot simply taps and waits for the next tick.
+
+> [!NOTE]
+> **Warning-popup exit threshold.** When `performMiscChecks()` matches a `ButtonCancel` template, the bot does not exit immediately. It increments a `consecutiveButtonCancelMatches` counter and only exits once the counter reaches **5 consecutive iterations**, throwing a `CampaignBreakpointException` with a "Bot may have encountered a warning popup" notification. A single-frame template miss against an unrelated UI element no longer trips a false-positive exit. This replaced the old "Stop on Unexpected Popups" setting.
 
 ---
 
@@ -297,6 +303,9 @@ When `analyzeTrainings()` is called:
 3. **Results are cached** for the current turn in `cachedAnalysisResults` to avoid re-reading if the training screen is visited multiple times.
 4. **Filtering:** Trainings exceeding the maximum failure chance threshold (default 20%) are excluded, unless risky training mode or Good-Luck Charm overrides are active.
 
+> [!NOTE]
+> **First-failure-chance OCR retry.** If the very first failure-chance read on a Training screen entry comes back unparseable, `recoverAndRetryFailureChance()` clicks back out and re-enters the Training screen once before giving up. This catches the common case where the failure-chance number hasn't fully rendered yet on the first frame the bot captures.
+
 **YOLO Stat Detection:** When `enableYoloStatDetection` is enabled, stat gain digits are detected using a **YOLOv8 nano** model (`best.onnx`) instead of template matching. The model is trained to detect 11 classes (digits 0–9 and the '+' symbol) in small 130x50 pixel crop regions for each stat. It runs via ONNX Runtime with a confidence threshold of 0.8 and IoU threshold of 0.45 for NMS. The `YoloDetector` is loaded once as a singleton and kept in memory. Both detection methods coexist — the setting controls which one is used at runtime. The YOLO training pipeline and model export tools live in the [yolo/](yolo/) directory.
 
 ### 6.2 Scoring Algorithm
@@ -366,6 +375,18 @@ The bot supports configurable per-year stat targets (End of Junior / End of Clas
 When every training option is filtered out by the failure-chance or stat-cap rules, the bot follows a configurable fallback chain (e.g. rest, recover mood, or force Wit) instead of stalling on the turn. The fallback decision also respects negative statuses — for instance, with active negative conditions the forced fallback is Wit rather than Speed to avoid stat reductions from conditions like Slow Metabolism.
 </details>
 
+<details>
+<summary><strong>Per-Context Stat Priorities</strong></summary>
+
+The Training Settings page exposes three stat-priority lists instead of one:
+
+- **Training stat priority** — used by the per-turn training scorer (the existing behavior).
+- **Event choice stat priority** — used by [Section 8.3](#83-default-scoring) when scoring training-event option text. Falls back to the training list if left empty.
+- **Summer training stat priority** — used during Summer turns (37–40 and 61–64), when the trainee is barred from racing and the optimal stat to push is often different from the rest-of-year priority. Falls back to the training list if left empty.
+
+This lets the user, for example, push Speed during the year but lean into Stamina or Wit during Summer Training without having to flip the global priority.
+</details>
+
 ### 6.4 Training Configuration Summary
 
 | Setting | Default | Effect |
@@ -403,6 +424,7 @@ The bot determines if extra races should be run via `checkEligibilityToStartExtr
 - **In-Game Race Agenda:** Follows the agenda set within the game itself.
 - **Fan Farming:** Enters races based on a configurable interval (`daysToRunExtraRaces`).
 - **Smart Racing / Look-Ahead:** Checks upcoming turns for higher-quality races and may defer racing to a better opportunity.
+- **Smart Race Solver:** From Classic year onward, the optional [Smart Race Solver](#12-smart-race-solver) can take over extra-race scheduling — see Section 12. When it's enabled with `enableFarmingFans` on and `enableForceRacing` off, the solver decides which turns are race turns and which races are picked, and the legacy fan-farming and look-ahead heuristics step aside.
 
 > [!IMPORTANT]
 > **Trackblazer** bypasses smart racing logic entirely and races as aggressively as possible, only stopping for summer, finals, or when the consecutive race limit is reached.
@@ -648,7 +670,12 @@ The bot opens the Training Items dialog when **any** of these conditions are met
 | Ankle Weights exist for the selected training stat | Training stat bonus |
 | Good-Luck Charm exists, not used today, failure chance ≥ 20%, and a training is selected | Prevent training failure |
 
-If **none** of these conditions are met and the inventory has already been synced, the bot skips opening the dialog entirely to save time.
+If **none** of these conditions are met and the inventory has already been synced, the bot skips opening the dialog entirely to save time. Several extra short-circuits skip the open even when one of the bullets above looks satisfied:
+
+- **Conserved energy item only:** If the only energy items in inventory are the lowest-tier copies reserved for emergency race recovery, the dialog is skipped — opening it would just use them and defeat the conservation rule.
+- **Conserved megaphone or Charm only:** If the only training-effect items in inventory would be filtered out by the megaphone-priority logic or by the Charm low-failure / low-gain rules, the dialog is skipped.
+- **No matching condition heal:** If no negative status is active, condition heals don't trigger the dialog even when they're in inventory.
+- **Low main stat gain floor (Trackblazer):** Trackblazer also tracks a `trackblazerLowMainStatGainItemFloor` (default 20) — when mood is low, the bot refuses to spend a Charm or run a Reset Whistle reshuffle if the selected training's main stat gain falls below this floor. The mood penalty would cap the gain enough that the item is conserved for a higher-gain turn instead.
 
 Once the dialog is open, the bot scrolls through the full item list, performing **inventory sync** and **inline item usage** in a single pass. Each item encountered is evaluated against the rules below. If the cached inventory already accounts for every item of interest, the scan exits early.
 
@@ -1083,7 +1110,8 @@ Trackblazer uses a specialized race selection algorithm (`findSuitableRace()`, f
    - Check for **Rival status** via template matching (`LabelRivalRacer`)
    - Filter by grade based on the current consecutive race count (see [11.5](#115-consecutive-race-system))
 4. **Selection priority:**
-   - **Rival races first** (these offer bonus rewards)
+   - **Smart Race Solver match first** — when the [Smart Race Solver](#12-smart-race-solver) has a planned race for this turn and the scan encounters it, the scan **short-circuits** and commits to that race without finishing the rest of the list. See [Section 12.6](#126-race-day-lifecycle--peek-mark-pending-commit).
+   - **Rival races** (these offer bonus rewards)
    - Among non-rival candidates, races matching the configured **preferred distance** and/or **preferred surface** (Scenario Overrides UI) are preferred over ones that don't
    - Then by **grade:** G1 > G2 > G3 > OP > Pre-OP
 5. **Second pass:** After selecting the winner, the bot scrolls back through the list to find the winner's current screen position and taps it.
@@ -1094,11 +1122,117 @@ Trackblazer uses a specialized race selection algorithm (`findSuitableRace()`, f
 
 ---
 
-## 12. Ask the Docs Chatbot
+## 12. Smart Race Solver
 
-An optional, fully offline documentation assistant that answers questions about the app. The pipeline is **retrieval-augmented**: a small embedding model finds the most relevant excerpts from the app's own docs and source code, and a downloaded GGUF chat model paraphrases them. The bot never reaches the network at runtime — every model and index ships locally.
+An optimization-based race scheduler that replaces the older Smart Racing Plan. Instead of asking the user to hand-pick races on a calendar, the solver takes the trainee's aptitudes, the bundled race database, and a set of **epithet** goals, and searches the entire 72-turn space for the highest-scoring race-vs-train schedule. The bot then drives the in-game race picker against that plan turn by turn.
 
-### 12.1 Overview & guarantees
+### 12.1 When the solver runs
+
+The solver is **opt-in** via the `enableSmartRaceSolver` setting on the Racing Settings page. It only takes over extra-race selection when:
+
+- `enableFarmingFans` is on (the bot is allowed to enter extra races at all),
+- `enableForceRacing` is off (the user hasn't asked the bot to race every turn unconditionally),
+- and the campaign is past Junior year (the solver plans from Classic onward; Junior racing follows the existing maiden-race / mandatory-race path).
+
+When all three hold, [Racing.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/Racing.kt) calls `SmartRaceSolverIntegration.peekRaceKeyForTurn()` to ask "is there a race planned for the current turn, and if so, which one?" The answer steers both extra-racing eligibility and the race-list scan inside Trackblazer's `findSuitableRace()`.
+
+> [!IMPORTANT]
+> **Trackblazer integration.** Trackblazer's `decideNextAction()` consults `peekDecisionForTurn()` *before* the existing flowchart in [Section 11.1](#111-overview-and-flow-differences). When the solver has picked `Race`, the turn defers to the racing flow; when it picks `Train`, the legacy fan-farming heuristic is bypassed so the turn really is a training turn.
+
+### 12.2 Architecture
+
+```mermaid
+flowchart LR
+    Settings["SmartRaceSolverSettings (TS)"] -->|SolverConfigSnapshot| Bridge["SmartRaceSolverModule (RN bridge)"]
+    Bridge --> Integration["SmartRaceSolverIntegration"]
+    Integration --> Solver["SmartRaceSolver.solve()"]
+    Solver -->|exact| MILP["MilpSolver (ojAlgo)"]
+    Solver -.->|fallback| Heuristic["Heuristic (beam search)"]
+    Integration --> History["RaceHistory + EpithetTracker"]
+    Bot["Racing.kt / Trackblazer.kt"] -->|peek / mark / commit| Integration
+    Integration --> LogStream["LogStreamServer (Race History calendar)"]
+```
+
+The solver itself is a **pure function** — `solve(state) -> Schedule` — defined in [SmartRaceSolver.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/solver/SmartRaceSolver.kt). State management (race history, parsed JSON caches, pending-race bookkeeping) lives in the integration object. The React Native side never re-implements the algorithm; it ships a `SolverConfigSnapshot` over the bridge, gets back a `SchedulePreview`, and renders the calendar.
+
+| Layer | Files | Responsibility |
+|-------|-------|----------------|
+| Solver core | [SmartRaceSolver.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/solver/SmartRaceSolver.kt), [MilpSolver.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/solver/MilpSolver.kt), [Heuristic.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/solver/Heuristic.kt), [ScoringFunctions.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/solver/ScoringFunctions.kt) | Two interchangeable backends + the shared scoring formula. |
+| Domain types | [Schedule.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/solver/Schedule.kt), [SolverState.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/solver/SolverState.kt), [Epithet.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/solver/Epithet.kt), [RaceHistory.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/solver/RaceHistory.kt) | `Decision`, `Schedule`, `Aptitudes`, `EpithetMatcher`, `RaceWin`. |
+| Bot integration | [SmartRaceSolverIntegration.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/solver/SmartRaceSolverIntegration.kt) | Race-history accumulation, lazy JSON parsing, peek / mark / commit lifecycle, calendar broadcasts. |
+| RN bridge | [SmartRaceSolverModule.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/solver/SmartRaceSolverModule.kt), [src/lib/solver/preview.ts](src/lib/solver/preview.ts) | `previewSchedule()` JSON-in / JSON-out call surface for the settings UI. |
+| Settings UI | [src/pages/SmartRaceSolverSettings/](src/pages/SmartRaceSolverSettings/), [src/lib/solver/scoring.ts](src/lib/solver/scoring.ts), [src/lib/solver/constants.ts](src/lib/solver/constants.ts) | Calendar preview, character preset, target / forced epithet picker, weight sliders. |
+
+### 12.3 Backends — MILP first, beam search as fallback
+
+`SmartRaceSolver.solve(state)` tries the exact backend first and falls back to the heuristic only if the model is infeasible:
+
+1. **MILP (default).** [MilpSolver.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/solver/MilpSolver.kt) builds an `ExpressionsBasedModel` via **ojAlgo** that mirrors the reference Trackblazer site's GLPK formulation. Decision variables: `x[turn]` (race vs train), `r[turn][raceKey]` (specific race choice), `y[epithet]` (completion indicator), `z[turn]` (3rd-or-later consecutive-race indicator). Each [`EpithetMatcher`](android/app/src/main/java/com/steve1316/uma_android_automation/bot/solver/Epithet.kt) becomes one or two linear inequalities tying `y[e]` to the corresponding sum of `r`-variables and the history-derived constant.
+2. **Beam-search heuristic (fallback).** When MILP returns an empty schedule (typically because forced epithets are mutually contradictory), [Heuristic.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/solver/Heuristic.kt) takes over. It expands each beam into one child per legal decision (locked decision, available race, `Train`, `Rest`), scores each child, and prunes back to `DEFAULT_BEAM_WIDTH = 32`.
+
+Both backends share the scoring function in [ScoringFunctions.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/solver/ScoringFunctions.kt). The objective being maximized is:
+
+$$\text{Score} = \sum_{\text{race}} v_\text{race} - \sum_{\text{race}} c_\text{race} + \sum_{\text{epithet}} r_\text{epithet} - \text{penalties}$$
+
+where `v_race` is the per-race stat + skill-point reward (uplifted by `raceBonusPct`), `c_race` is the per-race cost expressed as a percentage of a G2 baseline (`raceCostPct`), `r_epithet` is the epithet's reward magnitude scaled by `epithetValue`, and penalties cover the 3rd-consecutive-race penalty (waived on Late-Dec turns 23 / 47 / 71 to match the reference solver) and a summer-racing penalty (turns 37–40 and 61–64).
+
+> [!NOTE]
+> With the default weights — a 50% race-bonus uplift on top of the base reward table and a per-race cost equal to the weighted G2 baseline — G2 / G3 races score zero and only get picked when an epithet, fan tiebreaker, or Late-Dec window pushes them positive. The default schedule is therefore train-heavy and races only when a goal pulls it to.
+
+### 12.4 Epithets — the goal language
+
+Epithets are the goals the solver is trying to satisfy. Each is a flat list of [`EpithetMatcher`](android/app/src/main/java/com/steve1316/uma_android_automation/bot/solver/Epithet.kt) entries combined with logical AND. Subtypes cover:
+
+- **`WinRace(name, atClass?)`** — win the named race (optionally only in Junior / Classic / Senior).
+- **`WinRaceTimes(name, times)`** — win the named race at least `times` times.
+- **`WinAnyOf(names, count, atClass?)`** — win at least `count` distinct races from `names`.
+- **`WinAtLeast(filter, count, atClass?)`** — win at least `count` races that satisfy a structured filter (terrain, grade, distance, country tokens, etc.).
+- **`AnyOf` / `AllOf`** — boolean combinations over other matchers.
+
+[`EpithetTracker`](android/app/src/main/java/com/steve1316/uma_android_automation/bot/solver/EpithetTracker.kt) classifies each epithet against the live state as one of `COMPLETED`, `IN_PROGRESS`, `DEAD`, or `UNTOUCHED`. **Dead** is the recovery hook: when a race is lost, the bot adds the epithet whose prerequisite was missed to `SolverState.deadEpithets`, calls `solve` again, and the heuristic re-plans around the dead branch.
+
+The epithet corpus itself is generated by [scripts/scrapers/epithet_scraper.py](scripts/scrapers/epithet_scraper.py) into [src/data/epithets.json](src/data/epithets.json). Display labels for matcher conditions are pre-computed at build time by [scripts/precompute-epithet-labels.ts](scripts/precompute-epithet-labels.ts) so the runtime renderer never has to re-derive them.
+
+### 12.5 Settings UI — calendar preview
+
+The [Smart Race Solver Settings page](src/pages/SmartRaceSolverSettings/) lets the user:
+
+- Pick a **character preset** (sourced from [src/data/characterPresets.json](src/data/characterPresets.json)). Selecting one seeds the six aptitude rows (Sprint / Mile / Medium / Long / Turf / Dirt) — the user can still hand-edit individual cells.
+- Pick **target epithets** (the solver gets a bonus for completing them) and **forced epithets** (hard-locked — schedules that don't complete them are discarded). Empty-matcher epithets are flagged with a red dot and skipped by the solver.
+- Set **per-turn manual locks** — pin a specific race or `TRAIN_LOCK_SENTINEL` onto a calendar cell to override the solver for that turn.
+- Tune the **weights bundle** (`raceValue`, `epithetValue`, `statWeight`, `spWeight`, `hintWeight`, `consecutiveRacePenalty`, `summerPenalty`, `raceBonusPct`, `raceCostPct`, `aptitudeThreshold`, `includeOpAndPreOp`, `allowSummerRacing`).
+
+After every meaningful change the page debounces a `SmartRaceSolverModule.previewSchedule()` call into Kotlin (see [src/lib/solver/preview.ts](src/lib/solver/preview.ts)) and renders the returned `SchedulePreview` onto a 72-cell calendar. Each cell shows the picked race name, grade badge, and epithet progression for that turn; a popover gives the full per-matcher condition labels and pending prerequisites. A floating Recalculate FAB and a stale-preview warning surface when the inputs have changed but the calendar hasn't refreshed yet.
+
+### 12.6 Race-day lifecycle — peek, mark pending, commit
+
+The solver is consulted at three moments per race-day turn:
+
+1. **Peek (pre-decision).** Before deciding to race or train, the bot calls `peekRaceKeyForTurn()` (or `peekDecisionForTurn()` from Trackblazer). The integration object returns the `Decision` from the cached schedule without mutating any state.
+2. **Mark pending (at tap).** Once the bot finds the planned race in the in-game list and taps it, [`SmartRaceSolverIntegration.markPendingRace()`](android/app/src/main/java/com/steve1316/uma_android_automation/bot/solver/SmartRaceSolverIntegration.kt) stores a `pendingRace` snapshot. This race is considered "speculatively won" for downstream peek calls so the rest of the turn can plan against the assumed result.
+3. **Commit (at result).** [Racing.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/Racing.kt) detects the 1st-place screen via [`LabelCongratulations`](android/app/src/main/java/com/steve1316/uma_android_automation/components/LabelCongratulations.kt) and calls `commitPendingRace(won = firstPlace)`. The plan is locked in once at run start (by the post-seed broadcast) and otherwise only changes on a loss. On a win the race is appended to the permanent history and the cached schedule is reused for the broadcast - the future plan does not change, only the past results panel gains the new win. The rest of the schedule was already optimized assuming the trainee would win this race, so re-running the solver would only produce noise. On a loss the race is recorded in `raceLosses`, the matcher's epithet is marked dead, and the next snapshot re-runs the solver so the schedule replans around the dead epithet. Turn-advance broadcasts only refresh the badge - they reuse the cached schedule. Peek calls from `Trackblazer` also read the cached schedule rather than re-solving every main-screen iteration.
+
+> [!IMPORTANT]
+> The speculative-pending model is what makes the race-list scan in [Trackblazer.findSuitableRace()](#117-race-selection) able to **short-circuit**: once the scan finds a race whose key matches `peekRaceKeyForTurn()`, it stops scrolling and commits to that race instead of finishing the full multi-page sweep.
+
+### 12.7 Race history — seed, broadcast, calendar
+
+`SmartRaceSolverIntegration` keeps two in-memory lists for the current run:
+
+- `raceHistory` — confirmed wins (or speculatively-pending wins). The solver reads this on every solve so already-won races aren't picked again.
+- `raceLosses` — confirmed losses. Not consumed by the solver but surfaced in the Remote Log Viewer so the user can see what was attempted.
+
+Both lists are cleared by `reset()` when a new bot run starts. On startup the bot calls `seedHistoryFromCareerScrape()` to OCR the in-game **Career → Race History** screen so a mid-run restart picks up where the previous session left off (skipped at or before turn 13 since pre-debut has no real history). When that scrape isn't usable, `seedHistoryFromPreview()` falls back to seeding from the Preview schedule's already-completed turns.
+
+After every commit, [LogStreamServer](android/app/src/main/java/com/steve1316/uma_android_automation/log/LogStreamServer.kt) broadcasts a fresh JSON calendar snapshot to the **Remote Log Viewer**. The viewer's Race History tab renders a 72-cell calendar with grade badges, race names, and per-cell tooltips that include the epithet progression, the per-matcher condition labels, and a synthetic Junior Make Debut entry. The whole panel hides itself when `enableSmartRaceSolver` is off.
+
+---
+
+## 13. Ask the Docs Chatbot
+
+An optional, fully offline documentation assistant that answers questions about the app. The pipeline is **retrieval-augmented**: a small embedding model finds the most relevant excerpts from the app's own docs and source code, and a downloaded GGUF chat model paraphrases them. Every chat call runs locally — the only network use is the one-time download of the embedder ONNX and the user-selected GGUF.
+
+### 13.1 Overview & guarantees
 
 - **Opt-in.** Hidden until the user enables `Enable Ask the Docs feature` on the LLM Settings page. The toggle lives at `chat.enableAskTheDocs` in `BotStateContext` and gates both the drawer entry and the rest of the LLM Settings page.
 - **Retrieve-only fallback.** Even with no chat model downloaded — or when generation is rejected by the verifier — the user still gets a verbatim excerpt from the most-similar doc chunk. The feature degrades to "search" rather than failing.
@@ -1133,25 +1267,28 @@ groundingVerifier.overlap()
    └── overlap <  SUMMARY_THRESHOLD ────────────► verifierFallback (verbatim)
 ```
 
-### 12.2 Corpus & indexing
+### 13.2 Corpus & indexing
 
 The corpus is built **at compile time** by [scripts/build-doc-index.ts](scripts/build-doc-index.ts) and shipped as a binary asset that the app loads on first chat call. Sources covered:
 
 - `README.md` and `HOW_IT_WORKS.md` (this file).
 - The static option descriptions from [src/context/searchConfig.ts](src/context/searchConfig.ts) — same strings used by the in-app settings search.
-- The Kotlin source under [android/app/src/main/java/com/steve1316/uma_android_automation/](android/app/src/main/java/com/steve1316/uma_android_automation/), so questions about implementation are grounded in the actual code rather than docs only.
+- The Kotlin source under [android/app/src/main/java/com/steve1316/uma_android_automation/](android/app/src/main/java/com/steve1316/uma_android_automation/), so questions about implementation are grounded in the actual code rather than docs only. Code chunking is done with a **tree-sitter Kotlin** parser so chunks land on declaration boundaries (functions, classes, top-level properties) instead of arbitrary line ranges.
 
-The script splits each source into roughly section-sized **chunks** (each chunk keeps its `source` and hierarchical `heading` so citations stay readable), embeds them, and writes the binary index consumed by [DocIndex.kt](android/app/src/main/java/com/steve1316/uma_android_automation/llm/DocIndex.kt). The index format stores chunk metadata followed by a contiguous block of L2-normalized 384-dim float vectors — small enough to load fully into memory.
+The script splits each source into roughly section-sized **chunks** (each chunk keeps its `source` and hierarchical `heading` so citations stay readable), embeds them, and writes the binary index consumed by [DocIndex.kt](android/app/src/main/java/com/steve1316/uma_android_automation/llm/DocIndex.kt). The index format is **v2**: chunk metadata (including a single `kind` byte distinguishing `"doc"` from `"code"`) followed by a contiguous block of L2-normalized 384-dim float vectors — small enough to load fully into memory.
 
-### 12.3 Embedding pipeline
+### 13.3 Embedding pipeline
 
 The embedder is `sentence-transformers/all-MiniLM-L6-v2` running through **ONNX Runtime for Android**. The corpus build script and [EmbeddingService.kt](android/app/src/main/java/com/steve1316/uma_android_automation/llm/EmbeddingService.kt) use the same model so query and document vectors live in the same space.
+
+> [!NOTE]
+> **Embedder is downloaded, not bundled.** The ONNX file is too large to ship inside the APK, so the app fetches it on first use from the public mirror at [src/lib/chat/embedder.ts](src/lib/chat/embedder.ts) (`Xenova/all-MiniLM-L6-v2/onnx/model_quantized.onnx`). The download is SHA-256-verified against the value baked into the build script, so a runtime mirror swap can't desynchronize the embeddings.
 
 - **Tokenization** is BERT-style WordPiece, implemented in pure Kotlin in [WordPieceTokenizer.kt](android/app/src/main/java/com/steve1316/uma_android_automation/llm/WordPieceTokenizer.kt) (no JNI dependency on a native tokenizer). It does basic Unicode normalization + accent stripping, then greedy longest-match against the WordPiece vocab, with `[CLS]`/`[SEP]` framing and zero-padding to a fixed length.
 - **Pooling.** The model returns one vector per token; `EmbeddingService.meanPoolAndNormalize()` masks padding, mean-pools across real tokens, then L2-normalizes. After normalization, **dot product equals cosine similarity**, which lets retrieval skip the divide step entirely.
 - **Lazy init.** Both `EmbeddingService` and `DocIndex` are loaded once and cached using double-checked locking, so the first chat call pays the load cost and every subsequent call is cheap.
 
-### 12.4 Retrieval
+### 13.4 Retrieval
 
 [ChatOrchestrator.kt](android/app/src/main/java/com/steve1316/uma_android_automation/llm/ChatOrchestrator.kt) is the single entry point used by the React Native bridge:
 
@@ -1161,7 +1298,7 @@ The embedder is `sentence-transformers/all-MiniLM-L6-v2` running through **ONNX 
 
 Each result carries `source`, `heading`, `text` (raw chunk), `expandedText` (reassembled section), `score`, and a `kind` of `"doc"` or `"code"` — code citations render with Kotlin syntax highlighting and a `File.kt::member` heading; doc citations render as Markdown.
 
-### 12.5 Generation (optional)
+### 13.5 Generation (optional)
 
 When a downloaded GGUF is present, [llamaRunner.ts](src/lib/chat/llamaRunner.ts) loads it through `llama.rn` and the [LLMChatModule.kt](android/app/src/main/java/com/steve1316/uma_android_automation/llm/LLMChatModule.kt) bridge. The system prompt:
 
@@ -1169,13 +1306,20 @@ When a downloaded GGUF is present, [llamaRunner.ts](src/lib/chat/llamaRunner.ts)
 - Caps target length at 4–10 sentences and forbids any `Answer:` prefix.
 - Tells the model to emit the literal sentinel `NOT_IN_DOCS` when the excerpts don't contain the answer. The Chat page treats that sentinel as a signal to drop into retrieve-only mode rather than show a hallucinated reply.
 
+The supported presets are **Qwen 2.5 Instruct** GGUFs (Q4_K_M quants verified against the official Hugging Face repos) at 0.5B / 1.5B / 3B sizes, plus a **Custom** card for pasting any other `.gguf` URL. The 0.5B preset is the default — fast on the slowest devices, weak summaries; the 3B preset gives the highest quality but needs ~4 GB free RAM.
+
 Three knobs from [chatSettings.ts](src/lib/chat/chatSettings.ts) tune the generation step:
 
-- `maxOutputTokens` — hard cap on the answer length.
-- `llmCitationCharCap` — how much of each expanded citation is fed in. Larger cap → more material to summarize from; smaller cap → faster, fits more citations into the model's context window.
-- `modelContextWindow` — the engine KV-cache size (`n_ctx`). Changing it reloads the loaded model on the next chat call.
+- `maxOutputTokens` — hard cap on the answer length (default 768).
+- `llmCitationCharCap` — how much of each expanded citation is fed in (default 2200). Larger cap → more material to summarize from; smaller cap → faster, fits more citations into the model's context window.
+- `modelContextWindow` — the engine KV-cache size (`n_ctx`, default 4096). Changing it reloads the loaded model on the next chat call.
 
-### 12.6 Grounding verifier & failure modes
+Sampling defaults in [llamaRunner.ts](src/lib/chat/llamaRunner.ts) are tuned to keep small models from looping: `temperature = 0.35`, `topK = 40`, `topP = 0.95`, `minP = 0.05`, and a **repetition penalty** of `penaltyRepeat = 1.1` over `penaltyLastN = 128` recent tokens. Without `penaltyRepeat` and `minP`, the 0.5B model in particular tends to cycle through paragraph-sized fragments verbatim. The default `stop` list covers Gemma (`<end_of_turn>`), Qwen (`<|im_end|>` / `<|end|>`), and Llama (`<|eot_id|>` / `</s>`) end-of-turn markers so the model halts cleanly regardless of which preset is loaded.
+
+> [!TIP]
+> **Stop generation.** The Ask button on the Chat page acts as a stop button while a generation is in flight — tapping it cancels the in-progress `llama.rn` call so a runaway response can be aborted without waiting for `maxOutputTokens` to roll over.
+
+### 13.6 Grounding verifier & failure modes
 
 Generated answers are not trusted blindly. [src/lib/chat/groundingVerifier.ts](src/lib/chat/groundingVerifier.ts) computes a token-overlap score between the generated answer and the (trimmed) citation excerpts:
 
@@ -1184,11 +1328,26 @@ Generated answers are not trusted blindly. [src/lib/chat/groundingVerifier.ts](s
 
 This is deliberately conservative: if the model wandered off the docs, the user gets the source text instead of a confident-sounding fabrication.
 
-### 12.7 Model lifecycle
+### 13.7 Model lifecycle
 
 Chat models are GGUF files downloaded at runtime by [ModelDownloader.kt](android/app/src/main/java/com/steve1316/uma_android_automation/llm/ModelDownloader.kt) using Android's system `DownloadManager`. The downloader exposes `pending → running → paused → complete | failed | error` state subtypes that the LLM Settings page subscribes to via a `NativeEventEmitter` for live progress.
 
-- **Storage.** Files land in app-private storage and are listed by `LLMChatModule.listModels()`.
+- **Storage.** Files land in app-private storage and are listed by `LLMChatModule.listModels()`. Multiple models can be kept on disk at the same time and switched between freely.
 - **Active model.** The user's choice persists under `ACTIVE_MODEL_SETTING` (chat category, key `activeModelFilename`). It can be switched from the LLM Settings page **and** from the selector at the top of the Ask the Docs page — both go through the same write path so the change survives app restart.
+- **Hugging Face token.** Public Qwen presets need no auth, but the Custom card accepts a Hugging Face read-access token and persists it in SQLite outside `BotStateContext` so it never leaks into settings exports. The token field is shown unmasked so the user can verify it before saving.
 - **Race protection.** Because `EmbeddingService` and `DocIndex` are lazily initialized, downloading a chat model while a query is in flight can't corrupt embedding state — generation simply falls back to `retrieveOnly` for that one call and the next call picks up the newly active model.
 - **Deletion.** Per-file or bulk delete is offered from the Downloaded Models list; deleting the active file clears `ACTIVE_MODEL_SETTING` so the next chat call cleanly drops to retrieve-only.
+
+### 13.8 Device fitness panel
+
+The LLM Settings page surfaces a small **Device Fitness** row driven by [src/lib/chat/deviceCapabilities.ts](src/lib/chat/deviceCapabilities.ts):
+
+- **RAM (total / available)** read from Android's `ActivityManager.MemoryInfo`. Used both for the diagnostic display and for a pre-download fit check that warns when the selected preset's hand-tuned RAM requirement (see `PRESET_RAM_REQUIREMENTS_BYTES`) exceeds available memory.
+- **Acceleration tier** derived from `Build.SUPPORTED_ABIS[0]` plus the `Features:` line in `/proc/cpuinfo`:
+    - `v8.2 + dotprod (fast)` — arm64 device with `asimddp` support; runs the dotprod-optimized llama.rn variant.
+    - `v8 baseline (slow)` — arm64 device without `asimddp`; runs the baseline arm64 variant.
+    - `x86_64 native` — Android emulator on a desktop x86_64 host. The APK ships both `arm64-v8a` and `x86_64` ABIs so the emulator gets native llama.rn binaries instead of QEMU-translated arm64 ones, which is roughly an order of magnitude faster on `qwen2.5-0.5b-instruct-q4_k_m.gguf`.
+    - `unknown` — defensive fallback when neither check returns useful data.
+- **Recommended preset** picked by walking `PRESET_RAM_REQUIREMENTS_BYTES` against available RAM and surfacing the largest preset that fits.
+
+The `i8mm` and Hexagon / OpenCL llama.rn variants are intentionally trimmed from the APK to keep the install size down, so the tier label is informational only — the runtime always picks one of the three shipped variants.
