@@ -14,8 +14,14 @@ interface SkillPlanSettingsConfig {
     enableBuyInheritedUniqueSkills: boolean
     /** Whether to buy negative skills. */
     enableBuyNegativeSkills: boolean
-    /** The serialized skill plan data. */
+    /** The serialized skill plan data (comma-separated skill IDs). */
     plan: string
+    /** Comma-separated skill IDs that should never be purchased by this plan, even when ranked highly by a strategy. */
+    blacklist: string
+    /** When true, all green skills are excluded from this plan's purchases. */
+    excludeGreenSkills: boolean
+    /** When true, all red skills (debuffs like Intimidate, Speed Eater) are excluded from this plan's purchases. */
+    excludeRedSkills: boolean
 }
 
 /**
@@ -285,6 +291,9 @@ export const defaultSettings: Settings = {
                     enableBuyInheritedUniqueSkills: false,
                     enableBuyNegativeSkills: false,
                     plan: "",
+                    blacklist: "",
+                    excludeGreenSkills: false,
+                    excludeRedSkills: false,
                 }
                 return acc
             },

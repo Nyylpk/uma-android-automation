@@ -8,6 +8,7 @@ import com.steve1316.uma_android_automation.bot.Campaign
 import com.steve1316.uma_android_automation.types.RunningStyle
 import com.steve1316.uma_android_automation.types.SkillList
 import com.steve1316.uma_android_automation.types.SkillListEntry
+import com.steve1316.uma_android_automation.types.SkillType
 import com.steve1316.uma_android_automation.types.TrackDistance
 import com.steve1316.uma_android_automation.types.TrackSurface
 import org.json.JSONObject
@@ -55,6 +56,18 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
                             .map { it.trim() }
                             .mapNotNull { it.toIntOrNull() }
                     val skillNames: List<String> = skillIds.mapNotNull { game.skillDatabase.getSkillName(it) }
+                    val blacklistIds: List<Int> =
+                        planData
+                            .optString("blacklist", "")
+                            .split(",")
+                            .map { it.trim() }
+                            .mapNotNull { it.toIntOrNull() }
+                    val skillBlacklist: List<String> = blacklistIds.mapNotNull { game.skillDatabase.getSkillName(it) }
+                    val excludedTypes: Set<SkillType> =
+                        buildSet {
+                            if (planData.optBoolean("excludeGreenSkills", false)) add(SkillType.GREEN)
+                            if (planData.optBoolean("excludeRedSkills", false)) add(SkillType.RED)
+                        }
                     plansMap[planName] =
                         SkillPlanSettings(
                             bIsEnabled = planData.getBoolean("enabled"),
@@ -62,6 +75,8 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
                             bEnableBuyInheritedUniqueSkills = planData.getBoolean("enableBuyInheritedUniqueSkills"),
                             bEnableBuyNegativeSkills = planData.getBoolean("enableBuyNegativeSkills"),
                             skillNames = skillNames,
+                            skillBlacklist = skillBlacklist,
+                            excludedTypes = excludedTypes,
                         )
                 }
                 plansMap
@@ -106,6 +121,8 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
      * @property bEnableBuyInheritedUniqueSkills Whether to purchase inherited unique skills.
      * @property bEnableBuyNegativeSkills Whether to purchase negative (blue) skills.
      * @property skillNames The list of specific skill names to purchase as part of this plan.
+     * @property skillBlacklist Names of skills to exclude from purchase regardless of strategy.
+     * @property excludedTypes Skill type categories (GREEN / YELLOW / BLUE / RED) to exclude wholesale.
      */
     data class SkillPlanSettings(
         val bIsEnabled: Boolean,
@@ -113,6 +130,8 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
         val bEnableBuyInheritedUniqueSkills: Boolean,
         val bEnableBuyNegativeSkills: Boolean,
         val skillNames: List<String>,
+        val skillBlacklist: List<String> = emptyList(),
+        val excludedTypes: Set<SkillType> = emptySet(),
     )
 
     companion object {
@@ -128,6 +147,7 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
          * @property isInheritedUnique Whether this is an inherited unique skill.
          * @property isUserPlanned Whether this skill is in the user's plan.
          * @property communityTier The community tier ranking (lower is better, null = unranked).
+         * @property isBlacklisted Whether this skill is blacklisted by the user's plan settings (per-skill or category-level).
          */
         data class SkillCandidate(
             val name: String,
@@ -137,6 +157,7 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
             val isInheritedUnique: Boolean = false,
             val isUserPlanned: Boolean = false,
             val communityTier: Int? = null,
+            val isBlacklisted: Boolean = false,
         ) {
             /** The ratio of rank gained to price. Higher is better. */
             val evaluationPointRatio: Double
@@ -164,7 +185,7 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
 
             val sorted =
                 candidates
-                    .filter { it.name !in alreadyPlanned && it.price > 0 }
+                    .filter { it.name !in alreadyPlanned && it.price > 0 && !it.isBlacklisted }
                     .sortedByDescending { it.evaluationPointRatio }
 
             for (skill in sorted) {
@@ -199,7 +220,7 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
 
             // Phase 1: Negative skills
             if (settings.bEnableBuyNegativeSkills) {
-                for (skill in candidates.filter { it.isNegative }) {
+                for (skill in candidates.filter { it.isNegative && !it.isBlacklisted }) {
                     if (skill.name in bought) continue
                     if (skill.price <= remaining) {
                         result.add(skill.name to skill.price)
@@ -211,7 +232,7 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
 
             // Phase 2: Inherited unique skills
             if (settings.bEnableBuyInheritedUniqueSkills) {
-                for (skill in candidates.filter { it.isInheritedUnique }) {
+                for (skill in candidates.filter { it.isInheritedUnique && !it.isBlacklisted }) {
                     if (skill.name in bought) continue
                     if (skill.price <= remaining) {
                         result.add(skill.name to skill.price)
@@ -221,8 +242,8 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
                 }
             }
 
-            // Phase 3: User-planned skills (in the order specified by plan)
-            for (skill in candidates.filter { it.isUserPlanned }) {
+            // Phase 3: User-planned skills (in the order specified by plan). Blacklist takes precedence over plan.
+            for (skill in candidates.filter { it.isUserPlanned && !it.isBlacklisted }) {
                 if (skill.name in bought) continue
                 if (skill.price <= remaining) {
                     result.add(skill.name to skill.price)
@@ -268,7 +289,7 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
                         // For OPTIMIZE_SKILLS, filter by community tier first, then fall back to rank
                         val tiered =
                             remainingCandidates
-                                .filter { it.communityTier != null }
+                                .filter { it.communityTier != null && !it.isBlacklisted }
                                 .sortedWith(compareBy<SkillCandidate> { it.communityTier }.thenByDescending { it.evaluationPointRatio })
                         val tieredResult = mutableListOf<Pair<String, Int>>()
                         var tieredRemaining = budget - spent
@@ -368,6 +389,17 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
     // //////////////////////////////////////////////////////////////////////////////////////////////////
 
     /**
+     * Whether the given skill entry should be excluded from purchase due to the user's blacklist settings.
+     *
+     * Returns true if the entry's name is in the per-skill blacklist OR its color category is in the excluded types set.
+     *
+     * @param entry The [SkillListEntry] under consideration.
+     * @param settings The [SkillPlanSettings] holding the blacklist and excluded categories.
+     * @return True if the entry should be skipped, false otherwise.
+     */
+    private fun isBlacklisted(entry: SkillListEntry, settings: SkillPlanSettings): Boolean = entry.name in settings.skillBlacklist || entry.skillData.type in settings.excludedTypes
+
+    /**
      * Retrieve all available negative skills from the skill list.
      *
      * @param skillPlanSettings The [SkillPlanSettings] to follow.
@@ -388,6 +420,11 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
         for ((name, entry) in entries) {
             // Don't add any duplicate entries.
             if (name in skillsToBuy) {
+                continue
+            }
+
+            // Skip skills the user has explicitly blacklisted (per-skill or by color category).
+            if (isBlacklisted(entry, skillPlanSettings)) {
                 continue
             }
 
@@ -421,6 +458,10 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
         val entries: Map<String, SkillListEntry> = skillList.getInheritedUniqueSkills()
         for ((name, entry) in entries) {
             if (name in skillsToBuy || name in result) {
+                continue
+            }
+
+            if (isBlacklisted(entry, skillPlanSettings)) {
                 continue
             }
 
@@ -463,6 +504,11 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
             val entry: SkillListEntry? = skillList.getEntry(name)
             if (entry == null) {
                 MessageLog.e(TAG, "[ERROR] getUserPlannedSkills:: Failed to find entry for \"$name\".")
+                continue
+            }
+
+            // Skip skills the user has both planned AND blacklisted. Blacklist takes precedence to keep behavior predictable.
+            if (isBlacklisted(entry, skillPlanSettings)) {
                 continue
             }
 
@@ -652,6 +698,10 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
                         continue
                     }
 
+                    if (isBlacklisted(entry, skillPlanSettings)) {
+                        continue
+                    }
+
                     if (!entry.bIsAvailable || entry.screenPrice > remainingSkillPoints) {
                         continue
                     }
@@ -707,6 +757,10 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
             for (entry in sortedByPointRatio) {
                 // Don't add duplicate entries.
                 if (entry.name in result || entry.name in skillsToBuy) {
+                    continue
+                }
+
+                if (isBlacklisted(entry, skillPlanSettings)) {
                     continue
                 }
 

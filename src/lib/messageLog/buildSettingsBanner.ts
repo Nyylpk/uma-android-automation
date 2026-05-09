@@ -15,6 +15,15 @@ const safeJsonLength = (json: string): number => {
     }
 }
 
+const csvCount = (csv: string): number => (csv ? csv.split(",").filter((s) => s.trim() !== "").length : 0)
+
+const formatExcludedCategories = (plan: { excludeGreenSkills: boolean; excludeRedSkills: boolean }): string => {
+    const parts: string[] = []
+    if (plan.excludeGreenSkills) parts.push("Green")
+    if (plan.excludeRedSkills) parts.push("Red")
+    return parts.length === 0 ? "None" : parts.join(", ")
+}
+
 /**
  * Build the welcome / startup banner that summarizes the current bot configuration. Pure function of the
  * settings snapshot. The output is rendered at the top of the in-app message log and persisted to SQLite
@@ -154,14 +163,18 @@ ${longTargetsString}
         settings.skills.plans.preFinals.enabled
             ? `\n\t💲 Buy All Inherited Unique Skills: ${settings.skills.plans.preFinals.enableBuyInheritedUniqueSkills ? "✅" : "❌"}\n\t💲 Buy All Negative Skills: ${
                   settings.skills.plans.preFinals.enableBuyNegativeSkills ? "✅" : "❌"
-              }\n\t💸 Spending Strategy: ${settings.skills.plans.preFinals.strategy ? "✅" : "❌"}`
+              }\n\t💸 Spending Strategy: ${settings.skills.plans.preFinals.strategy ? "✅" : "❌"}\n\t🚫 Blacklisted Skills: ${csvCount(
+                  settings.skills.plans.preFinals.blacklist
+              )}\n\t🎨 Excluded Categories: ${formatExcludedCategories(settings.skills.plans.preFinals)}`
             : ""
     }
 📅 CareerComplete Skill Plan: ${settings.skills.plans.careerComplete.enabled ? "✅" : "❌"}${
         settings.skills.plans.careerComplete.enabled
             ? `\n\t💲 Buy All Inherited Unique Skills: ${settings.skills.plans.careerComplete.enableBuyInheritedUniqueSkills ? "✅" : "❌"}\n\t💲 Buy All Negative Skills: ${
                   settings.skills.plans.careerComplete.enableBuyNegativeSkills ? "✅" : "❌"
-              }\n\t💸 Spending Strategy: ${settings.skills.plans.careerComplete.strategy ? "✅" : "❌"}`
+              }\n\t💸 Spending Strategy: ${settings.skills.plans.careerComplete.strategy ? "✅" : "❌"}\n\t🚫 Blacklisted Skills: ${csvCount(
+                  settings.skills.plans.careerComplete.blacklist
+              )}\n\t🎨 Excluded Categories: ${formatExcludedCategories(settings.skills.plans.careerComplete)}`
             : ""
     }
 

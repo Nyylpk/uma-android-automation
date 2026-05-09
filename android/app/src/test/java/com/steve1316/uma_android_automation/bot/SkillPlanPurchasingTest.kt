@@ -475,4 +475,110 @@ class SkillPlanPurchasingTest {
             }
         }
     }
+
+    // //////////////////////////////////////////////////////////////////////////////////////////////////
+    // //////////////////////////////////////////////////////////////////////////////////////////////////
+    // Blacklist behavior
+
+    @Nested
+    @DisplayName("Skill blacklist (per-skill and category)")
+    inner class BlacklistTests {
+        @Test
+        fun `blacklisted skill never appears in OPTIMIZE_RANK output even with the best ratio`() {
+            // The blacklisted skill has the highest ratio (10.0). Without the filter it would always be picked first.
+            val candidates =
+                listOf(
+                    SkillCandidate("Top Pick", price = 10, evaluationPoints = 100, isBlacklisted = true),
+                    SkillCandidate("Runner Up", price = 50, evaluationPoints = 100),
+                    SkillCandidate("Third", price = 100, evaluationPoints = 50),
+                )
+
+            val result = calculateOptimizeRankPurchases(candidates, budget = 200)
+
+            assertFalse(result.any { it.first == "Top Pick" }, "Blacklisted skill must not be purchased")
+            assertTrue(result.any { it.first == "Runner Up" }, "Non-blacklisted skill should still be purchased")
+        }
+
+        @Test
+        fun `blacklisted skill on user plan is skipped even when the plan would otherwise buy it`() {
+            // Blacklist takes precedence over the user's planned-skill list to keep behavior predictable.
+            val candidates =
+                listOf(
+                    SkillCandidate("Planned & Blacklisted", price = 50, evaluationPoints = 80, isUserPlanned = true, isBlacklisted = true),
+                    SkillCandidate("Planned", price = 50, evaluationPoints = 80, isUserPlanned = true),
+                )
+            val settings =
+                SkillPlanSettings(
+                    bIsEnabled = true,
+                    strategy = SpendingStrategy.DEFAULT,
+                    bEnableBuyInheritedUniqueSkills = false,
+                    bEnableBuyNegativeSkills = false,
+                    skillNames = listOf("Planned & Blacklisted", "Planned"),
+                )
+
+            val result = calculateCommonPurchases(candidates, budget = 200, settings = settings)
+
+            assertFalse(result.any { it.first == "Planned & Blacklisted" }, "Blacklist must override user plan")
+            assertTrue(result.any { it.first == "Planned" }, "Non-blacklisted planned skill should still be purchased")
+        }
+
+        @Test
+        fun `category exclusion drops every matching skill regardless of strategy`() {
+            // Simulates the production layer setting isBlacklisted = true on every skill in an excluded color category.
+            val candidates =
+                (1..5).map { i ->
+                    SkillCandidate(
+                        name = "Green_$i",
+                        price = 30,
+                        evaluationPoints = 80,
+                        isBlacklisted = true,
+                    )
+                } +
+                    listOf(
+                        SkillCandidate("Yellow_1", price = 50, evaluationPoints = 60),
+                        SkillCandidate("Yellow_2", price = 60, evaluationPoints = 50),
+                    )
+            val settings =
+                SkillPlanSettings(
+                    bIsEnabled = true,
+                    strategy = SpendingStrategy.OPTIMIZE_RANK,
+                    bEnableBuyInheritedUniqueSkills = false,
+                    bEnableBuyNegativeSkills = false,
+                    skillNames = emptyList(),
+                )
+
+            val result = calculateSkillPurchases(candidates, budget = 500, settings = settings)
+
+            assertTrue(result.none { it.first.startsWith("Green_") }, "No green skills should be purchased")
+            assertTrue(result.any { it.first.startsWith("Yellow_") }, "Yellow skills are still eligible")
+        }
+
+        @Test
+        fun `empty plan with both flags off causes common phase to return empty - the no skills bought scenario`() {
+            // Pins the behavior reported by users as "bot doesn't buy any skills even though I created a planner".
+            // The production strategy DEFAULT (UI label "Do Not Spend Remaining Points") delegates to getSkillsToBuyDefaultStrategy
+            // which returns emptyMap, so the only purchases come from the common phase. With an empty plan list and both
+            // auto-buy flags off, the common phase also returns empty - meaning the bot buys nothing.
+            // (Note: the pure calculateSkillPurchases treats DEFAULT == OPTIMIZE_RANK, so we assert the common phase directly.)
+            val candidates =
+                listOf(
+                    SkillCandidate("A", price = 50, evaluationPoints = 100),
+                    SkillCandidate("B", price = 80, evaluationPoints = 200),
+                    SkillCandidate("Negative", price = 30, evaluationPoints = 20, isNegative = true),
+                    SkillCandidate("Inherited", price = 60, evaluationPoints = 90, isInheritedUnique = true),
+                )
+            val settings =
+                SkillPlanSettings(
+                    bIsEnabled = true,
+                    strategy = SpendingStrategy.DEFAULT,
+                    bEnableBuyInheritedUniqueSkills = false,
+                    bEnableBuyNegativeSkills = false,
+                    skillNames = emptyList(),
+                )
+
+            val commonResult = calculateCommonPurchases(candidates, budget = 1000, settings = settings)
+
+            assertTrue(commonResult.isEmpty(), "Common phase with no plan and both flags off should buy nothing")
+        }
+    }
 }

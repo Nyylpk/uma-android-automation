@@ -568,6 +568,20 @@ const searchConfig: SearchOption[] = [
         page: "SkillPlanSettingsSkillPointCheck",
         parentId: "enable-skill-plan-skillPointCheck",
     },
+    {
+        id: "exclude-green-skills-SkillPlanSettingsSkillPointCheck",
+        title: "Skip All Green Skills",
+        description: "When enabled, no green (stat-trigger) skills will be purchased by this plan.",
+        page: "SkillPlanSettingsSkillPointCheck",
+        parentId: "enable-skill-plan-skillPointCheck",
+    },
+    {
+        id: "exclude-red-skills-SkillPlanSettingsSkillPointCheck",
+        title: "Skip All Red Skills (Debuffs)",
+        description: "When enabled, no red skills (debuffs like Intimidate, Speed Eater, Tether, Intense Gaze) will be purchased by this plan.",
+        page: "SkillPlanSettingsSkillPointCheck",
+        parentId: "enable-skill-plan-skillPointCheck",
+    },
 
     // ============================================================
     // Skill Plan Settings — Pre-Finals
@@ -592,6 +606,20 @@ const searchConfig: SearchOption[] = [
         page: "SkillPlanSettingsPreFinals",
         parentId: "enable-skill-plan-preFinals",
     },
+    {
+        id: "exclude-green-skills-SkillPlanSettingsPreFinals",
+        title: "Skip All Green Skills",
+        description: "When enabled, no green (stat-trigger) skills will be purchased by this plan.",
+        page: "SkillPlanSettingsPreFinals",
+        parentId: "enable-skill-plan-preFinals",
+    },
+    {
+        id: "exclude-red-skills-SkillPlanSettingsPreFinals",
+        title: "Skip All Red Skills (Debuffs)",
+        description: "When enabled, no red skills (debuffs like Intimidate, Speed Eater, Tether, Intense Gaze) will be purchased by this plan.",
+        page: "SkillPlanSettingsPreFinals",
+        parentId: "enable-skill-plan-preFinals",
+    },
 
     // ============================================================
     // Skill Plan Settings — Career Complete
@@ -613,6 +641,20 @@ const searchConfig: SearchOption[] = [
         id: "enable-buy-negative-skills-SkillPlanSettingsCareerComplete",
         title: "Purchase All Negative Skills",
         description: "When enabled, the bot will attempt to purchase all negative skills (i.e. Firm Conditions ×).",
+        page: "SkillPlanSettingsCareerComplete",
+        parentId: "enable-skill-plan-careerComplete",
+    },
+    {
+        id: "exclude-green-skills-SkillPlanSettingsCareerComplete",
+        title: "Skip All Green Skills",
+        description: "When enabled, no green (stat-trigger) skills will be purchased by this plan.",
+        page: "SkillPlanSettingsCareerComplete",
+        parentId: "enable-skill-plan-careerComplete",
+    },
+    {
+        id: "exclude-red-skills-SkillPlanSettingsCareerComplete",
+        title: "Skip All Red Skills (Debuffs)",
+        description: "When enabled, no red skills (debuffs like Intimidate, Speed Eater, Tether, Intense Gaze) will be purchased by this plan.",
         page: "SkillPlanSettingsCareerComplete",
         parentId: "enable-skill-plan-careerComplete",
     },

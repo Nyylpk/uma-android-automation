@@ -75,10 +75,11 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
     // Merge current skills settings with defaults to handle missing properties.
     const combinedConfig = { ...defaultSettings.skills.plans, ...skills.plans }
 
-    const { enabled, strategy, enableBuyInheritedUniqueSkills, enableBuyNegativeSkills, plan } = combinedConfig[planKey]
+    const { enabled, strategy, enableBuyInheritedUniqueSkills, enableBuyNegativeSkills, plan, blacklist, excludeGreenSkills, excludeRedSkills } = combinedConfig[planKey]
 
     const [searchQuery, setSearchQuery] = useState("")
     const [showSelected, setShowSelected] = useState(false)
+    const [selectionMode, setSelectionMode] = useState<"plan" | "blacklist">("plan")
     const scrollViewRef = useRef<ScrollView>(null)
 
     // Parse skill plan from CSV string.
@@ -86,18 +87,25 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
         return plan && plan !== "" && typeof plan === "string" ? plan.split(",").map((s) => Number(s)) : []
     }, [plan])
 
-    // Set showSelected to False whenever we have no selected skills.
+    const blacklistIds: number[] = useMemo(() => {
+        return blacklist && blacklist !== "" && typeof blacklist === "string" ? blacklist.split(",").map((s) => Number(s)) : []
+    }, [blacklist])
+
+    // The currently active selection list, depending on whether the user is editing the plan or the blacklist.
+    const activeIds: number[] = selectionMode === "plan" ? planIds : blacklistIds
+
+    // Set showSelected to False whenever the active list has no entries.
     React.useEffect(() => {
-        if (planIds.length === 0) {
+        if (activeIds.length === 0) {
             setShowSelected(false)
         }
-    }, [planIds, setShowSelected])
+    }, [activeIds, setShowSelected])
 
     // Filter skills based on search and preferences.
     const filteredSkills = useMemo(() => {
-        const skills: Skill[] = showSelected ? skillData.filter((skill: Skill) => planIds.includes(skill.id)) : skillData
+        const skills: Skill[] = showSelected ? skillData.filter((skill: Skill) => activeIds.includes(skill.id)) : skillData
         return skills.filter((skill: Skill) => skill.name_en.toLowerCase().includes(searchQuery.toLowerCase()))
-    }, [searchQuery, planIds, showSelected])
+    }, [searchQuery, activeIds, showSelected])
 
     /**
      * Update a skill plan setting.
@@ -124,30 +132,23 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
      */
     const handleSkillPress = useCallback(
         (skill: Skill) => {
-            // Determine if this should be added to the skill plan or removed.
-            const isSelected = planIds.includes(skill.id)
+            const targetKey: "plan" | "blacklist" = selectionMode
+            const currentIds: number[] = selectionMode === "plan" ? planIds : blacklistIds
+            const isSelected = currentIds.includes(skill.id)
 
-            let newPlanIds: number[] = []
-            if (isSelected) {
-                // Remove the skill from the skill plan.
-                newPlanIds = planIds.filter((id) => id !== skill.id)
-            } else {
-                // Add the skill to the skill plan.
-                newPlanIds = [...planIds, skill.id]
-            }
+            const newIds: number[] = isSelected ? currentIds.filter((id) => id !== skill.id) : [...currentIds, skill.id]
 
-            // Update the racing plan with the changes.
-            updateSkillsSetting("plan", newPlanIds.join(","))
+            updateSkillsSetting(targetKey, newIds.join(","))
         },
-        [planIds, updateSkillsSetting]
+        [selectionMode, planIds, blacklistIds, updateSkillsSetting]
     )
 
     /**
-     * Remove all skills from the current skill plan.
+     * Remove all skills from the currently active list (plan or blacklist).
      */
-    const clearAllSkillsFromPlan = useCallback(() => {
-        updateSkillsSetting("plan", "")
-    }, [updateSkillsSetting])
+    const clearActiveList = useCallback(() => {
+        updateSkillsSetting(selectionMode, "")
+    }, [selectionMode, updateSkillsSetting])
 
     const styles = useMemo(
         () =>
@@ -223,6 +224,40 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
                 inputContainer: {
                     marginBottom: 16,
                 },
+                modeTab: {
+                    flex: 1,
+                    paddingVertical: 10,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    backgroundColor: colors.background,
+                    alignItems: "center",
+                },
+                modeTabActive: {
+                    backgroundColor: colors.primary,
+                    borderColor: colors.primary,
+                },
+                modeTabLabel: {
+                    fontSize: 14,
+                    fontWeight: "600",
+                    color: colors.foreground,
+                },
+                modeTabLabelActive: {
+                    color: colors.background,
+                },
+                summary: {
+                    fontSize: 14,
+                    color: colors.foreground,
+                    marginBottom: 4,
+                    lineHeight: 20,
+                },
+                summaryBullet: {
+                    fontSize: 14,
+                    color: colors.foreground,
+                    marginBottom: 2,
+                    marginLeft: 16,
+                    lineHeight: 20,
+                },
             }),
         [colors]
     )
@@ -246,6 +281,28 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
                         label="Purchase All Negative Skills"
                         description={"When enabled, the bot will attempt to purchase all negative skills (i.e. Firm Conditions ×)."}
                         style={{ marginTop: 16 }}
+                    />
+                </View>
+                <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Skill Type Filters</Text>
+                    <Text style={[styles.inputDescription, { marginTop: 0, marginBottom: 8 }]}>
+                        Exclude entire skill color categories from purchase. Useful when "Best Skills First" or "Optimize Rank" is picking unwanted skills like debuffs or stat boosts.
+                    </Text>
+                    <CustomCheckbox
+                        searchId={`exclude-green-skills-${name}`}
+                        checked={excludeGreenSkills}
+                        onCheckedChange={(checked) => updateSkillsSetting("excludeGreenSkills", checked)}
+                        label="Skip All Green Skills"
+                        description={"When enabled, no green (stat-trigger) skills will be purchased by this plan."}
+                        style={{ marginTop: 8 }}
+                    />
+                    <CustomCheckbox
+                        searchId={`exclude-red-skills-${name}`}
+                        checked={excludeRedSkills}
+                        onCheckedChange={(checked) => updateSkillsSetting("excludeRedSkills", checked)}
+                        label="Skip All Red Skills (Debuffs)"
+                        description={"When enabled, no red skills (debuffs like Intimidate, Speed Eater, Tether, Intense Gaze) will be purchased by this plan."}
+                        style={{ marginTop: 8 }}
                     />
                 </View>
                 <View style={styles.inputContainer}>
@@ -278,14 +335,57 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
         )
     }
 
+    const renderConfigurationSummary = () => {
+        const strategyLabel: string =
+            strategy === "default" ? "Do Not Spend Remaining Points" : strategy === "optimize_skills" ? "Best Skills First" : strategy === "optimize_rank" ? "Optimize Rank" : strategy
+        const excludedCategories: string[] = []
+        if (excludeGreenSkills) excludedCategories.push("Green")
+        if (excludeRedSkills) excludedCategories.push("Red")
+        const categoryText: string = excludedCategories.length === 0 ? "None" : excludedCategories.join(", ")
+        const idsToNames = (ids: number[]): string[] => ids.map((id) => skillData.find((s) => s.id === id)?.name_en ?? `Unknown (ID ${id})`)
+        const renderSkillBulletList = (header: string, ids: number[]) => {
+            const names = idsToNames(ids)
+            return (
+                <>
+                    <Text style={styles.summary}>
+                        {header} ({ids.length}):
+                    </Text>
+                    {names.length === 0 ? (
+                        <Text style={styles.summaryBullet}>- None</Text>
+                    ) : (
+                        names.map((skillName, i) => (
+                            <Text key={`${header}-${ids[i]}`} style={styles.summaryBullet}>
+                                - {skillName}
+                            </Text>
+                        ))
+                    )}
+                </>
+            )
+        }
+        return (
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Configuration Summary</Text>
+                <Text style={styles.summary}>Strategy: {strategyLabel}</Text>
+                <Text style={styles.summary}>Buy Inherited Unique Skills: {enableBuyInheritedUniqueSkills ? "Yes" : "No"}</Text>
+                <Text style={styles.summary}>Buy Negative Skills: {enableBuyNegativeSkills ? "Yes" : "No"}</Text>
+                <Text style={styles.summary}>Excluded Categories: {categoryText}</Text>
+                {renderSkillBulletList("Planned Skills", planIds)}
+                {renderSkillBulletList("Blacklisted Skills", blacklistIds)}
+            </View>
+        )
+    }
+
     const renderSkillList = () => {
+        const isPlanMode = selectionMode === "plan"
+        const sectionTitle = isPlanMode ? "Planned Skills" : "Blacklisted Skills"
+        const helperText = isPlanMode ? "Select skills that the bot will always attempt to buy." : "Select skills the bot must never purchase, even when a strategy ranks them highly."
         return (
             <View style={styles.section}>
                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 12 }}>
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.sectionTitle}>Planned Skills</Text>
+                        <Text style={styles.sectionTitle}>{sectionTitle}</Text>
                         <Text style={[styles.inputDescription, { marginTop: 0 }]}>
-                            Selected {planIds.length} / {filteredSkills.length} skills
+                            Selected {activeIds.length} / {filteredSkills.length} skills
                         </Text>
                     </View>
                     <View style={{ flexDirection: "row", gap: 8 }}>
@@ -295,19 +395,28 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
                     </View>
                 </View>
 
+                <View style={{ flexDirection: "row", marginBottom: 12, gap: 8 }}>
+                    <TouchableOpacity onPress={() => setSelectionMode("plan")} style={[styles.modeTab, isPlanMode && styles.modeTabActive]}>
+                        <Text style={[styles.modeTabLabel, isPlanMode && styles.modeTabLabelActive]}>Plan ({planIds.length})</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setSelectionMode("blacklist")} style={[styles.modeTab, !isPlanMode && styles.modeTabActive]}>
+                        <Text style={[styles.modeTabLabel, !isPlanMode && styles.modeTabLabelActive]}>Blacklist ({blacklistIds.length})</Text>
+                    </TouchableOpacity>
+                </View>
+
                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
                     <CustomCheckbox
                         searchId={`show-selected-skills-${name}`}
-                        checked={planIds.length === 0 ? false : showSelected}
-                        disabled={planIds.length === 0}
-                        onCheckedChange={(checked) => setShowSelected(checked && planIds.length !== 0)}
+                        checked={activeIds.length === 0 ? false : showSelected}
+                        disabled={activeIds.length === 0}
+                        onCheckedChange={(checked) => setShowSelected(checked && activeIds.length !== 0)}
                         label="Show Only Selected Skills"
                     />
                 </View>
 
                 <View style={{ flexDirection: "row", marginBottom: 12 }}>
                     <View style={{ flex: 1 }}>
-                        <Text style={[styles.inputDescription, { marginTop: 0 }]}>Select skills that the bot will always attempt to buy.</Text>
+                        <Text style={[styles.inputDescription, { marginTop: 0 }]}>{helperText}</Text>
                     </View>
                 </View>
 
@@ -326,7 +435,7 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
                                                 <Text style={styles.skillDescription}>{skill.desc_en}</Text>
                                                 <Text style={styles.skillSubtext}>ID: {skill.id}</Text>
                                             </View>
-                                            {planIds.includes(skill.id) && <CircleCheckBig size={18} color={"green"} />}
+                                            {activeIds.includes(skill.id) && <CircleCheckBig size={18} color={selectionMode === "plan" ? "green" : "red"} />}
                                         </View>
                                     </TouchableOpacity>
                                 ),
@@ -370,6 +479,8 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
                                 {renderOptions()}
                                 <Divider style={{ marginBottom: 16 }} />
                                 {renderSkillList()}
+                                <Divider style={{ marginBottom: 16 }} />
+                                {renderConfigurationSummary()}
                             </>
                         )}
                     </View>
