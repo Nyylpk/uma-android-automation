@@ -1233,7 +1233,9 @@ class Trackblazer(game: Game) : Campaign(game) {
             )
 
         try {
-            val cleanedText = coinText.replace(Regex("[^0-9]"), "")
+            // ML Kit sometimes misreads a lone digit "1" as the letter "L". Treat that whole-string case as 1 so we don't drop a valid count of one.
+            val normalizedText = if (coinText.trim().equals("L", ignoreCase = true)) "1" else coinText
+            val cleanedText = normalizedText.replace(Regex("[^0-9]"), "")
             if (cleanedText.isEmpty()) {
                 MessageLog.w(TAG, "[WARN] updateShopCoins:: Parsed empty string for Shop Coins from raw text: \"$coinText\".")
             } else {
