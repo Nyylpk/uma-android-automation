@@ -14,6 +14,8 @@ const makeStubSettings = (): Settings => {
         get(_target, prop) {
             if (prop === "length") return 0
             if (prop === "join") return () => ""
+            if (prop === "split") return () => []
+            if (prop === "trim") return () => ""
             if (prop === Symbol.toPrimitive) return () => 0
             if (prop === "toString") return () => "0"
             return new Proxy({}, handler)

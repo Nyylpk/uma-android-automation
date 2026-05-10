@@ -12,6 +12,9 @@ module.exports = {
         "^.+\\.(ts|tsx)$": [
             "babel-jest",
             {
+                // Skip babel.config.js so babel-preset-expo doesn't rewrite `process.env.EXPO_PUBLIC_*` into imports of `expo/virtual/env.js`, which Jest can't parse.
+                configFile: false,
+                babelrc: false,
                 presets: [
                     ["@babel/preset-env", { targets: { node: "current" } }],
                     "@babel/preset-typescript",
