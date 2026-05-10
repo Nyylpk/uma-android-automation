@@ -17,10 +17,11 @@ const safeJsonLength = (json: string): number => {
 
 const csvCount = (csv: string): number => (csv ? csv.split(",").filter((s) => s.trim() !== "").length : 0)
 
-const formatExcludedCategories = (plan: { excludeGreenSkills: boolean; excludeRedSkills: boolean }): string => {
+const formatExcludedCategories = (plan: { excludeGreenSkills: boolean; excludeRedSkills: boolean; excludeUniqueSkills: boolean }): string => {
     const parts: string[] = []
     if (plan.excludeGreenSkills) parts.push("Green")
     if (plan.excludeRedSkills) parts.push("Red")
+    if (plan.excludeUniqueSkills) parts.push("Unique")
     return parts.length === 0 ? "None" : parts.join(", ")
 }
 
@@ -164,7 +165,7 @@ ${longTargetsString}
 🛣️ Track Surface Override: ${settings.skills.preferredTrackSurface}
 📅 Pre-Finals Skill Plan: ${settings.skills.plans.preFinals.enabled ? "✅" : "❌"}${
         settings.skills.plans.preFinals.enabled
-            ? `\n\t💲 Buy All Inherited Unique Skills: ${settings.skills.plans.preFinals.enableBuyInheritedUniqueSkills ? "✅" : "❌"}\n\t💲 Buy All Negative Skills: ${
+            ? `\n\t💲 Buy All Negative Skills: ${
                   settings.skills.plans.preFinals.enableBuyNegativeSkills ? "✅" : "❌"
               }\n\t💸 Spending Strategy: ${settings.skills.plans.preFinals.strategy ? "✅" : "❌"}\n\t🚫 Blacklisted Skills: ${csvCount(
                   settings.skills.plans.preFinals.blacklist
@@ -173,7 +174,7 @@ ${longTargetsString}
     }
 📅 CareerComplete Skill Plan: ${settings.skills.plans.careerComplete.enabled ? "✅" : "❌"}${
         settings.skills.plans.careerComplete.enabled
-            ? `\n\t💲 Buy All Inherited Unique Skills: ${settings.skills.plans.careerComplete.enableBuyInheritedUniqueSkills ? "✅" : "❌"}\n\t💲 Buy All Negative Skills: ${
+            ? `\n\t💲 Buy All Negative Skills: ${
                   settings.skills.plans.careerComplete.enableBuyNegativeSkills ? "✅" : "❌"
               }\n\t💸 Spending Strategy: ${settings.skills.plans.careerComplete.strategy ? "✅" : "❌"}\n\t🚫 Blacklisted Skills: ${csvCount(
                   settings.skills.plans.careerComplete.blacklist

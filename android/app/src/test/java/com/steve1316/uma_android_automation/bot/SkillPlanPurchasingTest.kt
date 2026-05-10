@@ -153,7 +153,6 @@ class SkillPlanPurchasingTest {
             SkillPlanSettings(
                 bIsEnabled = true,
                 strategy = SpendingStrategy.DEFAULT,
-                bEnableBuyInheritedUniqueSkills = true,
                 bEnableBuyNegativeSkills = true,
                 skillNames = listOf("User Skill A", "User Skill B"),
             )
@@ -182,31 +181,7 @@ class SkillPlanPurchasingTest {
         }
 
         @Test
-        fun `buys inherited unique skills after negative`() {
-            val candidates =
-                listOf(
-                    SkillCandidate("Negative", price = 30, evaluationPoints = 20, isNegative = true),
-                    SkillCandidate("Inherited", price = 80, evaluationPoints = 120, isInheritedUnique = true),
-                )
-            val result = calculateCommonPurchases(candidates, 200, defaultSettings)
-            assertEquals(2, result.size)
-            assertEquals("Negative", result[0].first)
-            assertEquals("Inherited", result[1].first)
-        }
-
-        @Test
-        fun `skips inherited unique when disabled`() {
-            val settings = defaultSettings.copy(bEnableBuyInheritedUniqueSkills = false)
-            val candidates =
-                listOf(
-                    SkillCandidate("Inherited", price = 80, evaluationPoints = 120, isInheritedUnique = true),
-                )
-            val result = calculateCommonPurchases(candidates, 1000, settings)
-            assertTrue(result.isEmpty())
-        }
-
-        @Test
-        fun `buys user-planned skills after inherited unique`() {
+        fun `buys user-planned skills after negative`() {
             val candidates =
                 listOf(
                     SkillCandidate("Negative", price = 30, evaluationPoints = 20, isNegative = true),
@@ -225,12 +200,11 @@ class SkillPlanPurchasingTest {
             val candidates =
                 listOf(
                     SkillCandidate("Negative", price = 80, evaluationPoints = 20, isNegative = true),
-                    SkillCandidate("Inherited", price = 80, evaluationPoints = 120, isInheritedUnique = true),
                     SkillCandidate("User Skill A", price = 80, evaluationPoints = 80, isUserPlanned = true),
                 )
             val result = calculateCommonPurchases(candidates, 150, defaultSettings)
-            // Can afford Negative(80) + Inherited(80) = 160 > 150
-            // So only Negative(80) then can't afford Inherited(80) at 70 remaining
+            // Can afford Negative(80) + User Skill A(80) = 160 > 150
+            // So only Negative(80) then can't afford User Skill A(80) at 70 remaining
             assertEquals(1, result.size)
             assertEquals("Negative", result[0].first)
         }
@@ -239,11 +213,26 @@ class SkillPlanPurchasingTest {
         fun `does not buy duplicates`() {
             val candidates =
                 listOf(
-                    SkillCandidate("Dual Role", price = 50, evaluationPoints = 30, isNegative = true, isInheritedUnique = true),
+                    SkillCandidate("Dual Role", price = 50, evaluationPoints = 30, isNegative = true, isUserPlanned = true),
                 )
             val result = calculateCommonPurchases(candidates, 1000, defaultSettings)
-            // Should only appear once even though it matches both negative and inherited
+            // Should only appear once even though it matches both negative and user-planned phases.
             assertEquals(1, result.size)
+        }
+
+        @Test
+        fun `bExcludeUniqueSkills filters planned inherited unique skills`() {
+            // Production-layer behavior: when bExcludeUniqueSkills is on, isBlacklisted is precomputed true for any inherited-unique entry.
+            // This test simulates that pre-computation and verifies the downstream candidate pipeline respects the flag.
+            val settings = defaultSettings.copy(bExcludeUniqueSkills = true)
+            val candidates =
+                listOf(
+                    SkillCandidate("Planned Inherited", price = 80, evaluationPoints = 120, isInheritedUnique = true, isUserPlanned = true, isBlacklisted = true),
+                    SkillCandidate("Planned Regular", price = 50, evaluationPoints = 80, isUserPlanned = true),
+                )
+            val result = calculateCommonPurchases(candidates, 1000, settings)
+            assertTrue(result.none { it.first == "Planned Inherited" }, "bExcludeUniqueSkills must filter out inherited unique skill from plan")
+            assertTrue(result.any { it.first == "Planned Regular" }, "Non-unique planned skill should still be purchased")
         }
     }
 
@@ -260,7 +249,6 @@ class SkillPlanPurchasingTest {
                 SkillPlanSettings(
                     bIsEnabled = false,
                     strategy = SpendingStrategy.DEFAULT,
-                    bEnableBuyInheritedUniqueSkills = true,
                     bEnableBuyNegativeSkills = true,
                     skillNames = emptyList(),
                 )
@@ -279,7 +267,6 @@ class SkillPlanPurchasingTest {
                 SkillPlanSettings(
                     bIsEnabled = true,
                     strategy = SpendingStrategy.DEFAULT,
-                    bEnableBuyInheritedUniqueSkills = false,
                     bEnableBuyNegativeSkills = true,
                     skillNames = emptyList(),
                 )
@@ -302,7 +289,6 @@ class SkillPlanPurchasingTest {
                 SkillPlanSettings(
                     bIsEnabled = true,
                     strategy = SpendingStrategy.OPTIMIZE_RANK,
-                    bEnableBuyInheritedUniqueSkills = false,
                     bEnableBuyNegativeSkills = false,
                     skillNames = emptyList(),
                 )
@@ -324,7 +310,6 @@ class SkillPlanPurchasingTest {
                 SkillPlanSettings(
                     bIsEnabled = true,
                     strategy = SpendingStrategy.OPTIMIZE_SKILLS,
-                    bEnableBuyInheritedUniqueSkills = false,
                     bEnableBuyNegativeSkills = false,
                     skillNames = emptyList(),
                 )
@@ -371,7 +356,6 @@ class SkillPlanPurchasingTest {
                     SkillPlanSettings(
                         bIsEnabled = true,
                         strategy = SpendingStrategy.OPTIMIZE_RANK,
-                        bEnableBuyInheritedUniqueSkills = rng.nextBoolean(),
                         bEnableBuyNegativeSkills = rng.nextBoolean(),
                         skillNames = candidates.filter { it.isUserPlanned }.map { it.name },
                     )
@@ -412,7 +396,6 @@ class SkillPlanPurchasingTest {
                     SkillPlanSettings(
                         bIsEnabled = true,
                         strategy = SpendingStrategy.OPTIMIZE_SKILLS,
-                        bEnableBuyInheritedUniqueSkills = true,
                         bEnableBuyNegativeSkills = true,
                         skillNames = candidates.filter { it.isUserPlanned }.map { it.name },
                     )
@@ -447,7 +430,6 @@ class SkillPlanPurchasingTest {
                 SkillPlanSettings(
                     bIsEnabled = true,
                     strategy = SpendingStrategy.OPTIMIZE_SKILLS,
-                    bEnableBuyInheritedUniqueSkills = true,
                     bEnableBuyNegativeSkills = true,
                     skillNames = candidates.filter { it.isUserPlanned }.map { it.name },
                 )
@@ -511,7 +493,6 @@ class SkillPlanPurchasingTest {
                 SkillPlanSettings(
                     bIsEnabled = true,
                     strategy = SpendingStrategy.DEFAULT,
-                    bEnableBuyInheritedUniqueSkills = false,
                     bEnableBuyNegativeSkills = false,
                     skillNames = listOf("Planned & Blacklisted", "Planned"),
                 )
@@ -542,7 +523,6 @@ class SkillPlanPurchasingTest {
                 SkillPlanSettings(
                     bIsEnabled = true,
                     strategy = SpendingStrategy.OPTIMIZE_RANK,
-                    bEnableBuyInheritedUniqueSkills = false,
                     bEnableBuyNegativeSkills = false,
                     skillNames = emptyList(),
                 )
@@ -571,7 +551,6 @@ class SkillPlanPurchasingTest {
                 SkillPlanSettings(
                     bIsEnabled = true,
                     strategy = SpendingStrategy.DEFAULT,
-                    bEnableBuyInheritedUniqueSkills = false,
                     bEnableBuyNegativeSkills = false,
                     skillNames = emptyList(),
                 )

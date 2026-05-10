@@ -83,13 +83,15 @@ const searchConfig: SearchOption[] = [
     {
         id: "event-choice-stat-priority",
         title: "Event Choice Prioritization",
-        description: "Select the priority order of stats used when scoring in-game event choices. Events typically grant flat stat gains, so a different ordering than regular training may be optimal.",
+        description:
+            "Select the priority order of stats used when scoring in-game event choices. Events typically grant flat stat gains, so a different ordering than regular training may be optimal.",
         page: "TrainingSettings",
     },
     {
         id: "summer-training-stat-priority",
         title: "Summer Training Prioritization",
-        description: "Select the priority order of stats used during Summer Training. Facility levels are maxed during summer with no facility progression, so a different ordering than regular training may be optimal.",
+        description:
+            "Select the priority order of stats used during Summer Training. Facility levels are maxed during summer with no facility progression, so a different ordering than regular training may be optimal.",
         page: "TrainingSettings",
     },
     {
@@ -461,7 +463,8 @@ const searchConfig: SearchOption[] = [
     {
         id: "smart-solver-aptitude-threshold",
         title: "Aptitude Threshold",
-        description: "Minimum aptitude (distance AND surface) required for a race to be eligible. Includes toggles to allow OP / Pre-OP races (off by default; useful for weak characters like Haru Urara) and to allow racing during the Classic / Senior summer training camps (off by default).",
+        description:
+            "Minimum aptitude (distance AND surface) required for a race to be eligible. Includes toggles to allow OP / Pre-OP races (off by default; useful for weak characters like Haru Urara) and to allow racing during the Classic / Senior summer training camps (off by default).",
         page: "SmartRaceSolverSettings",
         parentId: "enable-smart-race-solver",
     },
@@ -475,14 +478,16 @@ const searchConfig: SearchOption[] = [
     {
         id: "smart-solver-forced-epithets",
         title: "Forced Epithets",
-        description: "Epithets the solver MUST complete. If completion becomes impossible (for example a needed race was already lost), the solver stops planning. Use sparingly — each forced epithet narrows what the solver can pick.",
+        description:
+            "Epithets the solver MUST complete. If completion becomes impossible (for example a needed race was already lost), the solver stops planning. Use sparingly — each forced epithet narrows what the solver can pick.",
         page: "SmartRaceSolverSettings",
         parentId: "enable-smart-race-solver",
     },
     {
         id: "smart-solver-optimize-mode",
         title: "Optimization Mode",
-        description: "Pick whether the Smart Race Solver chases stat epitaphs only or also emphasizes fan-heavy races (G1s, big G3s) alongside epitaphs. Switching modes snaps the editable weight sliders to a fresh preset; you can still tune each slider afterward.",
+        description:
+            "Pick whether the Smart Race Solver chases stat epitaphs only or also emphasizes fan-heavy races (G1s, big G3s) alongside epitaphs. Switching modes snaps the editable weight sliders to a fresh preset; you can still tune each slider afterward.",
         page: "SmartRaceSolverSettings",
         parentId: "enable-smart-race-solver",
     },
@@ -562,13 +567,6 @@ const searchConfig: SearchOption[] = [
         page: "SkillPlanSettingsSkillPointCheck",
     },
     {
-        id: "enable-buy-inherited-unique-skills-SkillPlanSettingsSkillPointCheck",
-        title: "Purchase All Inherited Unique Skills",
-        description: "When enabled, the bot will attempt to purchase all inherited unique skills regardless of their evaluated rating or community tier list rating.",
-        page: "SkillPlanSettingsSkillPointCheck",
-        parentId: "enable-skill-plan-skillPointCheck",
-    },
-    {
         id: "enable-buy-negative-skills-SkillPlanSettingsSkillPointCheck",
         title: "Purchase All Negative Skills",
         description: "When enabled, the bot will attempt to purchase all negative skills (i.e. Firm Conditions ×).",
@@ -589,6 +587,13 @@ const searchConfig: SearchOption[] = [
         page: "SkillPlanSettingsSkillPointCheck",
         parentId: "enable-skill-plan-skillPointCheck",
     },
+    {
+        id: "exclude-unique-skills-SkillPlanSettingsSkillPointCheck",
+        title: "Skip All Unique Skills",
+        description: "When enabled, no inherited unique (legacy) skills will be purchased by this plan, even if they appear in the planned skills list.",
+        page: "SkillPlanSettingsSkillPointCheck",
+        parentId: "enable-skill-plan-skillPointCheck",
+    },
 
     // ============================================================
     // Skill Plan Settings — Pre-Finals
@@ -598,13 +603,6 @@ const searchConfig: SearchOption[] = [
         title: "Enable Pre-Finals Plan (Beta)",
         description: "When enabled, the bot will attempt to purchase skills based on the following configuration.",
         page: "SkillPlanSettingsPreFinals",
-    },
-    {
-        id: "enable-buy-inherited-unique-skills-SkillPlanSettingsPreFinals",
-        title: "Purchase All Inherited Unique Skills",
-        description: "When enabled, the bot will attempt to purchase all inherited unique skills regardless of their evaluated rating or community tier list rating.",
-        page: "SkillPlanSettingsPreFinals",
-        parentId: "enable-skill-plan-preFinals",
     },
     {
         id: "enable-buy-negative-skills-SkillPlanSettingsPreFinals",
@@ -627,6 +625,13 @@ const searchConfig: SearchOption[] = [
         page: "SkillPlanSettingsPreFinals",
         parentId: "enable-skill-plan-preFinals",
     },
+    {
+        id: "exclude-unique-skills-SkillPlanSettingsPreFinals",
+        title: "Skip All Unique Skills",
+        description: "When enabled, no inherited unique (legacy) skills will be purchased by this plan, even if they appear in the planned skills list.",
+        page: "SkillPlanSettingsPreFinals",
+        parentId: "enable-skill-plan-preFinals",
+    },
 
     // ============================================================
     // Skill Plan Settings — Career Complete
@@ -636,13 +641,6 @@ const searchConfig: SearchOption[] = [
         title: "Enable Career Complete Plan (Beta)",
         description: "When enabled, the bot will attempt to purchase skills based on the following configuration.",
         page: "SkillPlanSettingsCareerComplete",
-    },
-    {
-        id: "enable-buy-inherited-unique-skills-SkillPlanSettingsCareerComplete",
-        title: "Purchase All Inherited Unique Skills",
-        description: "When enabled, the bot will attempt to purchase all inherited unique skills regardless of their evaluated rating or community tier list rating.",
-        page: "SkillPlanSettingsCareerComplete",
-        parentId: "enable-skill-plan-careerComplete",
     },
     {
         id: "enable-buy-negative-skills-SkillPlanSettingsCareerComplete",
@@ -662,6 +660,13 @@ const searchConfig: SearchOption[] = [
         id: "exclude-red-skills-SkillPlanSettingsCareerComplete",
         title: "Skip All Red Skills (Debuffs)",
         description: "When enabled, no red skills (debuffs like Intimidate, Speed Eater, Tether, Intense Gaze) will be purchased by this plan.",
+        page: "SkillPlanSettingsCareerComplete",
+        parentId: "enable-skill-plan-careerComplete",
+    },
+    {
+        id: "exclude-unique-skills-SkillPlanSettingsCareerComplete",
+        title: "Skip All Unique Skills",
+        description: "When enabled, no inherited unique (legacy) skills will be purchased by this plan, even if they appear in the planned skills list.",
         page: "SkillPlanSettingsCareerComplete",
         parentId: "enable-skill-plan-careerComplete",
     },
@@ -990,7 +995,8 @@ const searchConfig: SearchOption[] = [
     {
         id: "llm-citation-char-cap",
         title: "Context per citation",
-        description: "How much of each retrieved doc section is fed to the chatbot LLM. Larger caps give the model more material to summarize from but consume more of the model's context window budget.",
+        description:
+            "How much of each retrieved doc section is fed to the chatbot LLM. Larger caps give the model more material to summarize from but consume more of the model's context window budget.",
         page: "LLMSettings",
     },
     {

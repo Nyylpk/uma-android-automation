@@ -75,7 +75,7 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
     // Merge current skills settings with defaults to handle missing properties.
     const combinedConfig = { ...defaultSettings.skills.plans, ...skills.plans }
 
-    const { enabled, strategy, enableBuyInheritedUniqueSkills, enableBuyNegativeSkills, plan, blacklist, excludeGreenSkills, excludeRedSkills } = combinedConfig[planKey]
+    const { enabled, strategy, enableBuyNegativeSkills, plan, blacklist, excludeGreenSkills, excludeRedSkills, excludeUniqueSkills } = combinedConfig[planKey]
 
     const [searchQuery, setSearchQuery] = useState("")
     const [showSelected, setShowSelected] = useState(false)
@@ -267,14 +267,6 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
             <>
                 <View style={styles.inputContainer}>
                     <CustomCheckbox
-                        searchId={`enable-buy-inherited-unique-skills-${name}`}
-                        checked={enableBuyInheritedUniqueSkills}
-                        onCheckedChange={(checked) => updateSkillsSetting("enableBuyInheritedUniqueSkills", checked)}
-                        label="Purchase All Inherited Unique Skills"
-                        description={"When enabled, the bot will attempt to purchase all inherited unique skills regardless of their evaluated rating or community tier list rating."}
-                        style={{ marginTop: 16 }}
-                    />
-                    <CustomCheckbox
                         searchId={`enable-buy-negative-skills-${name}`}
                         checked={enableBuyNegativeSkills}
                         onCheckedChange={(checked) => updateSkillsSetting("enableBuyNegativeSkills", checked)}
@@ -302,6 +294,14 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
                         onCheckedChange={(checked) => updateSkillsSetting("excludeRedSkills", checked)}
                         label="Skip All Red Skills (Debuffs)"
                         description={"When enabled, no red skills (debuffs like Intimidate, Speed Eater, Tether, Intense Gaze) will be purchased by this plan."}
+                        style={{ marginTop: 8 }}
+                    />
+                    <CustomCheckbox
+                        searchId={`exclude-unique-skills-${name}`}
+                        checked={excludeUniqueSkills}
+                        onCheckedChange={(checked) => updateSkillsSetting("excludeUniqueSkills", checked)}
+                        label="Skip All Unique Skills"
+                        description={"When enabled, no inherited unique (legacy) skills will be purchased by this plan, even if they appear in the planned skills list."}
                         style={{ marginTop: 8 }}
                     />
                 </View>
@@ -341,6 +341,7 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
         const excludedCategories: string[] = []
         if (excludeGreenSkills) excludedCategories.push("Green")
         if (excludeRedSkills) excludedCategories.push("Red")
+        if (excludeUniqueSkills) excludedCategories.push("Unique")
         const categoryText: string = excludedCategories.length === 0 ? "None" : excludedCategories.join(", ")
         const idsToNames = (ids: number[]): string[] => ids.map((id) => skillData.find((s) => s.id === id)?.name_en ?? `Unknown (ID ${id})`)
         const renderSkillBulletList = (header: string, ids: number[]) => {
@@ -366,7 +367,6 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Configuration Summary</Text>
                 <Text style={styles.summary}>Strategy: {strategyLabel}</Text>
-                <Text style={styles.summary}>Buy Inherited Unique Skills: {enableBuyInheritedUniqueSkills ? "Yes" : "No"}</Text>
                 <Text style={styles.summary}>Buy Negative Skills: {enableBuyNegativeSkills ? "Yes" : "No"}</Text>
                 <Text style={styles.summary}>Excluded Categories: {categoryText}</Text>
                 {renderSkillBulletList("Planned Skills", planIds)}

@@ -72,11 +72,11 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
                         SkillPlanSettings(
                             bIsEnabled = planData.getBoolean("enabled"),
                             strategy = SpendingStrategy.fromName(strategyString) ?: SpendingStrategy.DEFAULT,
-                            bEnableBuyInheritedUniqueSkills = planData.getBoolean("enableBuyInheritedUniqueSkills"),
                             bEnableBuyNegativeSkills = planData.getBoolean("enableBuyNegativeSkills"),
                             skillNames = skillNames,
                             skillBlacklist = skillBlacklist,
                             excludedTypes = excludedTypes,
+                            bExcludeUniqueSkills = planData.optBoolean("excludeUniqueSkills", false),
                         )
                 }
                 plansMap
@@ -118,20 +118,20 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
      *
      * @property bIsEnabled Whether the skill plan is active.
      * @property strategy The [SpendingStrategy] to follow.
-     * @property bEnableBuyInheritedUniqueSkills Whether to purchase inherited unique skills.
      * @property bEnableBuyNegativeSkills Whether to purchase negative (blue) skills.
      * @property skillNames The list of specific skill names to purchase as part of this plan.
      * @property skillBlacklist Names of skills to exclude from purchase regardless of strategy.
      * @property excludedTypes Skill type categories (GREEN / YELLOW / BLUE / RED) to exclude wholesale.
+     * @property bExcludeUniqueSkills Whether to exclude all inherited unique skills from purchase, even if listed in the plan.
      */
     data class SkillPlanSettings(
         val bIsEnabled: Boolean,
         val strategy: SpendingStrategy,
-        val bEnableBuyInheritedUniqueSkills: Boolean,
         val bEnableBuyNegativeSkills: Boolean,
         val skillNames: List<String>,
         val skillBlacklist: List<String> = emptyList(),
         val excludedTypes: Set<SkillType> = emptySet(),
+        val bExcludeUniqueSkills: Boolean = false,
     )
 
     companion object {
@@ -230,19 +230,7 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
                 }
             }
 
-            // Phase 2: Inherited unique skills
-            if (settings.bEnableBuyInheritedUniqueSkills) {
-                for (skill in candidates.filter { it.isInheritedUnique && !it.isBlacklisted }) {
-                    if (skill.name in bought) continue
-                    if (skill.price <= remaining) {
-                        result.add(skill.name to skill.price)
-                        remaining -= skill.price
-                        bought.add(skill.name)
-                    }
-                }
-            }
-
-            // Phase 3: User-planned skills (in the order specified by plan). Blacklist takes precedence over plan.
+            // Phase 2: User-planned skills (in the order specified by plan). Blacklist takes precedence over plan.
             for (skill in candidates.filter { it.isUserPlanned && !it.isBlacklisted }) {
                 if (skill.name in bought) continue
                 if (skill.price <= remaining) {
@@ -397,7 +385,10 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
      * @param settings The [SkillPlanSettings] holding the blacklist and excluded categories.
      * @return True if the entry should be skipped, false otherwise.
      */
-    private fun isBlacklisted(entry: SkillListEntry, settings: SkillPlanSettings): Boolean = entry.name in settings.skillBlacklist || entry.skillData.type in settings.excludedTypes
+    private fun isBlacklisted(entry: SkillListEntry, settings: SkillPlanSettings): Boolean =
+        entry.name in settings.skillBlacklist ||
+            entry.skillData.type in settings.excludedTypes ||
+            (settings.bExcludeUniqueSkills && entry.bIsInheritedUnique)
 
     /**
      * Retrieve all available negative skills from the skill list.
@@ -424,43 +415,6 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
             }
 
             // Skip skills the user has explicitly blacklisted (per-skill or by color category).
-            if (isBlacklisted(entry, skillPlanSettings)) {
-                continue
-            }
-
-            if (entry.screenPrice <= remainingSkillPoints) {
-                result[name] = entry.screenPrice
-                remainingSkillPoints -= entry.screenPrice
-                entry.buy()
-            }
-        }
-
-        return result.toMap()
-    }
-
-    /**
-     * Retrieve all available inherited unique skills from the skill list.
-     *
-     * @param skillPlanSettings The [SkillPlanSettings] to follow.
-     * @param skillList The [SkillList] to analyze.
-     * @param skillsToBuy The list of skills already planned for purchase.
-     * @param availableSkillPoints The current amount of available skill points.
-     * @return A map of skill names to their prices for the identified inherited unique skills.
-     */
-    private fun getInheritedUniqueSkills(skillPlanSettings: SkillPlanSettings, skillList: SkillList, skillsToBuy: List<String>, availableSkillPoints: Int): Map<String, Int> {
-        if (!skillPlanSettings.bEnableBuyInheritedUniqueSkills) {
-            return emptyMap()
-        }
-
-        val result: MutableMap<String, Int> = mutableMapOf()
-        var remainingSkillPoints = availableSkillPoints
-
-        val entries: Map<String, SkillListEntry> = skillList.getInheritedUniqueSkills()
-        for ((name, entry) in entries) {
-            if (name in skillsToBuy || name in result) {
-                continue
-            }
-
             if (isBlacklisted(entry, skillPlanSettings)) {
                 continue
             }
@@ -567,14 +521,6 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
 
         result +=
             getNegativeSkills(
-                skillPlanSettings = skillPlanSettings,
-                skillList = skillList,
-                skillsToBuy = skillsToBuy + result.keys.toList(),
-                availableSkillPoints = availableSkillPoints - result.values.sum(),
-            )
-
-        result +=
-            getInheritedUniqueSkills(
                 skillPlanSettings = skillPlanSettings,
                 skillList = skillList,
                 skillsToBuy = skillsToBuy + result.keys.toList(),
@@ -945,7 +891,6 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
         if (
             skillPlanSettings.skillNames.isEmpty() &&
             skillPlanSettings.strategy == SpendingStrategy.DEFAULT &&
-            !skillPlanSettings.bEnableBuyInheritedUniqueSkills &&
             !skillPlanSettings.bEnableBuyNegativeSkills
         ) {
             MessageLog.w(TAG, "[WARN] start:: Skill Plan is empty and no options to purchase any skills are enabled. Aborting...")

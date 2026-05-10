@@ -10,8 +10,6 @@ interface SkillPlanSettingsConfig {
     enabled: boolean
     /** The spending strategy for this plan. */
     strategy: string
-    /** Whether to buy inherited unique skills. */
-    enableBuyInheritedUniqueSkills: boolean
     /** Whether to buy negative skills. */
     enableBuyNegativeSkills: boolean
     /** The serialized skill plan data (comma-separated skill IDs). */
@@ -22,6 +20,8 @@ interface SkillPlanSettingsConfig {
     excludeGreenSkills: boolean
     /** When true, all red skills (debuffs like Intimidate, Speed Eater) are excluded from this plan's purchases. */
     excludeRedSkills: boolean
+    /** When true, all inherited unique (legacy) skills are excluded from this plan's purchases, even if listed in the plan. */
+    excludeUniqueSkills: boolean
 }
 
 /**
@@ -289,12 +289,12 @@ export const defaultSettings: Settings = {
                 acc[curr] = {
                     enabled: false,
                     strategy: "default",
-                    enableBuyInheritedUniqueSkills: false,
                     enableBuyNegativeSkills: false,
                     plan: "",
                     blacklist: "",
                     excludeGreenSkills: false,
                     excludeRedSkills: false,
+                    excludeUniqueSkills: false,
                 }
                 return acc
             },
