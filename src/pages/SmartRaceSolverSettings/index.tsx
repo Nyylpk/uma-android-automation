@@ -1433,7 +1433,8 @@ const SmartRaceSolverSettings = () => {
                                         </Text>
                                         {!previewLoading && !previewError && preview && previewStats && (
                                             <Text style={[styles.inputDescription, { fontStyle: "italic", marginTop: 2 }]}>
-                                                Note: Projected Fan Gain is the raw sum of each scheduled race's base fan reward and does not factor in in-game fan bonuses and other fan sources. Actual fans earned during a run will be higher.
+                                                Note: Projected Fan Gain is the raw sum of each scheduled race's base fan reward and does not factor in in-game fan bonuses and other fan sources.
+                                                Actual fans earned during a run will be higher.
                                             </Text>
                                         )}
                                         {dirty && (
