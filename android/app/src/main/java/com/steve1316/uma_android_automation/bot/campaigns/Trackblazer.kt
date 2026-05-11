@@ -1624,12 +1624,30 @@ class Trackblazer(game: Game) : Campaign(game) {
                         when {
                             trainingSelected == null ->
                                 MessageLog.i(TAG, "[TRACKBLAZER] Reset Whistle re-analysis returned no training; nothing to execute.")
-                            training.lastSelectionSource == SelectionSource.FORCED_FROM_SKIPPED ->
-                                MessageLog.i(
-                                    TAG,
-                                    "[TRACKBLAZER] Reset Whistle re-analysis still rejected all trainings; Whistle Forces Training is enabled, " +
-                                        "so executing forced pick: $trainingSelected. Megaphone (if available) will be applied to this forced selection.",
-                                )
+                            training.lastSelectionSource == SelectionSource.FORCED_FROM_SKIPPED -> {
+                                // The forced pick comes from the rejected pool, so by definition either its main gain is below minCharmGain or its failure is too high to clear without a charm.
+                                // If the analyzer's charm gates would suppress the charm anyway, executing this pick is a near-certain failure with no defensive item.
+                                // Abandon this and let the recovery branch below take Rest/Recreation.
+                                val forcedCandidate = training.cachedAnalysisResults?.firstOrNull { it.name == trainingSelected }
+                                val forcedFail = forcedCandidate?.failureChance ?: 0
+                                val forcedMainGain = forcedCandidate?.statGains?.get(trainingSelected) ?: 0
+                                val charmAvailable = (currentInventory["Good-Luck Charm"] ?: 0) > 0
+                                val charmWouldFire =
+                                    charmAvailable && !bUsedCharmToday && forcedFail >= 20 && !shouldConserveTrainingEffectItems(trainingSelected, trainee) && forcedMainGain >= minCharmGain
+                                if (!charmWouldFire && forcedFail >= 50) {
+                                    MessageLog.i(
+                                        TAG,
+                                        "[TRACKBLAZER] Skipping Whistle force-pick: $trainingSelected at $forcedFail% fail with no Good-Luck Charm. Falling back to recovery.",
+                                    )
+                                    trainingSelected = null
+                                } else {
+                                    MessageLog.i(
+                                        TAG,
+                                        "[TRACKBLAZER] Reset Whistle re-analysis still rejected all trainings; Whistle Forces Training is enabled, " +
+                                            "so executing forced pick: $trainingSelected. Megaphone (if available) will be applied to this forced selection.",
+                                    )
+                                }
+                            }
                             training.lastSelectionSource != SelectionSource.ANALYSIS ->
                                 MessageLog.i(TAG, "[TRACKBLAZER] Reset Whistle re-analysis used fallback (${training.lastSelectionSource}): $trainingSelected.")
                             else ->
@@ -1796,11 +1814,14 @@ class Trackblazer(game: Game) : Campaign(game) {
             }
 
         // Glow Sticks Logic
-        // Day 73+: only use if we have enough to cover remaining finale days.
         val useGlowSticks =
             if (date.day >= 73) {
-                val remainingFinaleDays = listOf(73, 74, 75).count { it >= date.day }
-                fans >= 20000 && glowSticksCount >= remainingFinaleDays
+                // Reserve 1 stick for Day 75 (the Final).
+                val reserveForFinals = if (date.day < 75) 1 else 0
+                fans >= 20000 && glowSticksCount > reserveForFinals
+            } else if (fans >= 30000) {
+                // Use the last stick. Shops refresh when the Finales start so there is a chance for another Glow Stick to buy.
+                glowSticksCount > 0
             } else {
                 fans >= 20000 && glowSticksCount > 1
             }
