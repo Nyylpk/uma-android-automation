@@ -884,7 +884,13 @@ class Trackblazer(game: Game) : Campaign(game) {
             // If we are, we should treat it as a mandatory race and NOT an extra race.
             if (IconRaceDayRibbon.check(game.imageUtils, sourceBitmap = sourceBitmap) || IconGoalRibbon.check(game.imageUtils, sourceBitmap = sourceBitmap)) {
                 MessageLog.i(TAG, "[TRACKBLAZER] Mandatory race ribbon detected. Processing as mandatory race.")
-                return super.handleRaceEvents(true)
+                val result = super.handleRaceEvents(true)
+                // Mandatory races bypass executeAction(), so decrement the megaphone counter here to match the per-turn decrement applied to other actions.
+                if (result && trainee.megaphoneTurnCounter > 0) {
+                    trainee.megaphoneTurnCounter--
+                    MessageLog.i(TAG, "[TRACKBLAZER] Megaphone duration reduced. Turns remaining: ${trainee.megaphoneTurnCounter}.")
+                }
+                return result
             }
 
             MessageLog.i(TAG, "[TRACKBLAZER] Checking for suitable races.")
