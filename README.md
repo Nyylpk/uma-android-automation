@@ -29,6 +29,7 @@ This project is purely for educational purposes to learn about Android automatio
             - 1080 x 1920 (width x height)
             - 240 DPI (This is important)
             - Disable the equivalent of "Keep alive in background" in the emulator settings to prevent the overlay button from not showing up.
+            - Specific to MuMu: the `App running` emulator setting also needs to be disabled for the same issue.
 
 > [!WARNING]
 > If you change the display resolution while the overlay button is still active, you will need to restart the app in order for the display changes to persist to the `MediaProjection` service.
