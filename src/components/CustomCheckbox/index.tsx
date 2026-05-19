@@ -4,6 +4,7 @@ import { Checkbox } from "../ui/checkbox"
 import { Label } from "../ui/label"
 import { Text } from "../ui/text"
 import { useTheme } from "../../context/ThemeContext"
+import { copyToClipboard } from "../../lib/utils"
 import SearchableItem from "../SearchableItem"
 
 interface CustomCheckboxProps {
@@ -75,7 +76,7 @@ const CustomCheckbox: React.FC<CustomCheckboxProps> = ({
 
             {/* flexShrink is used to make sure the description wraps properly and not overflow past the right side of the screen. */}
             <View style={{ flexShrink: 1 }}>
-                <Label style={{ color: colors.foreground, fontWeight: "bold" }} disabled={disabled} onPress={() => onCheckedChange(!checked)}>
+                <Label style={{ color: colors.foreground, fontWeight: "bold" }} disabled={disabled} onPress={() => onCheckedChange(!checked)} onLongPress={() => copyToClipboard(label)}>
                     {label}
                 </Label>
                 {description && (

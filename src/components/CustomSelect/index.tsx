@@ -1,7 +1,8 @@
 import React, { useRef, useState } from "react"
-import { View, LayoutChangeEvent, ViewStyle } from "react-native"
+import { View, LayoutChangeEvent, ViewStyle, Pressable } from "react-native"
 import { Text } from "../ui/text"
 import { useTheme } from "../../context/ThemeContext"
+import { copyToClipboard } from "../../lib/utils"
 import { Option, Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue, NativeSelectScrollView } from "../ui/select"
 import SearchableItem from "../SearchableItem"
 
@@ -132,9 +133,9 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     const content = (
         <View style={style}>
             {label && (
-                <View style={{ marginBottom: 4 }}>
+                <Pressable style={{ marginBottom: 4 }} onLongPress={() => copyToClipboard(label)}>
                     <Text style={{ fontSize: 16, fontWeight: "600", color: colors.foreground }}>{label}</Text>
-                </View>
+                </Pressable>
             )}
             {description && (
                 <View>

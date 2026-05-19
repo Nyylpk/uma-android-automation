@@ -1,7 +1,8 @@
 import React, { useMemo, useState, useRef, useEffect } from "react"
-import { View, Text, StyleSheet, Animated, LayoutChangeEvent, ViewStyle } from "react-native"
+import { View, Text, StyleSheet, Animated, LayoutChangeEvent, ViewStyle, Pressable } from "react-native"
 import Slider from "@react-native-community/slider"
 import { useTheme } from "../../context/ThemeContext"
+import { copyToClipboard } from "../../lib/utils"
 import { Input } from "../ui/input"
 import SearchableItem from "../SearchableItem"
 
@@ -360,7 +361,11 @@ const CustomSlider: React.FC<CustomSliderProps> = ({
 
     const content = (
         <View className={className} style={[styles.container, style]}>
-            {label && <Text style={styles.label}>{label}</Text>}
+            {label && (
+                <Pressable onLongPress={() => copyToClipboard(label)}>
+                    <Text style={styles.label}>{label}</Text>
+                </Pressable>
+            )}
             {description && <Text style={styles.descriptionText}>{description}</Text>}
 
             <View style={styles.sliderContainer} onLayout={handleLayout}>

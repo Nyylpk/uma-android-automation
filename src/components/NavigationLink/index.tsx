@@ -1,6 +1,7 @@
 import React from "react"
 import { View, Text, TouchableOpacity, ViewStyle } from "react-native"
 import { useThemeClasses } from "../../hooks/useThemeClasses"
+import { copyToClipboard } from "../../lib/utils"
 
 interface NavigationLinkProps {
     /** The title text for the navigation link. */
@@ -35,7 +36,7 @@ const NavigationLink: React.FC<NavigationLinkProps> = ({ title, description, onP
 
     return (
         <View className={`mt-5 p-4 rounded-lg border ${themeClasses.bgCard} ${themeClasses.border} ${disabled ? "opacity-50" : ""} ${className}`} style={style}>
-            <TouchableOpacity onPress={disabled ? undefined : onPress} disabled={disabled}>
+            <TouchableOpacity onPress={disabled ? undefined : onPress} onLongPress={() => copyToClipboard(title)} disabled={disabled}>
                 <Text className={`text-lg font-semibold ${disabled ? themeClasses.textSecondary : themeClasses.text}`}>{title}</Text>
                 <Text className={`mt-2 ${themeClasses.textSecondary}`}>{description}</Text>
                 {disabled && disabledDescription && <Text className={`mt-2 text-sm text-orange-500`}>⚠️ {disabledDescription}</Text>}
