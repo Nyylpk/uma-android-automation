@@ -1024,10 +1024,10 @@ class Trackblazer(game: Game) : Campaign(game) {
 
         // Avoid racing and training analysis at low energy with 3+ consecutive races to prevent
         // -30 stat penalty. Energy items were already attempted in onMainScreenEntry().
-        // However, if a Good-Luck Charm is available, allow training analysis since the charm
-        // can bypass high failure chances that come with low energy.
-        val hasCharmAvailable = !bUsedCharmToday && (currentInventory["Good-Luck Charm"] ?: 0) > 0
-        if (trainee.energy <= 10 && consecutiveRaceCount >= 3 && !hasCharmAvailable) {
+        // A Good-Luck Charm in inventory is not a justification to enter training here: the
+        // charm only fires after analyzeTrainings produces a selected training with measured
+        // failureChance >= 20, so it cannot protect a turn whose analysis is the thing at risk.
+        if (trainee.energy <= 10 && consecutiveRaceCount >= 3) {
             // Before resting, attempt to use a conserved energy item for emergency race recovery.
             val conserveItem = energyItemConservationOrder.firstOrNull { (currentInventory[it] ?: 0) > 0 }
             if (conserveItem != null) {
@@ -1086,9 +1086,11 @@ class Trackblazer(game: Game) : Campaign(game) {
             val isMandatoryRace = IconRaceDayRibbon.check(game.imageUtils) || IconGoalRibbon.check(game.imageUtils)
 
             if (!isScheduledRace && !isMandatoryRace) {
-                // Skip irregular training evaluation when energy is depleted and no charm can offset the failure chance.
-                if (trainee.energy <= 0 && !hasCharmAvailable) {
-                    MessageLog.i(TAG, "[TRACKBLAZER] Skipping Irregular Training evaluation as energy is ${trainee.energy}% with no Good-Luck Charm available.")
+                // Skip irregular training evaluation when energy is depleted. The charm cannot
+                // fire preemptively (it requires a selected training with measured failureChance
+                // >= 20), so charm presence in inventory is not a reason to enter the screen.
+                if (trainee.energy <= 0) {
+                    MessageLog.i(TAG, "[TRACKBLAZER] Skipping Irregular Training evaluation as energy is ${trainee.energy}%.")
                     bHasCheckedIrregularTrainingThisTurn = true
                 } else if (ButtonTraining.click(game.imageUtils)) {
                     game.wait(game.dialogWaitDelay)
