@@ -567,7 +567,11 @@ class Trackblazer(game: Game) : Campaign(game) {
                         val reasons = mutableListOf<String>()
                         race.isRival = rivalFound
 
-                        if (date.year == DateYear.JUNIOR) {
+                        // Solver-scheduled races bypass the grade and consecutive-race filters: the solver already weighed those factors when picking this race.
+                        val solverMatched = solverPlannedKey != null && SmartRaceSolverIntegration.isRaceKeyMatch(race, solverPlannedKey)
+                        if (solverMatched) {
+                            isSuitable = true
+                        } else if (date.year == DateYear.JUNIOR) {
                             if (listOf(RaceGrade.G1, RaceGrade.G2, RaceGrade.G3).contains(race.grade)) {
                                 isSuitable = true
                             } else {
@@ -588,8 +592,9 @@ class Trackblazer(game: Game) : Campaign(game) {
                         if (isSuitable) {
                             val candidate = Candidate(screenPoint, race, detectedName, rivalFound)
                             allSuitableRaces.add(candidate)
-                            sb.appendLine("\n- Found Suitable Race: \"${race.name}\" (${race.grade}) Rival: $rivalFound")
-                            if (solverPlannedKey != null && SmartRaceSolverIntegration.isRaceKeyMatch(race, solverPlannedKey)) {
+                            val suffix = if (solverMatched) " [Smart Race Solver override]" else ""
+                            sb.appendLine("\n- Found Suitable Race: \"${race.name}\" (${race.grade}) Rival: $rivalFound$suffix")
+                            if (solverMatched) {
                                 solverMatchedCandidate = candidate
                             }
                         } else {
@@ -629,7 +634,11 @@ class Trackblazer(game: Game) : Campaign(game) {
                     val reasons = mutableListOf<String>()
                     race.isRival = rivalFound
 
-                    if (date.year == DateYear.JUNIOR) {
+                    // Solver-scheduled races bypass the grade and consecutive-race filters: the solver already weighed those factors when picking this race.
+                    val solverMatched = solverPlannedKey != null && SmartRaceSolverIntegration.isRaceKeyMatch(race, solverPlannedKey)
+                    if (solverMatched) {
+                        isSuitable = true
+                    } else if (date.year == DateYear.JUNIOR) {
                         if (listOf(RaceGrade.G1, RaceGrade.G2, RaceGrade.G3).contains(race.grade)) {
                             isSuitable = true
                         } else {
@@ -648,7 +657,11 @@ class Trackblazer(game: Game) : Campaign(game) {
                     }
 
                     if (isSuitable) {
-                        allSuitableRaces.add(Candidate(location, race, detectedName, rivalFound))
+                        val candidate = Candidate(location, race, detectedName, rivalFound)
+                        allSuitableRaces.add(candidate)
+                        if (solverMatched) {
+                            solverMatchedCandidate = candidate
+                        }
                     }
                 }
             }
