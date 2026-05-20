@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Animated, LayoutChangeEvent, ViewStyle, Pressab
 import Slider from "@react-native-community/slider"
 import { useTheme } from "../../context/ThemeContext"
 import { copyToClipboard } from "../../lib/utils"
+import { pressSurfaceInner } from "../../lib/pressSurface"
 import { Input } from "../ui/input"
 import SearchableItem from "../SearchableItem"
 
@@ -360,12 +361,13 @@ const CustomSlider: React.FC<CustomSliderProps> = ({
     }
 
     const content = (
-        <View className={className} style={[styles.container, style]}>
-            {label && (
-                <Pressable onLongPress={() => copyToClipboard(label)}>
-                    <Text style={styles.label}>{label}</Text>
-                </Pressable>
-            )}
+        <Pressable
+            className={className}
+            style={[styles.container, pressSurfaceInner, style]}
+            onLongPress={label ? () => copyToClipboard(label) : undefined}
+            android_ripple={label ? { color: colors.ripple, foreground: true } : undefined}
+        >
+            {label && <Text style={styles.label}>{label}</Text>}
             {description && <Text style={styles.descriptionText}>{description}</Text>}
 
             <View style={styles.sliderContainer} onLayout={handleLayout}>
@@ -433,7 +435,7 @@ const CustomSlider: React.FC<CustomSliderProps> = ({
                 </View>
             )}
             {children}
-        </View>
+        </Pressable>
     )
 
     if (searchId) {

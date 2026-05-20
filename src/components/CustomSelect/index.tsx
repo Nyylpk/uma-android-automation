@@ -3,6 +3,7 @@ import { View, LayoutChangeEvent, ViewStyle, Pressable } from "react-native"
 import { Text } from "../ui/text"
 import { useTheme } from "../../context/ThemeContext"
 import { copyToClipboard } from "../../lib/utils"
+import { pressSurfaceInner, pressSurfaceOuter } from "../../lib/pressSurface"
 import { Option, Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue, NativeSelectScrollView } from "../ui/select"
 import SearchableItem from "../SearchableItem"
 
@@ -131,38 +132,40 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     }
 
     const content = (
-        <View style={style}>
-            {label && (
-                <Pressable style={{ marginBottom: 4 }} onLongPress={() => copyToClipboard(label)}>
-                    <Text style={{ fontSize: 16, fontWeight: "600", color: colors.foreground }}>{label}</Text>
-                </Pressable>
-            )}
-            {description && (
-                <View>
-                    <Text style={{ fontSize: 14, color: colors.foreground, opacity: 0.7, marginBottom: 4 }}>{description}</Text>
-                </View>
-            )}
-            <Select onValueChange={handleValueChange} value={value as any} defaultValue={defaultValue as any} disabled={disabled}>
-                <View ref={triggerRef} style={[{ width: width as any }]} onLayout={onTriggerLayout}>
-                    <SelectTrigger disabled={disabled} style={{ backgroundColor: colors.background, borderColor: colors.border }}>
-                        <SelectValue placeholder={value || defaultValue ? (currentLabel ?? "ERROR") : placeholder} style={{ color: colors.foreground }} />
-                    </SelectTrigger>
-                </View>
-                <SelectContent style={{ width: triggerWidth }} portalHost={portalHost}>
-                    <NativeSelectScrollView>
-                        <SelectGroup>
-                            {groupLabel && <SelectLabel>{groupLabel}</SelectLabel>}
-                            {options &&
-                                options.map((option) => (
-                                    <SelectItem key={option.value} label={option.label} value={option.value} disabled={option.disabled}>
-                                        {option.label}
-                                    </SelectItem>
-                                ))}
-                        </SelectGroup>
-                    </NativeSelectScrollView>
-                </SelectContent>
-            </Select>
-            {children}
+        <View style={[pressSurfaceOuter, style]}>
+            <Pressable style={pressSurfaceInner} onLongPress={label ? () => copyToClipboard(label) : undefined} android_ripple={label ? { color: colors.ripple, foreground: true } : undefined}>
+                {label && (
+                    <View style={{ marginBottom: 4 }}>
+                        <Text style={{ fontSize: 16, fontWeight: "600", color: colors.foreground }}>{label}</Text>
+                    </View>
+                )}
+                {description && (
+                    <View>
+                        <Text style={{ fontSize: 14, color: colors.foreground, opacity: 0.7, marginBottom: 4 }}>{description}</Text>
+                    </View>
+                )}
+                <Select onValueChange={handleValueChange} value={value as any} defaultValue={defaultValue as any} disabled={disabled}>
+                    <View ref={triggerRef} style={[{ width: width as any }]} onLayout={onTriggerLayout}>
+                        <SelectTrigger disabled={disabled} style={{ backgroundColor: colors.background, borderColor: colors.border }}>
+                            <SelectValue placeholder={value || defaultValue ? (currentLabel ?? "ERROR") : placeholder} style={{ color: colors.foreground }} />
+                        </SelectTrigger>
+                    </View>
+                    <SelectContent style={{ width: triggerWidth }} portalHost={portalHost}>
+                        <NativeSelectScrollView>
+                            <SelectGroup>
+                                {groupLabel && <SelectLabel>{groupLabel}</SelectLabel>}
+                                {options &&
+                                    options.map((option) => (
+                                        <SelectItem key={option.value} label={option.label} value={option.value} disabled={option.disabled}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                            </SelectGroup>
+                        </NativeSelectScrollView>
+                    </SelectContent>
+                </Select>
+                {children}
+            </Pressable>
         </View>
     )
 

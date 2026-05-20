@@ -1,10 +1,11 @@
 import React from "react"
-import { View, ViewStyle } from "react-native"
+import { Pressable, View, ViewStyle } from "react-native"
 import { Checkbox } from "../ui/checkbox"
 import { Label } from "../ui/label"
 import { Text } from "../ui/text"
 import { useTheme } from "../../context/ThemeContext"
 import { copyToClipboard } from "../../lib/utils"
+import { pressSurfaceInner, pressSurfaceOuter } from "../../lib/pressSurface"
 import SearchableItem from "../SearchableItem"
 
 interface CustomCheckboxProps {
@@ -71,26 +72,28 @@ const CustomCheckbox: React.FC<CustomCheckboxProps> = ({
     const { colors } = useTheme()
 
     const content = (
-        <View className={`flex-row items-start gap-3 ${className}`} style={style}>
-            <Checkbox checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} className="dark:border-gray-400" />
+        <View className={className} style={[pressSurfaceOuter, style]}>
+            <Pressable className="flex-row items-start gap-3" style={pressSurfaceInner} onLongPress={() => copyToClipboard(label)} android_ripple={{ color: colors.ripple, foreground: true }}>
+                <Checkbox checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} className="dark:border-gray-400" />
 
-            {/* flexShrink is used to make sure the description wraps properly and not overflow past the right side of the screen. */}
-            <View style={{ flexShrink: 1 }}>
-                <Label style={{ color: colors.foreground, fontWeight: "bold" }} disabled={disabled} onPress={() => onCheckedChange(!checked)} onLongPress={() => copyToClipboard(label)}>
-                    {label}
-                </Label>
-                {description && (
-                    <Text
-                        className="text-sm mt-1"
-                        style={{
-                            color: colors.mutedForeground,
-                        }}
-                    >
-                        {description}
-                    </Text>
-                )}
-                {children}
-            </View>
+                {/* flexShrink is used to make sure the description wraps properly and not overflow past the right side of the screen. */}
+                <View style={{ flexShrink: 1 }}>
+                    <Label style={{ color: colors.foreground, fontWeight: "bold" }} disabled={disabled} onPress={() => onCheckedChange(!checked)} onLongPress={() => copyToClipboard(label)}>
+                        {label}
+                    </Label>
+                    {description && (
+                        <Text
+                            className="text-sm mt-1"
+                            style={{
+                                color: colors.mutedForeground,
+                            }}
+                        >
+                            {description}
+                        </Text>
+                    )}
+                    {children}
+                </View>
+            </Pressable>
         </View>
     )
 
