@@ -215,6 +215,9 @@ class Trackblazer(game: Game) : Campaign(game) {
     /** Number of cupcakes (Plain preferred over Berry Sweet) held back so Royal Kale Juice's mood penalty can be offset. 0 = no reserve. */
     private val cupcakeReserveCount: Int = SettingsHelper.getIntSetting("scenarioOverrides", "trackblazerCupcakeReserve", 1)
 
+    /** Number of Master Cleat Hammers held back for the Finale days (73-75). 0 = no reserve, spend freely on G1/G2 races. */
+    private val masterHammerFinaleReserve: Int = SettingsHelper.getIntSetting("scenarioOverrides", "trackblazerMasterHammerFinaleReserve", 2)
+
     /** Whether the Reset Whistle forces training. */
     private val whistleForcesTraining: Boolean = SettingsHelper.getBooleanSetting("scenarioOverrides", "trackblazerWhistleForcesTraining", true)
 
@@ -2071,18 +2074,19 @@ class Trackblazer(game: Game) : Campaign(game) {
         val artisanHammerCount = currentInventory["Artisan Cleat Hammer"] ?: 0
         val glowSticksCount = currentInventory["Glow Sticks"] ?: 0
 
-        // Always reserve 2 master hammers for the finale (days 73-75)
-        val spareMasterHammers = (masterHammerCount - 2).coerceAtLeast(0)
+        // Reserve `masterHammerFinaleReserve` master hammers for the finale (days 73-75). Pre-finale days only spend the surplus above that reserve.
+        val spareMasterHammers = (masterHammerCount - masterHammerFinaleReserve).coerceAtLeast(0)
 
         // Master Hammer Logic
         val canUseMasterHammer =
             if (date.day < 73) {
-                // Only use spare masters beyond the 2 reserved for the finale
+                // Only use spare masters beyond the reserve for the finale.
                 spareMasterHammers > 0 && (grade == RaceGrade.G1 || grade == RaceGrade.G2)
             } else {
-                // Ensure we still have enough for remaining finale days.
+                // Ensure we still have enough for remaining finale days. Reserve count caps the per-day allowance.
                 val remainingFinaleDays = listOf(73, 74, 75).count { it >= date.day }
-                val hasEnough = masterHammerCount > remainingFinaleDays.coerceAtMost(masterHammerCount - 1).coerceAtLeast(0)
+                val effectiveReserve = remainingFinaleDays.coerceAtMost(masterHammerCount - 1).coerceAtLeast(0)
+                val hasEnough = masterHammerCount > effectiveReserve
                 hasEnough && grade == RaceGrade.G1
             }
 
