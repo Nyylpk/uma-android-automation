@@ -113,6 +113,9 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
     /** Whether the rainbow training bonus is active. */
     private val enableRainbowTrainingBonus: Boolean = SettingsHelper.getBooleanSetting("training", "enableRainbowTrainingBonus")
 
+    /** Whether to apply an anticipatory rainbow multiplier in Year 2+ when a training has multiple near-max (green/blue) friendship bars. */
+    private val enablePrioritizeNearMaxFriendship: Boolean = SettingsHelper.getBooleanSetting("training", "enablePrioritizeNearMaxFriendship", true)
+
     /** Whether to enable risky training logic. */
     private val enableRiskyTraining: Boolean = SettingsHelper.getBooleanSetting("training", "enableRiskyTraining")
 
@@ -290,6 +293,7 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
      * @property enablePrioritizeSkillHints Whether to prioritize skill hints.
      * @property enableTrainingLevelWeighting Whether to amplify priority-list stat scores by their OCR-detected training level (1-5).
      * @property disableStatTargets Whether per-distance stat targets are overridden by the scenario stat cap for all stats.
+     * @property enablePrioritizeNearMaxFriendship Whether to apply an anticipatory rainbow multiplier in Year 2+ when a training has multiple near-max (green/blue) friendship bars.
      * @property statsTrainedOverBuffer Set of stats that have already exceeded their cap buffer.
      */
     data class TrainingConfig(
@@ -310,6 +314,7 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
         val enablePrioritizeSkillHints: Boolean = false,
         val enableTrainingLevelWeighting: Boolean = false,
         val disableStatTargets: Boolean = false,
+        val enablePrioritizeNearMaxFriendship: Boolean = true,
         val statsTrainedOverBuffer: Set<StatName> = emptySet(),
     ) {
         override fun equals(other: Any?): Boolean {
@@ -334,6 +339,7 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
             if (enablePrioritizeSkillHints != other.enablePrioritizeSkillHints) return false
             if (enableTrainingLevelWeighting != other.enableTrainingLevelWeighting) return false
             if (disableStatTargets != other.disableStatTargets) return false
+            if (enablePrioritizeNearMaxFriendship != other.enablePrioritizeNearMaxFriendship) return false
             if (statsTrainedOverBuffer != other.statsTrainedOverBuffer) return false
 
             return true
@@ -356,6 +362,7 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
             result = 31 * result + enablePrioritizeSkillHints.hashCode()
             result = 31 * result + enableTrainingLevelWeighting.hashCode()
             result = 31 * result + disableStatTargets.hashCode()
+            result = 31 * result + enablePrioritizeNearMaxFriendship.hashCode()
             result = 31 * result + statsTrainedOverBuffer.hashCode()
             return result
         }
@@ -926,6 +933,36 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
 
             // Apply rainbow multiplier to total score.
             totalScore *= rainbowMultiplier
+
+            // 5. Anticipatory rainbow multiplier (Year 2+ only, when no real rainbows present).
+            // Each near-max (green/blue) friendship bar contributes fillPercent/100 to a sum, then 0.2 * sum is added to a 1.0 base, capped at +0.6.
+            // Caps at 1.6x to remain strictly below the real 2.0x rainbow multiplier so anticipation never outranks an actual rainbow.
+            if (
+                config.enablePrioritizeNearMaxFriendship &&
+                config.currentDate.year > DateYear.JUNIOR &&
+                training.numRainbow == 0 &&
+                training.relationshipBars.isNotEmpty()
+            ) {
+                var contributions = 0.0
+                var qualifyingBars = 0
+                for (bar in training.relationshipBars) {
+                    if ((bar.dominantColor == "green" || bar.dominantColor == "blue") && bar.fillPercent > 10.0) {
+                        contributions += bar.fillPercent / 100.0
+                        qualifyingBars += 1
+                    }
+                }
+                if (qualifyingBars > 0) {
+                    val anticipatoryMultiplier = 1.0 + minOf(0.6, 0.2 * contributions)
+                    MessageLog.i(
+                        TAG,
+                        "[TRAINING] [${training.name}] $qualifyingBars near-max friendship bar(s) detected (contributions=${String.format(
+                            "%.2f",
+                            contributions,
+                        )}). Applying anticipatory multiplier ${String.format("%.2fx", anticipatoryMultiplier)}.",
+                    )
+                    totalScore *= anticipatoryMultiplier
+                }
+            }
 
             return totalScore.coerceAtLeast(0.0)
         }
@@ -2060,6 +2097,7 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
                 enablePrioritizeSkillHints = enablePrioritizeSkillHints,
                 enableTrainingLevelWeighting = enableTrainingLevelWeighting,
                 disableStatTargets = disableStatTargets,
+                enablePrioritizeNearMaxFriendship = enablePrioritizeNearMaxFriendship,
                 statsTrainedOverBuffer = statsTrainedOverBuffer,
             )
 
@@ -2231,6 +2269,12 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
                     // Stat Efficiency mode.
                     if (selected.numRainbow > 0) {
                         keyFactors.add("Rainbow training detected (multiplier applied).")
+                    }
+                    if (config.enablePrioritizeNearMaxFriendship && selected.numRainbow == 0) {
+                        val nearMaxFriendshipCount = selected.relationshipBars.count { (it.dominantColor == "green" || it.dominantColor == "blue") && it.fillPercent > 10.0 }
+                        if (nearMaxFriendshipCount > 0) {
+                            keyFactors.add("$nearMaxFriendshipCount near-max friendship bar(s) (anticipatory rainbow multiplier applied).")
+                        }
                     }
                     val mainGain = selected.statGains[selected.name] ?: 0
                     val currentVal = config.currentStats[selected.name] ?: 0
