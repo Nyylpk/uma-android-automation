@@ -44,8 +44,8 @@ class DecisionTracer {
         val mood: Mood,
         /** Active negative status names. Empty when none. */
         val negativeStatuses: List<String>,
-        /** Map of decision-relevant inventory item names to counts. May be empty for campaigns without inventory tracking. */
-        val inventory: Map<String, Int>,
+        /** Decision-relevant inventory grouped by category label (e.g. `Megaphones`) then mapped to item-name -> count. Outer and inner maps preserve insertion order (use `LinkedHashMap`). Empty for campaigns without inventory tracking. */
+        val inventory: Map<String, Map<String, Int>>,
         /** Campaign-specific extra state (e.g. `consecutiveRaceCount` for Trackblazer) as displayable key/value pairs. */
         val extra: Map<String, String>,
     )
@@ -191,18 +191,24 @@ class DecisionTracer {
      *
      * @param date Current game date used for the turn label.
      * @param trainee Live trainee whose state is snapshotted (shallow copy of relevant fields).
-     * @param inventorySnapshot Decision-relevant inventory counts. Pass an empty map when the campaign has no inventory concept.
+     * @param inventorySnapshot Decision-relevant inventory grouped by category label -> item-name -> count. Both maps preserve insertion order (use `LinkedHashMap`). Pass an empty map when the campaign has no inventory concept.
      * @param settings Settings values that drive decisions this turn.
      * @param extraState Optional map of campaign-specific state values (e.g. Trackblazer's `consecutiveRaceCount`) that the base trainee snapshot does not carry.
      */
-    fun startTurn(date: GameDate, trainee: Trainee, inventorySnapshot: Map<String, Int> = emptyMap(), settings: SettingsSnapshot = SettingsSnapshot(), extraState: Map<String, String> = emptyMap()) {
+    fun startTurn(
+        date: GameDate,
+        trainee: Trainee,
+        inventorySnapshot: Map<String, Map<String, Int>> = emptyMap(),
+        settings: SettingsSnapshot = SettingsSnapshot(),
+        extraState: Map<String, String> = emptyMap(),
+    ) {
         turnLabel = formatTurnLabel(date)
         stateSnapshot =
             StateSnapshot(
                 energy = trainee.energy,
                 mood = trainee.mood,
                 negativeStatuses = trainee.currentNegativeStatuses.toList(),
-                inventory = inventorySnapshot.toMap(),
+                inventory = inventorySnapshot.mapValuesTo(LinkedHashMap()) { (_, items) -> LinkedHashMap(items) },
                 extra = extraState.toMap(),
             )
         settingsSnapshot = settings
@@ -355,7 +361,10 @@ class DecisionTracer {
         state.extra.forEach { (key, value) -> sb.append("  $key = $value\n") }
         if (state.inventory.isNotEmpty()) {
             sb.append("Inventory (decision-relevant):\n")
-            state.inventory.toSortedMap().forEach { (name, count) -> sb.append("  $name = $count\n") }
+            state.inventory.forEach { (group, items) ->
+                sb.append("  [$group]\n")
+                items.toSortedMap().forEach { (name, count) -> sb.append("  $name = $count\n") }
+            }
         }
         return sb.toString()
     }

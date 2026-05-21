@@ -1059,11 +1059,21 @@ class Trackblazer(game: Game) : Campaign(game) {
         }
     }
 
-    override fun gatherDecisionInventory(): Map<String, Int> {
-        // Only the items that drive Trackblazer's decision tree this turn. Energy items are aggregated under their displayable name.
-        val keys = listOf("Good-Luck Charm", "Empowering Megaphone", "Motivating Megaphone", "Coaching Megaphone", "Reset Whistle", "Royal Kale Juice", "Berry Sweet Cupcake", "Plain Cupcake")
-        val snapshot = mutableMapOf<String, Int>()
-        keys.forEach { name -> snapshot[name] = currentInventory[name] ?: 0 }
+    override fun gatherDecisionInventory(): Map<String, Map<String, Int>> {
+        // Only the items that drive Trackblazer's decision tree this turn. Grouped by category so the Decision Report renders related items together.
+        val groups =
+            linkedMapOf(
+                "Charms & Whistles" to listOf("Good-Luck Charm", "Reset Whistle"),
+                "Megaphones" to listOf("Empowering Megaphone", "Motivating Megaphone", "Coaching Megaphone"),
+                "Cupcakes & Heals" to listOf("Berry Sweet Cupcake", "Plain Cupcake", "Royal Kale Juice"),
+                "Race Items" to listOf("Artisan Cleat Hammer", "Master Cleat Hammer", "Glow Sticks"),
+            )
+        val snapshot = linkedMapOf<String, Map<String, Int>>()
+        groups.forEach { (group, keys) ->
+            val items = linkedMapOf<String, Int>()
+            keys.forEach { name -> items[name] = currentInventory[name] ?: 0 }
+            snapshot[group] = items
+        }
         return snapshot
     }
 

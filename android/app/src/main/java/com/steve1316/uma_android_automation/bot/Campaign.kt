@@ -819,11 +819,11 @@ abstract class Campaign(game: Game) : Task(game) {
     }
 
     /**
-     * Decision-relevant inventory snapshot for the current turn. Subclasses with inventory tracking (e.g. Trackblazer) should override to
-     * return the items that drive their decisions (charms, whistles, megaphones, energy/mood items). Empty map by default for campaigns
+     * Decision-relevant inventory snapshot for the current turn, grouped by category label (e.g. `Megaphones`, `Race Items`) then mapped to item-name -> count. Subclasses with inventory tracking
+     * (e.g. Trackblazer) should override to return the items that drive their decisions. Use `LinkedHashMap` so the category order is preserved when rendered. Empty map by default for campaigns
      * without inventory.
      */
-    open fun gatherDecisionInventory(): Map<String, Int> = emptyMap()
+    open fun gatherDecisionInventory(): Map<String, Map<String, Int>> = emptyMap()
 
     /**
      * Decision-relevant settings snapshot for the current turn. Subclasses should populate the snapshot with the user-configurable knobs
