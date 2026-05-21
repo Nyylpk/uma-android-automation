@@ -1,7 +1,18 @@
-import { DarkTheme, DefaultTheme, type Theme } from "@react-navigation/native"
+// //////////////////////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////////////////////////
+// Theme tokens
+//
+// Two layers coexist here:
+//
+//   1. The shadcn-derived palette (background, foreground, card, accent, muted, destructive, ...). Existing primitives and pages depend on these names.
+//
+//   2. The semantic design tokens consumed by the new primitives (bg, surface, surfaceRaised, borderHair, borderStrong, text, textMuted, textSubtle, textInverse, brand, brandSubtle, brandBorder, onBrand, glass*). The names are deliberately distinct from the shadcn set so adopting them on a page is an explicit opt-in rather than a silent re-skin.
+//
+// The React Navigation adapter lives in `navTheme.ts` so this file has no runtime dependencies and can be imported safely from Jest tests.
 
 export const THEME = {
     light: {
+        // --- Legacy (shadcn-derived) tokens ---
         background: "hsl(0, 0%, 100%)",
         foreground: "hsl(0, 0%, 3.9%)",
         card: "hsl(0, 0%, 100%)",
@@ -45,8 +56,26 @@ export const THEME = {
         warningContent: "hsl(23 93% 25%)",
         error: "hsl(349 100% 69%)",
         errorContent: "hsl(342 95% 15%)",
+        // --- Design tokens (warm stone light) ---
+        bg: "#fafaf9",
+        surface: "#ffffff",
+        surfaceRaised: "#ffffff",
+        borderHair: "#e7e5e4",
+        borderStrong: "#d6d3d1",
+        text: "#1c1917",
+        textMuted: "#78716c",
+        textSubtle: "#a8a29e",
+        textInverse: "#ffffff",
+        brand: "#0891b2",
+        brandSubtle: "rgba(8, 145, 178, 0.10)",
+        brandBorder: "rgba(8, 145, 178, 0.35)",
+        onBrand: "#ffffff",
+        glassBackground: "rgba(255, 255, 255, 0.72)",
+        glassBorder: "rgba(0, 0, 0, 0.08)",
+        glassBackdrop: "rgba(0, 0, 0, 0.20)",
     },
     dark: {
+        // --- Legacy (shadcn-derived) tokens ---
         background: "hsl(0, 0%, 3.9%)",
         foreground: "hsl(0, 0%, 98%)",
         card: "hsl(0, 0%, 3.9%)",
@@ -90,30 +119,25 @@ export const THEME = {
         warningContent: "hsl(23 93% 25%)",
         error: "hsl(349 100% 69%)",
         errorContent: "hsl(342 95% 15%)",
+        // --- Design tokens (Linear/Vercel dark) ---
+        bg: "#0a0a0a",
+        surface: "#111114",
+        surfaceRaised: "#18181b",
+        borderHair: "#1f1f23",
+        borderStrong: "#2a2a30",
+        text: "#ededed",
+        textMuted: "#6b6b73",
+        textSubtle: "#4a4a52",
+        textInverse: "#0a0a0a",
+        brand: "#22d3ee",
+        brandSubtle: "rgba(34, 211, 238, 0.10)",
+        brandBorder: "rgba(34, 211, 238, 0.35)",
+        onBrand: "#0a0a0a",
+        glassBackground: "rgba(28, 28, 32, 0.72)",
+        glassBorder: "rgba(255, 255, 255, 0.10)",
+        glassBackdrop: "rgba(0, 0, 0, 0.50)",
     },
 }
 
-export const NAV_THEME: Record<"light" | "dark", Theme> = {
-    light: {
-        ...DefaultTheme,
-        colors: {
-            background: THEME.light.background,
-            border: THEME.light.border,
-            card: THEME.light.card,
-            notification: THEME.light.destructive,
-            primary: THEME.light.primary,
-            text: THEME.light.foreground,
-        },
-    },
-    dark: {
-        ...DarkTheme,
-        colors: {
-            background: THEME.dark.background,
-            border: THEME.dark.border,
-            card: THEME.dark.card,
-            notification: THEME.dark.destructive,
-            primary: THEME.dark.primary,
-            text: THEME.dark.foreground,
-        },
-    },
-}
+/** Type of a single theme variant. Use as the static color contract for components. */
+export type ThemeColors = typeof THEME.light

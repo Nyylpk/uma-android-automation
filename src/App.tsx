@@ -30,7 +30,7 @@ import DiscordSettings from "./pages/DiscordSettings"
 import LLMSettings from "./pages/LLMSettings"
 import Chat from "./pages/Chat"
 import DrawerContent from "./components/DrawerContent"
-import { NAV_THEME } from "./lib/theme"
+import { NAV_THEME } from "./lib/navTheme"
 
 export const Tag = "UAA"
 
