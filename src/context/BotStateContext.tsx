@@ -218,6 +218,13 @@ export interface Settings {
         trackblazerShopCheckFrequency: number
         trackblazerPreferredDistances: string[]
         trackblazerPreferredSurfaces: string[]
+        trackblazerEnergyItemReserve: number
+        trackblazerCupcakeReserve: number
+        trackblazerMasterHammerFinaleReserve: number
+        trackblazerArtisanHammerMinStockForG3: number
+        trackblazerArtisanHammerMinStockForG2: number
+        trackblazerGlowStickFinalReserve: number
+        trackblazerGlowStickMinFans: number
     }
 }
 
@@ -461,6 +468,13 @@ export const defaultSettings: Settings = {
         trackblazerShopCheckFrequency: 3,
         trackblazerPreferredDistances: [] as string[],
         trackblazerPreferredSurfaces: [] as string[],
+        trackblazerEnergyItemReserve: 1,
+        trackblazerCupcakeReserve: 1,
+        trackblazerMasterHammerFinaleReserve: 2,
+        trackblazerArtisanHammerMinStockForG3: 3,
+        trackblazerArtisanHammerMinStockForG2: 2,
+        trackblazerGlowStickFinalReserve: 1,
+        trackblazerGlowStickMinFans: 20000,
     },
 }
 

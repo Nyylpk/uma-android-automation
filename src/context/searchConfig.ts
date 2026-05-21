@@ -782,6 +782,55 @@ const searchConfig: SearchOption[] = [
         description: "Select preferred track surfaces for extra race selection. Matching races will be prioritized. Leave empty for no preference.",
         page: "ScenarioOverridesSettings",
     },
+    {
+        id: "trackblazer-energy-item-reserve",
+        title: "Trackblazer Energy Item Emergency Reserve",
+        description:
+            "Number of energy items (lowest-tier first) the Trackblazer bot keeps reserved for emergency race recovery when energy hits 1% or below with 3+ consecutive races. Set to 0 to disable the reserve and use energy items freely.",
+        page: "ScenarioOverridesSettings",
+    },
+    {
+        id: "trackblazer-cupcake-reserve",
+        title: "Trackblazer Cupcake Reserve for Kale Juice Synergy",
+        description:
+            "Number of cupcakes (Plain preferred) the Trackblazer bot keeps so the mood penalty from Royal Kale Juice can be offset. Set to 0 to disable the reserve and use cupcakes freely for mood.",
+        page: "ScenarioOverridesSettings",
+    },
+    {
+        id: "trackblazer-master-hammer-finale-reserve",
+        title: "Trackblazer Master Cleat Hammer Finale Reserve",
+        description:
+            "Master Cleat Hammers the Trackblazer bot holds back for the Finale days (73-75). Pre-finale days only spend the surplus above this reserve, and only on G1/G2 races. Set to 0 to disable the reserve.",
+        page: "ScenarioOverridesSettings",
+    },
+    {
+        id: "trackblazer-artisan-hammer-min-stock-for-g3",
+        title: "Trackblazer Artisan Hammer Min Stock for G3",
+        description:
+            "Minimum Artisan Cleat Hammer inventory before the Trackblazer bot is allowed to spend one on a G3 race. Set to 0 to always allow G3 use (as long as stock is positive).",
+        page: "ScenarioOverridesSettings",
+    },
+    {
+        id: "trackblazer-artisan-hammer-min-stock-for-g2",
+        title: "Trackblazer Artisan Hammer Min Stock for G2",
+        description:
+            "Minimum Artisan Cleat Hammer inventory before the Trackblazer bot is allowed to spend one on a G2 race. G1 is always allowed. Set to 0 to always allow G2 use (as long as stock is positive).",
+        page: "ScenarioOverridesSettings",
+    },
+    {
+        id: "trackblazer-glow-stick-final-reserve",
+        title: "Trackblazer Glow Stick Final-Day Reserve",
+        description:
+            "Glow Sticks the Trackblazer bot holds back for Day 75 (the Final). Pre-final-day races only spend sticks above this reserve. Set to 0 to disable the reserve.",
+        page: "ScenarioOverridesSettings",
+    },
+    {
+        id: "trackblazer-glow-stick-min-fans",
+        title: "Trackblazer Glow Stick Minimum Fans",
+        description:
+            "Minimum projected fan gain on a race before the Trackblazer bot uses a Glow Stick on it. Applies on standard and finale days. Set to 0 to use Glow Sticks on any race.",
+        page: "ScenarioOverridesSettings",
+    },
 
     // ============================================================
     // Discord Settings
