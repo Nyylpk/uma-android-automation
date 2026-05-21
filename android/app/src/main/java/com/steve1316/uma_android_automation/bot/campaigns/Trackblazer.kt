@@ -224,6 +224,12 @@ class Trackblazer(game: Game) : Campaign(game) {
     /** Minimum Artisan Cleat Hammer stock required before the bot will spend one on a G2 race. 0 = always allowed when stock > 0. G1 is always allowed. */
     private val artisanMinStockForG2: Int = SettingsHelper.getIntSetting("scenarioOverrides", "trackblazerArtisanHammerMinStockForG2", 2)
 
+    /** Number of Glow Sticks held back for Day 75 (the Final). 0 = no reserve. */
+    private val glowStickFinalReserve: Int = SettingsHelper.getIntSetting("scenarioOverrides", "trackblazerGlowStickFinalReserve", 1)
+
+    /** Minimum projected fan gain on a race before a Glow Stick is used. 0 = use on any race. */
+    private val glowStickMinFans: Int = SettingsHelper.getIntSetting("scenarioOverrides", "trackblazerGlowStickMinFans", 20000)
+
     /** Whether the Reset Whistle forces training. */
     private val whistleForcesTraining: Boolean = SettingsHelper.getBooleanSetting("scenarioOverrides", "trackblazerWhistleForcesTraining", true)
 
@@ -2125,18 +2131,11 @@ class Trackblazer(game: Game) : Campaign(game) {
                 }
             }
 
-        // Glow Sticks Logic
-        val useGlowSticks =
-            if (date.day >= 73) {
-                // Reserve 1 stick for Day 75 (the Final).
-                val reserveForFinals = if (date.day < 75) 1 else 0
-                fans >= 20000 && glowSticksCount > reserveForFinals
-            } else if (fans >= 30000) {
-                // Use the last stick. Shops refresh when the Finales start so there is a chance for another Glow Stick to buy.
-                glowSticksCount > 0
-            } else {
-                fans >= 20000 && glowSticksCount > 1
-            }
+        // Glow Sticks Logic. User-configured controls:
+        // - `glowStickFinalReserve` holds N sticks back for Day 75 (the Final). Pre-Day-75 races only spend the surplus.
+        // - `glowStickMinFans` is the per-race fan floor. Applies on standard and finale days.
+        val effectiveReserve = if (date.day < 75) glowStickFinalReserve else 0
+        val useGlowSticks = fans >= glowStickMinFans && glowSticksCount > effectiveReserve
 
         if (hammerToUse != null || useGlowSticks) {
             MessageLog.i(TAG, "[TRACKBLAZER] Suitable race items found in inventory (Hammer: $hammerToUse, Glow Sticks: $useGlowSticks). Opening Training Items dialog.")
