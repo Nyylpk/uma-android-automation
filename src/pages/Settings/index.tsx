@@ -4,15 +4,17 @@ import { BotMetaContext, GeneralMiscContext } from "../../context/BotStateContex
 import { InteractionManager, ScrollView, StyleSheet, Text, View } from "react-native"
 import { Snackbar } from "react-native-paper"
 import { useNavigation } from "@react-navigation/native"
+import { Ionicons } from "@react-native-vector-icons/ionicons"
 import ThemeToggle from "../../components/ThemeToggle"
 import { useTheme } from "../../context/ThemeContext"
 import CustomSelect from "../../components/CustomSelect"
-import NavigationLink from "../../components/NavigationLink"
 import CustomCheckbox from "../../components/CustomCheckbox"
 import CustomSlider from "../../components/CustomSlider"
 import CustomTitle from "../../components/CustomTitle"
 import CustomButton from "../../components/CustomButton"
 import PageHeader from "../../components/PageHeader"
+import { Row } from "../../components/ui/row"
+import { Section } from "../../components/ui/section"
 import { Separator } from "../../components/ui/separator"
 import WarningContainer from "../../components/WarningContainer"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../../components/ui/alert-dialog"
@@ -148,87 +150,73 @@ const Settings = () => {
         [general]
     )
 
-    const renderTrainingLink = () => {
-        return (
-            <NavigationLink
-                title="Go to Training Settings"
-                description="Configure which stats to train, set priorities, and customize training behavior."
-                onPress={() => navigation.navigate("TrainingSettings" as never)}
-            />
-        )
-    }
+    // Shared chevron icon used as the right-aligned affordance on every navigation Row.
+    const chevron = <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
 
-    const renderTrainingEventLink = () => {
+    const renderNavigationSections = () => {
         return (
-            <NavigationLink
-                title="Go to Training Event Settings"
-                description="Configure training event preferences and event selection behavior."
-                onPress={() => navigation.navigate("TrainingEventSettings" as never)}
-            />
-        )
-    }
+            <>
+                <Section label="GAMEPLAY">
+                    <Row
+                        title="Training"
+                        description="Stat priorities, training behavior, and customization."
+                        right={chevron}
+                        onPress={() => navigation.navigate("TrainingSettings" as never)}
+                    />
+                    <Row
+                        title="Training Events"
+                        description="Training event preferences and event selection."
+                        right={chevron}
+                        onPress={() => navigation.navigate("TrainingEventSettings" as never)}
+                    />
+                    <Row
+                        title="Racing"
+                        description="Racing behavior, retries, and mandatory race handling."
+                        right={chevron}
+                        onPress={() => navigation.navigate("RacingSettings" as never)}
+                    />
+                    <Row title="Skills" description="Skill purchasing behavior." right={chevron} onPress={() => navigation.navigate("SkillSettings" as never)} />
+                </Section>
 
-    const renderRacingLink = () => {
-        return (
-            <NavigationLink
-                title="Go to Racing Settings"
-                description="Configure racing behavior, retry settings, mandatory race handling, and more."
-                onPress={() => navigation.navigate("RacingSettings" as never)}
-            />
-        )
-    }
+                <Section label="SCENARIO">
+                    <Row
+                        title="Scenario Overrides"
+                        description="Behavior overrides specific to each scenario."
+                        right={chevron}
+                        onPress={() => navigation.navigate("ScenarioOverridesSettings" as never)}
+                    />
+                </Section>
 
-    const renderSkillsLink = () => {
-        return <NavigationLink title="Go to Skills Settings" description="Configure skill purchasing behavior." onPress={() => navigation.navigate("SkillSettings" as never)} />
-    }
+                <Section label="INTEGRATIONS">
+                    <Row
+                        title="Discord"
+                        description="Discord notifications when the bot stops."
+                        right={chevron}
+                        onPress={() => navigation.navigate("DiscordSettings" as never)}
+                    />
+                    <Row
+                        title="LLM"
+                        description="On-device docs search and chat model downloads."
+                        right={chevron}
+                        onPress={() => navigation.navigate("LLMSettings" as never)}
+                    />
+                </Section>
 
-    const renderEventLogVisualizerLink = () => {
-        return (
-            <NavigationLink
-                title="Go to Event Log Visualizer (Beta)"
-                description="Import logs and view a day-by-day timeline of actions."
-                onPress={() => navigation.navigate("EventLogVisualizer" as never)}
-            />
-        )
-    }
-
-    const renderScenarioOverridesLink = () => {
-        return (
-            <NavigationLink
-                title="Go to Scenario Overrides Settings"
-                description="Configure behavior overrides specific to each scenario."
-                onPress={() => navigation.navigate("ScenarioOverridesSettings" as never)}
-            />
-        )
-    }
-
-    const renderDebugLink = () => {
-        return (
-            <NavigationLink
-                title="Go to Debug Settings"
-                description="Configure debug mode, template matching settings, and diagnostic tests for bot troubleshooting."
-                onPress={() => navigation.navigate("DebugSettings" as never)}
-            />
-        )
-    }
-
-    const renderDiscordLink = () => {
-        return (
-            <NavigationLink
-                title="Go to Discord Settings"
-                description="Configure Discord bot notifications to receive DM updates when the bot stops."
-                onPress={() => navigation.navigate("DiscordSettings" as never)}
-            />
-        )
-    }
-
-    const renderLLMSettingsLink = () => {
-        return (
-            <NavigationLink
-                title="Go to LLM Settings"
-                description="Configure on-device docs search and chat model downloads for the Ask the Docs feature."
-                onPress={() => navigation.navigate("LLMSettings" as never)}
-            />
+                <Section label="TOOLS">
+                    <Row
+                        title="Event Log Visualizer (Beta)"
+                        description="Import logs and view a day-by-day timeline of actions."
+                        right={chevron}
+                        onPress={() => navigation.navigate("EventLogVisualizer" as never)}
+                    />
+                    <Row
+                        title="Debug"
+                        description="Debug mode, template matching, and diagnostic tests."
+                        right={chevron}
+                        onPress={() => navigation.navigate("DebugSettings" as never)}
+                    />
+                </Section>
+            </>
         )
     }
 
@@ -458,15 +446,7 @@ const Settings = () => {
                 >
                     <PageHeader title="Settings" rightComponent={<ThemeToggle />} />
                     <View className="m-1">
-                        {renderTrainingLink()}
-                        {renderTrainingEventLink()}
-                        {renderRacingLink()}
-                        {renderSkillsLink()}
-                        {renderEventLogVisualizerLink()}
-                        {renderDiscordLink()}
-                        {renderScenarioOverridesLink()}
-                        {renderDebugLink()}
-                        {renderLLMSettingsLink()}
+                        {renderNavigationSections()}
                         {showHeavySections && renderMiscSettings()}
                     </View>
                 </ScrollView>
