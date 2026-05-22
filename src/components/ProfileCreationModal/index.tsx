@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from "react"
-import { View, Text, StyleSheet, Modal, Pressable, ScrollView } from "react-native"
+import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native"
+import { GlassModal } from "../ui/glass-modal"
 import { useTheme } from "../../context/ThemeContext"
 import CustomButton from "../CustomButton"
 import { Input } from "../ui/input"
@@ -47,12 +48,6 @@ const ProfileCreationModal: React.FC<ProfileCreationModalProps> = ({ visible, on
     const styles = useMemo(
         () =>
             StyleSheet.create({
-                modal: {
-                    flex: 1,
-                    justifyContent: "center",
-                    alignItems: "center",
-                    backgroundColor: "rgba(70, 70, 70, 0.5)",
-                },
                 modalContent: {
                     backgroundColor: colors.surface,
                     borderRadius: 12,
@@ -237,11 +232,9 @@ const ProfileCreationModal: React.FC<ProfileCreationModalProps> = ({ visible, on
     }, [onClose])
 
     return (
-        <Modal visible={visible} transparent={true} animationType="fade" onRequestClose={handleClose}>
-            <View style={styles.modal}>
-                <View style={styles.modalContent}>
-                    {/* Header */}
-                    <View style={styles.header}>
+        <GlassModal visible={visible} onRequestClose={handleClose} contentStyle={styles.modalContent}>
+            {/* Header */}
+            <View style={styles.header}>
                         <Text style={styles.title}>Create New Profile</Text>
                         <Pressable style={styles.closeButton} onPress={handleClose} android_ripple={{ color: colors.ripple, foreground: true }}>
                             <X size={24} color={colors.text} />
@@ -297,17 +290,15 @@ const ProfileCreationModal: React.FC<ProfileCreationModalProps> = ({ visible, on
                         </ScrollView>
                     </View>
 
-                    <View style={styles.buttonRow}>
-                        <CustomButton onPress={handleClose} variant="outline" disabled={isCreating}>
-                            Cancel
-                        </CustomButton>
-                        <CustomButton onPress={handleCreate} variant={isCreating || !profileName.trim() ? "destructive" : "default"} disabled={isCreating || !profileName.trim()}>
-                            Create Profile
-                        </CustomButton>
-                    </View>
-                </View>
+            <View style={styles.buttonRow}>
+                <CustomButton onPress={handleClose} variant="outline" disabled={isCreating}>
+                    Cancel
+                </CustomButton>
+                <CustomButton onPress={handleCreate} variant={isCreating || !profileName.trim() ? "destructive" : "default"} disabled={isCreating || !profileName.trim()}>
+                    Create Profile
+                </CustomButton>
             </View>
-        </Modal>
+        </GlassModal>
     )
 }
 
