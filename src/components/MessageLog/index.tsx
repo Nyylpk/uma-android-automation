@@ -12,6 +12,7 @@ import { Copy, Plus, Minus, Type, X, ArrowUp, ArrowDown, ArrowUpAZ, ArrowDownZA 
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog"
 import { CustomScrollView } from "../CustomScrollView"
+import { GlassFab } from "../ui/glass-fab"
 
 const createStyles = (colors: ThemeColors) =>
     StyleSheet.create({
@@ -113,16 +114,6 @@ const createStyles = (colors: ThemeColors) =>
             flexDirection: "column",
             gap: 6,
             zIndex: 1000,
-        },
-        floatingButton: {
-            width: 36,
-            height: 36,
-            borderRadius: 18,
-            backgroundColor: colors.surfaceRaised,
-            alignItems: "center",
-            justifyContent: "center",
-            elevation: 3,
-            opacity: 0.7,
         },
     })
 
@@ -699,9 +690,7 @@ const MessageLog = () => {
                             pointerEvents: showScrollToTop ? "auto" : "none",
                         }}
                     >
-                        <Pressable style={styles.floatingButton} onPress={scrollToTop} android_ripple={{ color: colors.ripple, foreground: true }}>
-                            <ArrowUp size={16} color={colors.text} />
-                        </Pressable>
+                        <GlassFab onPress={scrollToTop} accessibilityLabel="Scroll to top" icon={<ArrowUp size={20} color={colors.brand} />} />
                     </Animated.View>
                     <Animated.View
                         style={{
@@ -709,9 +698,7 @@ const MessageLog = () => {
                             pointerEvents: showScrollToBottom ? "auto" : "none",
                         }}
                     >
-                        <Pressable style={styles.floatingButton} onPress={scrollToBottom} android_ripple={{ color: colors.ripple, foreground: true }}>
-                            <ArrowDown size={16} color={colors.text} />
-                        </Pressable>
+                        <GlassFab onPress={scrollToBottom} accessibilityLabel="Scroll to bottom" icon={<ArrowDown size={20} color={colors.brand} />} />
                     </Animated.View>
                 </View>
             )}
