@@ -56,13 +56,13 @@ const DrawerContent: React.FC<DrawerContentComponentProps> = (props) => {
             StyleSheet.create({
                 container: {
                     flex: 1,
-                    backgroundColor: colors.card,
+                    backgroundColor: colors.surface,
                 },
                 header: {
                     paddingBottom: 12,
                     paddingHorizontal: 20,
                     borderBottomWidth: 1,
-                    borderBottomColor: colors.border,
+                    borderBottomColor: colors.borderHair,
                     flexDirection: "row",
                     alignItems: "center",
                     justifyContent: "space-between",
@@ -74,12 +74,12 @@ const DrawerContent: React.FC<DrawerContentComponentProps> = (props) => {
                 headerTitle: {
                     fontSize: 24,
                     fontWeight: "bold",
-                    color: colors.foreground,
+                    color: colors.text,
                     marginBottom: 4,
                 },
                 headerSubtitle: {
                     fontSize: 14,
-                    color: colors.mutedForeground,
+                    color: colors.textMuted,
                 },
                 menuContainer: {
                     paddingTop: 8,
@@ -94,7 +94,7 @@ const DrawerContent: React.FC<DrawerContentComponentProps> = (props) => {
                     borderRadius: 0,
                 },
                 menuItemActive: {
-                    backgroundColor: colors.muted,
+                    backgroundColor: colors.surfaceRaised,
                 },
                 menuItemIcon: {
                     marginRight: 16,
@@ -104,11 +104,11 @@ const DrawerContent: React.FC<DrawerContentComponentProps> = (props) => {
                 menuItemText: {
                     fontSize: 16,
                     fontWeight: "500",
-                    color: colors.foreground,
+                    color: colors.text,
                     flex: 1,
                 },
                 menuItemTextActive: {
-                    color: colors.primary,
+                    color: colors.brand,
                     fontWeight: "600",
                 },
                 chevronButton: { ...circularPress(40), marginLeft: 8 },
@@ -126,7 +126,7 @@ const DrawerContent: React.FC<DrawerContentComponentProps> = (props) => {
                     borderRadius: 0,
                 },
                 nestedItemActive: {
-                    backgroundColor: colors.muted,
+                    backgroundColor: colors.surfaceRaised,
                 },
                 nestedItemIcon: {
                     marginRight: 16,
@@ -136,11 +136,11 @@ const DrawerContent: React.FC<DrawerContentComponentProps> = (props) => {
                 nestedItemText: {
                     fontSize: 15,
                     fontWeight: "400",
-                    color: colors.foreground,
+                    color: colors.text,
                     flex: 1,
                 },
                 nestedItemTextActive: {
-                    color: colors.primary,
+                    color: colors.brand,
                     fontWeight: "500",
                 },
                 doubleNestedItem: {
@@ -154,7 +154,7 @@ const DrawerContent: React.FC<DrawerContentComponentProps> = (props) => {
                     borderRadius: 0,
                 },
                 doubleNestedItemActive: {
-                    backgroundColor: colors.muted,
+                    backgroundColor: colors.surfaceRaised,
                 },
                 doubleNestedItemIcon: {
                     marginRight: 16,
@@ -164,17 +164,17 @@ const DrawerContent: React.FC<DrawerContentComponentProps> = (props) => {
                 doubleNestedItemText: {
                     fontSize: 14,
                     fontWeight: "400",
-                    color: colors.foreground,
+                    color: colors.text,
                     flex: 1,
                 },
                 doubleNestedItemTextActive: {
-                    color: colors.primary,
+                    color: colors.brand,
                     fontWeight: "500",
                 },
                 footer: {
                     padding: 20,
                     borderTopWidth: 1,
-                    borderTopColor: colors.border,
+                    borderTopColor: colors.borderHair,
                 },
                 footerButton: {
                     flexDirection: "row",
@@ -183,7 +183,7 @@ const DrawerContent: React.FC<DrawerContentComponentProps> = (props) => {
                 },
                 footerText: {
                     fontSize: 16,
-                    color: colors.primary,
+                    color: colors.brand,
                     fontWeight: "600",
                 },
             }),
@@ -502,12 +502,12 @@ const DrawerContent: React.FC<DrawerContentComponentProps> = (props) => {
                     onPress={() => (level === 0 ? handleParentNavigation(item) : handleNavigation(item.name))}
                 >
                     <View style={iconStyle}>
-                        <Ionicons name={item.icon(isActive) as any} size={iconSize} color={isActive ? colors.primary : colors.foreground} />
+                        <Ionicons name={item.icon(isActive) as any} size={iconSize} color={isActive ? colors.brand : colors.text} />
                     </View>
                     <Text style={[textStyle, isActive && textActiveStyle]}>{item.label}</Text>
                     {item.nested && (
                         <Pressable onPress={(e) => handleChevronPress(e, item)} style={styles.chevronButton} android_ripple={{ color: colors.ripple, foreground: true }}>
-                            <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={chevronSize} color={colors.mutedForeground} />
+                            <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={chevronSize} color={colors.textMuted} />
                         </Pressable>
                     )}
                 </Pressable>
@@ -533,7 +533,7 @@ const DrawerContent: React.FC<DrawerContentComponentProps> = (props) => {
             <View style={styles.footer}>
                 <Pressable onPress={() => Linking.openURL("https://github.com/steve1316/uma-android-automation")} android_ripple={{ color: colors.ripple, foreground: true }}>
                     <View style={styles.footerButton}>
-                        <Ionicons name="logo-github" size={32} color={colors.primary} style={{ marginRight: 8 }} />
+                        <Ionicons name="logo-github" size={32} color={colors.brand} style={{ marginRight: 8 }} />
                         <Text style={styles.footerText}>Go to GitHub</Text>
                     </View>
                 </Pressable>
