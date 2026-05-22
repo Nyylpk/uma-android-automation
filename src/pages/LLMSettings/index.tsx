@@ -425,65 +425,65 @@ const LLMSettings = () => {
     const styles = useMemo(
         () =>
             StyleSheet.create({
-                root: { flex: 1, margin: 10, backgroundColor: colors.background },
+                root: { flex: 1, margin: 10, backgroundColor: colors.bg },
                 section: { marginTop: 14 },
-                sectionLabel: { fontSize: 13, fontWeight: "600", color: colors.foreground, marginBottom: 6 },
-                statusRow: { color: colors.foreground, marginBottom: 4 },
-                hint: { fontSize: 11, color: colors.mutedForeground, marginTop: 4 },
+                sectionLabel: { fontSize: 13, fontWeight: "600", color: colors.text, marginBottom: 6 },
+                statusRow: { color: colors.text, marginBottom: 4 },
+                hint: { fontSize: 11, color: colors.textMuted, marginTop: 4 },
                 linkRowContainer: { flexDirection: "row" as const, gap: 16, marginTop: 4 },
                 linkRow: { paddingVertical: 10 },
-                link: { fontSize: 14, color: colors.primary, textDecorationLine: "underline" as const },
+                link: { fontSize: 14, color: colors.brand, textDecorationLine: "underline" as const },
                 tokenInput: {
                     borderWidth: 1,
-                    borderColor: colors.border,
+                    borderColor: colors.borderHair,
                     borderRadius: 6,
                     paddingHorizontal: 10,
                     paddingVertical: 8,
-                    color: colors.foreground,
-                    backgroundColor: colors.card,
+                    color: colors.text,
+                    backgroundColor: colors.surface,
                     marginTop: 6,
                 },
                 presetCard: {
                     borderWidth: 1,
-                    borderColor: colors.border,
+                    borderColor: colors.borderHair,
                     borderRadius: 6,
                     paddingHorizontal: 10,
                     paddingVertical: 8,
                     marginTop: 6,
-                    backgroundColor: colors.card,
+                    backgroundColor: colors.surface,
                 },
-                presetCardSelected: { borderColor: colors.primary, borderWidth: 2 },
-                presetLabel: { color: colors.foreground, fontSize: 13, fontWeight: "600" },
-                presetDetail: { color: colors.mutedForeground, fontSize: 11, marginTop: 2 },
+                presetCardSelected: { borderColor: colors.brand, borderWidth: 2 },
+                presetLabel: { color: colors.text, fontSize: 13, fontWeight: "600" },
+                presetDetail: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
                 modelRow: {
                     flexDirection: "row" as const,
                     alignItems: "center" as const,
                     justifyContent: "space-between" as const,
                     borderWidth: 1,
-                    borderColor: colors.border,
+                    borderColor: colors.borderHair,
                     borderRadius: 6,
                     paddingHorizontal: 10,
                     paddingVertical: 8,
                     marginTop: 6,
-                    backgroundColor: colors.card,
+                    backgroundColor: colors.surface,
                 },
-                modelRowActive: { borderColor: colors.primary, borderWidth: 2 },
+                modelRowActive: { borderColor: colors.brand, borderWidth: 2 },
                 modelInfo: { flex: 1, marginRight: 8 },
-                modelFilename: { color: colors.foreground, fontSize: 13, fontWeight: "600" as const },
-                modelMeta: { color: colors.mutedForeground, fontSize: 11, marginTop: 2 },
+                modelFilename: { color: colors.text, fontSize: 13, fontWeight: "600" as const },
+                modelMeta: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
                 modelActions: { flexDirection: "row" as const, gap: 6 },
                 modelActionButton: {
                     paddingHorizontal: 10,
                     paddingVertical: 6,
                     borderRadius: 4,
                     borderWidth: 1,
-                    borderColor: colors.border,
+                    borderColor: colors.borderHair,
                 },
-                modelActionText: { color: colors.foreground, fontSize: 12 },
-                modelActionActiveText: { color: colors.primary, fontSize: 12, fontWeight: "600" as const },
+                modelActionText: { color: colors.text, fontSize: 12 },
+                modelActionActiveText: { color: colors.brand, fontSize: 12, fontWeight: "600" as const },
                 activeBadge: { flexDirection: "row" as const, alignItems: "center" as const, gap: 4, paddingHorizontal: 4 },
                 tuningHeader: { flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "space-between" as const },
-                warningHint: { fontSize: 11, color: colors.warningBorder ?? colors.foreground, marginTop: 6 },
+                warningHint: { fontSize: 11, color: colors.warningBorder ?? colors.text, marginTop: 6 },
                 buttonRow: { flexDirection: "row", gap: 8, marginTop: 8 },
             }),
         [colors]
@@ -607,7 +607,7 @@ const LLMSettings = () => {
                                             value={hfToken}
                                             onChangeText={persistHfToken}
                                             placeholder="hf_... (only for gated repos)"
-                                            placeholderTextColor={colors.mutedForeground}
+                                            placeholderTextColor={colors.textMuted}
                                             autoCapitalize="none"
                                             autoCorrect={false}
                                         />
@@ -616,7 +616,7 @@ const LLMSettings = () => {
                                             value={modelUrl === CUSTOM_URL_SENTINEL ? "" : modelUrl}
                                             onChangeText={persistModelUrl}
                                             placeholder="Model .gguf URL"
-                                            placeholderTextColor={colors.mutedForeground}
+                                            placeholderTextColor={colors.textMuted}
                                             autoCapitalize="none"
                                             autoCorrect={false}
                                         />
@@ -655,7 +655,7 @@ const LLMSettings = () => {
                                             <View style={styles.modelActions}>
                                                 {isActive ? (
                                                     <View style={styles.activeBadge}>
-                                                        <Check size={14} color={colors.primary} />
+                                                        <Check size={14} color={colors.brand} />
                                                         <Text style={styles.modelActionActiveText}>Active</Text>
                                                     </View>
                                                 ) : (
@@ -674,7 +674,7 @@ const LLMSettings = () => {
                                                     accessibilityRole="button"
                                                     android_ripple={{ color: colors.ripple, foreground: true }}
                                                 >
-                                                    <Trash2 size={14} color={colors.foreground} />
+                                                    <Trash2 size={14} color={colors.text} />
                                                 </Pressable>
                                             </View>
                                         </View>

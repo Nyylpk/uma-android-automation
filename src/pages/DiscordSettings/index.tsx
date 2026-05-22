@@ -77,7 +77,7 @@ const DiscordSettings = () => {
                     flexDirection: "column",
                     justifyContent: "center",
                     margin: 10,
-                    backgroundColor: colors.background,
+                    backgroundColor: colors.bg,
                 },
                 section: {
                     marginBottom: 24,
@@ -85,12 +85,12 @@ const DiscordSettings = () => {
                 inputLabel: {
                     fontSize: 14,
                     fontWeight: "600",
-                    color: colors.foreground,
+                    color: colors.text,
                     marginBottom: 6,
                 },
                 inputDescription: {
                     fontSize: 12,
-                    color: colors.foreground + "99",
+                    color: colors.textMuted,
                     marginBottom: 8,
                 },
                 textInput: {
@@ -99,7 +99,7 @@ const DiscordSettings = () => {
                     borderRadius: 8,
                     padding: 12,
                     fontSize: 14,
-                    color: colors.foreground,
+                    color: colors.text,
                     backgroundColor: isDark ? "#1a1a1a" : "#f9f9f9",
                 },
                 textInputDisabled: {
@@ -121,7 +121,7 @@ const DiscordSettings = () => {
                 },
                 resultText: {
                     fontSize: 13,
-                    color: colors.foreground,
+                    color: colors.text,
                 },
             }),
         [colors, isDark]
@@ -161,7 +161,7 @@ const DiscordSettings = () => {
                                     value={discordToken}
                                     onChangeText={(text) => updateDiscordSetting("discordToken", text)}
                                     placeholder="Enter your Discord bot token..."
-                                    placeholderTextColor={colors.foreground + "55"}
+                                    placeholderTextColor={colors.textSubtle}
                                     editable={enableDiscordNotifications}
                                     autoCapitalize="none"
                                     autoCorrect={false}
@@ -184,7 +184,7 @@ const DiscordSettings = () => {
                                     value={discordUserID}
                                     onChangeText={(text) => updateDiscordSetting("discordUserID", text)}
                                     placeholder="Enter your Discord user ID..."
-                                    placeholderTextColor={colors.foreground + "55"}
+                                    placeholderTextColor={colors.textSubtle}
                                     editable={enableDiscordNotifications}
                                     keyboardType="numeric"
                                     autoCapitalize="none"

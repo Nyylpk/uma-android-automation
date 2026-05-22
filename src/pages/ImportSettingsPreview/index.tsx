@@ -57,7 +57,7 @@ const ImportSettingsPreview = () => {
                     flexDirection: "column",
                     justifyContent: "center",
                     margin: 10,
-                    backgroundColor: colors.background,
+                    backgroundColor: colors.bg,
                 },
                 content: {
                     flex: 1,
@@ -65,7 +65,7 @@ const ImportSettingsPreview = () => {
                 },
                 description: {
                     fontSize: 13,
-                    color: colors.mutedForeground,
+                    color: colors.textMuted,
                     marginBottom: 16,
                     fontWeight: "500",
                 },
@@ -77,7 +77,7 @@ const ImportSettingsPreview = () => {
                 },
                 noChangesText: {
                     fontSize: 15,
-                    color: colors.mutedForeground,
+                    color: colors.textMuted,
                     textAlign: "center",
                     lineHeight: 22,
                 },
@@ -87,17 +87,17 @@ const ImportSettingsPreview = () => {
                 categoryHeader: {
                     fontSize: 11,
                     fontWeight: "700",
-                    color: colors.mutedForeground,
+                    color: colors.textMuted,
                     textTransform: "uppercase",
                     letterSpacing: 1,
                     marginBottom: 8,
                     paddingHorizontal: 2,
                 },
                 categoryContent: {
-                    backgroundColor: colors.card,
+                    backgroundColor: colors.surface,
                     borderRadius: 10,
                     borderWidth: 1,
-                    borderColor: colors.border,
+                    borderColor: colors.borderHair,
                     overflow: "hidden",
                     shadowColor: "#000",
                     shadowOffset: { width: 0, height: 2 },
@@ -110,7 +110,7 @@ const ImportSettingsPreview = () => {
                     paddingVertical: 10,
                     paddingHorizontal: 12,
                     borderBottomWidth: 0.5,
-                    borderBottomColor: colors.border,
+                    borderBottomColor: colors.borderHair,
                     backgroundColor: "transparent",
                 },
                 settingItemLast: {
@@ -119,7 +119,7 @@ const ImportSettingsPreview = () => {
                 settingKey: {
                     fontSize: 11,
                     fontWeight: "600",
-                    color: colors.foreground,
+                    color: colors.text,
                     width: 125,
                     marginRight: 10,
                     lineHeight: 17,
@@ -141,7 +141,7 @@ const ImportSettingsPreview = () => {
                 },
                 valueText: {
                     fontSize: 11,
-                    color: colors.foreground,
+                    color: colors.text,
                     flexWrap: "wrap",
                     lineHeight: 16,
                 },
@@ -149,11 +149,11 @@ const ImportSettingsPreview = () => {
                     paddingHorizontal: 12,
                     paddingVertical: 12,
                     borderTopWidth: 1,
-                    borderTopColor: colors.border,
+                    borderTopColor: colors.borderHair,
                     flexDirection: "row",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    backgroundColor: colors.background,
+                    backgroundColor: colors.bg,
                 },
             }),
         [colors]
@@ -210,7 +210,7 @@ const ImportSettingsPreview = () => {
                                     {categoryChanges.map((item, index) => (
                                         <View
                                             key={`${item.category}-${item.key}-${index}`}
-                                            style={[styles.settingItem, index === categoryChanges.length - 1 && styles.settingItemLast, index % 2 === 1 && { backgroundColor: colors.muted }]}
+                                            style={[styles.settingItem, index === categoryChanges.length - 1 && styles.settingItemLast, index % 2 === 1 && { backgroundColor: colors.surfaceRaised }]}
                                         >
                                             <Text style={styles.settingKey}>{item.key}</Text>
                                             <View style={styles.settingValues}>
@@ -221,7 +221,7 @@ const ImportSettingsPreview = () => {
                                                     </Text>
                                                 </View>
                                                 <View style={styles.valuePair}>
-                                                    <Text style={[styles.valueLabel, { color: colors.primary }]}>New</Text>
+                                                    <Text style={[styles.valueLabel, { color: colors.brand }]}>New</Text>
                                                     <Text style={styles.valueText} numberOfLines={2}>
                                                         {item.formattedNewValue}
                                                     </Text>
