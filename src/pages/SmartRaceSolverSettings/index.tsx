@@ -551,27 +551,27 @@ const SmartRaceSolverSettings = () => {
     const styles = useMemo(
         () =>
             StyleSheet.create({
-                root: { flex: 1, flexDirection: "column", margin: 10, backgroundColor: colors.background },
-                section: { marginVertical: 8, padding: 12, backgroundColor: colors.card, borderRadius: 8 },
-                sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.foreground, marginBottom: 6 },
-                description: { fontSize: 13, color: colors.mutedForeground, marginBottom: 8 },
+                root: { flex: 1, flexDirection: "column", margin: 10, backgroundColor: colors.bg },
+                section: { marginVertical: 8, padding: 12, backgroundColor: colors.surface, borderRadius: 8 },
+                sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginBottom: 6 },
+                description: { fontSize: 13, color: colors.textMuted, marginBottom: 8 },
                 infoBlock: { marginTop: 12 },
-                infoLabel: { fontWeight: "bold", color: colors.foreground, fontSize: 14, lineHeight: 22, includeFontPadding: false },
-                infoDescription: { fontSize: 14, color: colors.foreground, opacity: 0.7, lineHeight: 22, includeFontPadding: false, marginTop: 2 },
+                infoLabel: { fontWeight: "bold", color: colors.text, fontSize: 14, lineHeight: 22, includeFontPadding: false },
+                infoDescription: { fontSize: 14, color: colors.text, opacity: 0.7, lineHeight: 22, includeFontPadding: false, marginTop: 2 },
                 restrictionNotice: {
                     fontSize: 12,
-                    color: colors.foreground,
-                    backgroundColor: colors.muted,
-                    borderLeftColor: colors.primary,
+                    color: colors.text,
+                    backgroundColor: colors.surfaceRaised,
+                    borderLeftColor: colors.brand,
                     borderLeftWidth: 3,
                     paddingVertical: 6,
                     paddingHorizontal: 10,
                     borderRadius: 4,
                     marginBottom: 8,
                 },
-                inputLabel: { fontSize: 14, color: colors.foreground, marginBottom: 4, marginTop: 6 },
-                input: { backgroundColor: colors.background, color: colors.foreground, marginBottom: 4 },
-                inputDescription: { fontSize: 12, color: colors.mutedForeground, marginBottom: 4 },
+                inputLabel: { fontSize: 14, color: colors.text, marginBottom: 4, marginTop: 6 },
+                input: { backgroundColor: colors.bg, color: colors.text, marginBottom: 4 },
+                inputDescription: { fontSize: 12, color: colors.textMuted, marginBottom: 4 },
                 row: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginVertical: 4 },
                 chip: {
                     width: "31.5%",
@@ -580,53 +580,53 @@ const SmartRaceSolverSettings = () => {
                     paddingVertical: 6,
                     borderRadius: 10,
                     borderWidth: 1,
-                    borderColor: colors.border,
-                    backgroundColor: colors.background,
+                    borderColor: colors.borderHair,
+                    backgroundColor: colors.bg,
                 },
-                chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-                chipText: { color: colors.foreground, fontSize: 12, fontWeight: "600" },
-                chipTextActive: { color: colors.background, fontSize: 12, fontWeight: "700" },
-                chipReward: { color: colors.mutedForeground, fontSize: 10, marginTop: 2 },
-                chipRewardActive: { color: colors.background, fontSize: 10, marginTop: 2, opacity: 0.9 },
-                chipCondition: { color: colors.mutedForeground, fontSize: 10, fontStyle: "italic", marginTop: 2 },
-                chipConditionActive: { color: colors.background, fontSize: 10, fontStyle: "italic", marginTop: 2, opacity: 0.8 },
+                chipActive: { backgroundColor: colors.brand, borderColor: colors.brand },
+                chipText: { color: colors.text, fontSize: 12, fontWeight: "600" },
+                chipTextActive: { color: colors.onBrand, fontSize: 12, fontWeight: "700" },
+                chipReward: { color: colors.textMuted, fontSize: 10, marginTop: 2 },
+                chipRewardActive: { color: colors.onBrand, fontSize: 10, marginTop: 2, opacity: 0.9 },
+                chipCondition: { color: colors.textMuted, fontSize: 10, fontStyle: "italic", marginTop: 2 },
+                chipConditionActive: { color: colors.onBrand, fontSize: 10, fontStyle: "italic", marginTop: 2, opacity: 0.8 },
                 chipNoMatcherDot: { position: "absolute", top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.destructive },
                 aptRow: { flexDirection: "row", alignItems: "center", marginVertical: 4 },
-                aptLabel: { width: 70, color: colors.foreground, fontSize: 13 },
+                aptLabel: { width: 70, color: colors.text, fontSize: 13 },
                 aptButtons: { flexDirection: "row", gap: 4, flex: 1 },
                 aptBtn: {
                     flex: 1,
                     paddingVertical: 6,
                     borderRadius: 4,
                     borderWidth: 1,
-                    borderColor: colors.border,
+                    borderColor: colors.borderHair,
                     alignItems: "center",
-                    backgroundColor: colors.background,
+                    backgroundColor: colors.bg,
                 },
-                aptBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-                aptBtnText: { color: colors.foreground, fontSize: 12 },
-                aptBtnTextActive: { color: colors.background, fontSize: 12, fontWeight: "700" },
+                aptBtnActive: { backgroundColor: colors.brand, borderColor: colors.brand },
+                aptBtnText: { color: colors.text, fontSize: 12 },
+                aptBtnTextActive: { color: colors.onBrand, fontSize: 12, fontWeight: "700" },
                 lockRow: {
                     flexDirection: "row",
                     alignItems: "center",
                     paddingVertical: 6,
                     borderBottomWidth: StyleSheet.hairlineWidth,
-                    borderColor: colors.border,
+                    borderColor: colors.borderHair,
                 },
-                lockTurn: { width: 60, color: colors.foreground, fontSize: 13 },
-                lockRace: { flex: 1, color: colors.foreground, fontSize: 13 },
+                lockTurn: { width: 60, color: colors.text, fontSize: 13 },
+                lockRace: { flex: 1, color: colors.text, fontSize: 13 },
                 presetList: {
                     maxHeight: 600,
                     marginBottom: 8,
                     borderWidth: StyleSheet.hairlineWidth,
-                    borderColor: colors.border,
+                    borderColor: colors.borderHair,
                     borderRadius: 6,
                 },
                 epithetList: {
                     maxHeight: 600,
                     marginVertical: 4,
                     borderWidth: StyleSheet.hairlineWidth,
-                    borderColor: colors.border,
+                    borderColor: colors.borderHair,
                     borderRadius: 6,
                     padding: 6,
                 },
@@ -634,14 +634,14 @@ const SmartRaceSolverSettings = () => {
                     paddingVertical: 8,
                     paddingHorizontal: 6,
                     borderBottomWidth: StyleSheet.hairlineWidth,
-                    borderColor: colors.border,
+                    borderColor: colors.borderHair,
                 },
-                presetItemActive: { backgroundColor: colors.primary },
-                presetName: { color: colors.foreground, fontSize: 14 },
-                presetNameActive: { color: colors.background, fontSize: 14, fontWeight: "700" },
-                presetAptitudes: { color: colors.mutedForeground, fontSize: 11, marginTop: 2 },
+                presetItemActive: { backgroundColor: colors.brand },
+                presetName: { color: colors.text, fontSize: 14 },
+                presetNameActive: { color: colors.onBrand, fontSize: 14, fontWeight: "700" },
+                presetAptitudes: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
                 summary: {
-                    color: colors.mutedForeground,
+                    color: colors.textMuted,
                     fontSize: 12,
                     fontFamily: "monospace",
                     paddingVertical: 4,
@@ -650,11 +650,11 @@ const SmartRaceSolverSettings = () => {
                     marginVertical: 8,
                     padding: 12,
                     borderWidth: 1,
-                    borderColor: colors.border,
+                    borderColor: colors.borderHair,
                     borderRadius: 8,
-                    backgroundColor: colors.background,
+                    backgroundColor: colors.bg,
                 },
-                yearCardTitle: { fontSize: 16, fontWeight: "700", color: colors.foreground, marginBottom: 6 },
+                yearCardTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginBottom: 6 },
                 calendarRow: { flexDirection: "row", alignItems: "stretch", paddingVertical: 4 },
                 calendarCellWrapper: { flex: 1, marginHorizontal: 3, alignItems: "stretch" },
                 calendarCell: {
@@ -665,12 +665,12 @@ const SmartRaceSolverSettings = () => {
                     paddingHorizontal: 4,
                     borderRadius: 6,
                     borderWidth: 1,
-                    borderColor: colors.border,
-                    backgroundColor: colors.card,
+                    borderColor: colors.borderHair,
+                    backgroundColor: colors.surface,
                     minHeight: 56,
                 },
                 calendarCellRace: {
-                    backgroundColor: colors.card,
+                    backgroundColor: colors.surface,
                 },
                 calendarBadge: {
                     minWidth: 30,
@@ -682,25 +682,25 @@ const SmartRaceSolverSettings = () => {
                     justifyContent: "center",
                 },
                 calendarBadgeText: { color: "#fff", fontSize: 10, fontWeight: "700" },
-                calendarRaceName: { fontSize: 10, color: colors.foreground, fontWeight: "600", textAlign: "center" },
-                calendarCellEmpty: { fontSize: 11, color: colors.mutedForeground, textAlign: "center" },
+                calendarRaceName: { fontSize: 10, color: colors.text, fontWeight: "600", textAlign: "center" },
+                calendarCellEmpty: { fontSize: 11, color: colors.textMuted, textAlign: "center" },
                 calendarCellPreDebut: {
-                    backgroundColor: colors.muted,
-                    borderColor: colors.border,
+                    backgroundColor: colors.surfaceRaised,
+                    borderColor: colors.borderHair,
                     borderStyle: "dashed",
                     opacity: 0.6,
                 },
                 calendarCellPreDebutText: {
                     fontSize: 10,
-                    color: colors.mutedForeground,
+                    color: colors.textMuted,
                     fontStyle: "italic",
                     fontWeight: "600",
                     textAlign: "center",
                 },
-                calendarDateLabel: { fontSize: 10, color: colors.mutedForeground, textAlign: "center", marginTop: 3 },
+                calendarDateLabel: { fontSize: 10, color: colors.textMuted, textAlign: "center", marginTop: 3 },
                 calendarCellLocked: {
                     borderWidth: 2,
-                    borderColor: colors.primary,
+                    borderColor: colors.brand,
                 },
                 popoverAltList: { maxHeight: 220, marginTop: 4 },
                 popoverButtonRow: { flexDirection: "row", gap: 8, marginTop: 8 },
@@ -711,7 +711,7 @@ const SmartRaceSolverSettings = () => {
                     paddingHorizontal: 4,
                     borderRadius: 4,
                     borderBottomWidth: StyleSheet.hairlineWidth,
-                    borderColor: colors.border,
+                    borderColor: colors.borderHair,
                 },
                 popoverAltBadge: {
                     minWidth: 30,
@@ -722,26 +722,26 @@ const SmartRaceSolverSettings = () => {
                     alignItems: "center",
                     justifyContent: "center",
                 },
-                popoverAltName: { fontSize: 12, fontWeight: "600", color: colors.foreground },
-                popoverAltMeta: { fontSize: 10, color: colors.mutedForeground },
-                popoverHint: { fontSize: 10, color: colors.mutedForeground, fontStyle: "italic", marginTop: 8, textAlign: "center" },
+                popoverAltName: { fontSize: 12, fontWeight: "600", color: colors.text },
+                popoverAltMeta: { fontSize: 10, color: colors.textMuted },
+                popoverHint: { fontSize: 10, color: colors.textMuted, fontStyle: "italic", marginTop: 8, textAlign: "center" },
                 recalcFab: { position: "absolute", bottom: 16, right: 16, zIndex: 10, alignItems: "flex-end" },
-                recalcFabLabel: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, marginBottom: 6, elevation: 4 },
-                recalcFabLabelText: { color: colors.cardForeground, fontSize: 12, fontWeight: "600" },
-                recalcFabButton: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center", elevation: 6 },
+                recalcFabLabel: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderHair, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, marginBottom: 6, elevation: 4 },
+                recalcFabLabelText: { color: colors.text, fontSize: 12, fontWeight: "600" },
+                recalcFabButton: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.brand, alignItems: "center", justifyContent: "center", elevation: 6 },
                 epithetCard: {
                     paddingVertical: 6,
                     paddingHorizontal: 8,
                     marginVertical: 3,
                     borderRadius: 6,
                     borderWidth: 1,
-                    borderColor: colors.border,
-                    backgroundColor: colors.card,
+                    borderColor: colors.borderHair,
+                    backgroundColor: colors.surface,
                 },
                 epithetCardHighlighted: {
-                    borderColor: colors.primary,
+                    borderColor: colors.brand,
                     borderWidth: 2,
-                    backgroundColor: colors.muted,
+                    backgroundColor: colors.surfaceRaised,
                 },
                 calendarCellHighlighted: {
                     borderColor: "#ca8a04",
@@ -752,21 +752,21 @@ const SmartRaceSolverSettings = () => {
                     shadowOffset: { width: 0, height: 0 },
                     elevation: 4,
                 },
-                epithetCardName: { fontSize: 13, fontWeight: "700", color: colors.foreground, marginBottom: 2 },
-                epithetCardReward: { fontSize: 11, color: colors.foreground, marginBottom: 1 },
-                epithetCardCondition: { fontSize: 11, color: colors.mutedForeground, fontStyle: "italic" },
-                epithetCardConditionItem: { fontSize: 11, color: colors.mutedForeground, fontStyle: "italic", marginLeft: 8 },
+                epithetCardName: { fontSize: 13, fontWeight: "700", color: colors.text, marginBottom: 2 },
+                epithetCardReward: { fontSize: 11, color: colors.text, marginBottom: 1 },
+                epithetCardCondition: { fontSize: 11, color: colors.textMuted, fontStyle: "italic" },
+                epithetCardConditionItem: { fontSize: 11, color: colors.textMuted, fontStyle: "italic", marginLeft: 8 },
                 statsRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start", marginVertical: 6, paddingHorizontal: 2, columnGap: 12, rowGap: 8 },
                 statsCell: { flexDirection: "column", alignItems: "flex-start", minWidth: 70, flexShrink: 1 },
-                statsLabel: { fontSize: 11, color: colors.mutedForeground, marginBottom: 2 },
-                statsValue: { fontSize: 16, color: colors.foreground, fontWeight: "700" },
-                popoverTitle: { fontSize: 15, fontWeight: "700", color: colors.foreground },
-                popoverMeta: { fontSize: 12, color: colors.mutedForeground, marginTop: 4 },
-                popoverSection: { fontSize: 13, fontWeight: "700", color: colors.foreground, marginTop: 8 },
-                popoverEpithet: { fontSize: 12, color: colors.foreground, marginTop: 2 },
-                popoverEpithetPending: { fontSize: 12, color: colors.mutedForeground, marginTop: 1, fontStyle: "italic" },
-                popoverEmpty: { fontSize: 12, color: colors.mutedForeground, marginTop: 2, fontStyle: "italic" },
-                previewStatus: { fontSize: 12, color: colors.mutedForeground, paddingVertical: 4 },
+                statsLabel: { fontSize: 11, color: colors.textMuted, marginBottom: 2 },
+                statsValue: { fontSize: 16, color: colors.text, fontWeight: "700" },
+                popoverTitle: { fontSize: 15, fontWeight: "700", color: colors.text },
+                popoverMeta: { fontSize: 12, color: colors.textMuted, marginTop: 4 },
+                popoverSection: { fontSize: 13, fontWeight: "700", color: colors.text, marginTop: 8 },
+                popoverEpithet: { fontSize: 12, color: colors.text, marginTop: 2 },
+                popoverEpithetPending: { fontSize: 12, color: colors.textMuted, marginTop: 1, fontStyle: "italic" },
+                popoverEmpty: { fontSize: 12, color: colors.textMuted, marginTop: 2, fontStyle: "italic" },
+                previewStatus: { fontSize: 12, color: colors.textMuted, paddingVertical: 4 },
                 previewError: { fontSize: 12, color: "#dc2626", paddingVertical: 4 },
             }),
         [colors]
@@ -850,7 +850,7 @@ const SmartRaceSolverSettings = () => {
                 ) : (
                     <ScrollView style={styles.popoverAltList} nestedScrollEnabled>
                         {alternatives.map((alt) => {
-                            const altColor = GRADE_COLORS[alt.grade] ?? colors.primary
+                            const altColor = GRADE_COLORS[alt.grade] ?? colors.brand
                             return (
                                 <Pressable
                                     key={`${alt.name}-${alt.date}`}
@@ -898,7 +898,7 @@ const SmartRaceSolverSettings = () => {
     const renderCalendarCell = (turn: number, turnInYear: number) => {
         const entry = preview?.decisions[String(turn)]
         const isRace = entry?.type === "Race"
-        const color = isRace ? (GRADE_COLORS[entry.grade ?? ""] ?? colors.primary) : null
+        const color = isRace ? (GRADE_COLORS[entry.grade ?? ""] ?? colors.brand) : null
         const shortRaceName = isRace ? shortenRaceName(entry.name ?? entry.raceKey ?? "") : ""
         const dateLabel = turnDateLabel(turnInYear)
         const isPreDebut = turn <= 13
@@ -1479,7 +1479,7 @@ const SmartRaceSolverSettings = () => {
                                         )}
                                         {previewLoading && (
                                             <View style={{ flexDirection: "row", alignItems: "center" }}>
-                                                <ActivityIndicator size="small" color={colors.primary} />
+                                                <ActivityIndicator size="small" color={colors.brand} />
                                                 <Text style={[styles.previewStatus, { marginLeft: 6 }]}>Computing preview…</Text>
                                             </View>
                                         )}
@@ -1599,7 +1599,7 @@ const SmartRaceSolverSettings = () => {
                                                     onPress={() => setHighlightedEpithet(isHighlighted ? null : name)}
                                                     android_ripple={{ color: colors.ripple, foreground: true }}
                                                 >
-                                                    <Text style={[styles.epithetCardName, { color: isSelected ? colors.primary : colors.foreground }]}>
+                                                    <Text style={[styles.epithetCardName, { color: isSelected ? colors.brand : colors.text }]}>
                                                         {name}
                                                         {isSelected ? "  ✓" : ""}
                                                     </Text>

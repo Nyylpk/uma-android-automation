@@ -95,8 +95,8 @@ interface RecalcFabProps {
     loading: boolean
     /** Style sheet from the parent so the FAB inherits the page's themed colors / sizes. */
     styles: { recalcFab: ViewStyle; recalcFabButton: ViewStyle; recalcFabLabel: ViewStyle; recalcFabLabelText: object }
-    /** Theme palette - the icon and spinner pull their tint from `colors.background` to contrast the primary fill. */
-    colors: { background: string }
+    /** Theme palette - the icon and spinner pull their tint from `colors.onBrand` to contrast the brand fill. */
+    colors: { onBrand: string }
 }
 
 /**
@@ -118,7 +118,7 @@ export const RecalcFab = memo(({ onPress, loading, styles, colors }: RecalcFabPr
                 <Text style={styles.recalcFabLabelText}>Apply Changes?</Text>
             </View>
             <Pressable style={styles.recalcFabButton} onPress={onPress} disabled={loading} android_ripple={{ color: themeColors.ripple, foreground: true }}>
-                {loading ? <ActivityIndicator size="small" color={colors.background} /> : <RefreshCw size={22} color={colors.background} />}
+                {loading ? <ActivityIndicator size="small" color={colors.onBrand} /> : <RefreshCw size={22} color={colors.onBrand} />}
             </Pressable>
         </Animated.View>
     )

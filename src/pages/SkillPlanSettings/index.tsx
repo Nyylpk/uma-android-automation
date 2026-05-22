@@ -157,11 +157,11 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
                     flex: 1,
                     flexDirection: "column",
                     margin: 10,
-                    backgroundColor: colors.background,
+                    backgroundColor: colors.bg,
                 },
                 description: {
                     fontSize: 14,
-                    color: colors.foreground,
+                    color: colors.text,
                     opacity: 0.7,
                     marginBottom: 16,
                     lineHeight: 20,
@@ -172,11 +172,11 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
                 sectionTitle: {
                     fontSize: 18,
                     fontWeight: "600",
-                    color: colors.foreground,
+                    color: colors.text,
                     marginBottom: 12,
                 },
                 skillItem: {
-                    backgroundColor: colors.card,
+                    backgroundColor: colors.surface,
                     padding: 16,
                     borderRadius: 8,
                     marginBottom: 8,
@@ -187,37 +187,37 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
                 skillName: {
                     fontSize: 16,
                     fontWeight: "600",
-                    color: colors.foreground,
+                    color: colors.text,
                 },
                 skillDescription: {
                     fontSize: 14,
-                    color: colors.foreground,
+                    color: colors.text,
                     opacity: 0.7,
                     marginTop: 4,
                 },
                 skillSubtext: {
                     fontSize: 14,
-                    color: colors.primary,
+                    color: colors.brand,
                     marginTop: 4,
                 },
                 input: {
                     borderWidth: 1,
-                    borderColor: colors.border,
+                    borderColor: colors.borderHair,
                     borderRadius: 8,
                     padding: 12,
                     fontSize: 16,
-                    color: colors.foreground,
-                    backgroundColor: colors.background,
+                    color: colors.text,
+                    backgroundColor: colors.bg,
                     marginBottom: 12,
                 },
                 inputLabel: {
                     fontSize: 16,
-                    color: colors.foreground,
+                    color: colors.text,
                     marginBottom: 8,
                 },
                 inputDescription: {
                     fontSize: 14,
-                    color: colors.foreground,
+                    color: colors.text,
                     opacity: 0.7,
                     marginTop: 8,
                 },
@@ -229,31 +229,31 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
                     paddingVertical: 10,
                     borderRadius: 8,
                     borderWidth: 1,
-                    borderColor: colors.border,
-                    backgroundColor: colors.background,
+                    borderColor: colors.borderHair,
+                    backgroundColor: colors.bg,
                     alignItems: "center",
                 },
                 modeTabActive: {
-                    backgroundColor: colors.primary,
-                    borderColor: colors.primary,
+                    backgroundColor: colors.brand,
+                    borderColor: colors.brand,
                 },
                 modeTabLabel: {
                     fontSize: 14,
                     fontWeight: "600",
-                    color: colors.foreground,
+                    color: colors.text,
                 },
                 modeTabLabelActive: {
-                    color: colors.background,
+                    color: colors.onBrand,
                 },
                 summary: {
                     fontSize: 14,
-                    color: colors.foreground,
+                    color: colors.text,
                     marginBottom: 4,
                     lineHeight: 20,
                 },
                 summaryBullet: {
                     fontSize: 14,
-                    color: colors.foreground,
+                    color: colors.text,
                     marginBottom: 2,
                     marginLeft: 16,
                     lineHeight: 20,
@@ -389,7 +389,7 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
                         </Text>
                     </View>
                     <View style={{ flexDirection: "row", gap: 8 }}>
-                        <CustomButton icon={<Trash2 size={16} color={colors.foreground} />} onPress={() => clearActiveList()}>
+                        <CustomButton icon={<Trash2 size={16} color={colors.text} />} onPress={() => clearActiveList()}>
                             Clear
                         </CustomButton>
                     </View>
@@ -446,7 +446,7 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
                             persistentScrollbar={true}
                             indicatorStyle={{
                                 width: 10,
-                                backgroundColor: colors.foreground,
+                                backgroundColor: colors.text,
                             }}
                             containerStyle={{
                                 flex: 1,
