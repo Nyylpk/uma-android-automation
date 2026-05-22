@@ -47,7 +47,7 @@ const Settings = () => {
                     flexDirection: "column",
                     justifyContent: "center",
                     margin: 10,
-                    backgroundColor: colors.background,
+                    backgroundColor: colors.bg,
                 },
             }),
         [colors]
@@ -268,7 +268,7 @@ const Settings = () => {
                             return (
                                 <View key={index} style={{ marginBottom: index < general.stopAtDates.length - 1 ? 12 : 0 }}>
                                     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                                        <Text style={{ fontSize: 14, fontWeight: "600", color: colors.foreground }}>Date {index + 1}</Text>
+                                        <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text }}>Date {index + 1}</Text>
                                         {general.stopAtDates.length > 1 && (
                                             <CustomButton onPress={() => handleRemoveStopAtDate(index)} variant="destructive" size="sm" fontSize={12}>
                                                 Remove

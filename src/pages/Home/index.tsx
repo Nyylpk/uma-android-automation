@@ -383,7 +383,7 @@ Note: Reinstall using the x86_64 release APK for much better performance.`)
                         setSnackbarOpen(false)
                     },
                 }}
-                style={{ backgroundColor: "red", borderRadius: 10 }}
+                style={{ backgroundColor: colors.error, borderRadius: 10 }}
             >
                 {snackbarMessage}
             </Snackbar>
