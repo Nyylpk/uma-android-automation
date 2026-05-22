@@ -235,60 +235,60 @@ const ProfileCreationModal: React.FC<ProfileCreationModalProps> = ({ visible, on
         <GlassModal visible={visible} onRequestClose={handleClose} contentStyle={styles.modalContent}>
             {/* Header */}
             <View style={styles.header}>
-                        <Text style={styles.title}>Create New Profile</Text>
-                        <Pressable style={styles.closeButton} onPress={handleClose} android_ripple={{ color: colors.ripple, foreground: true }}>
-                            <X size={24} color={colors.text} />
-                        </Pressable>
-                    </View>
+                <Text style={styles.title}>Create New Profile</Text>
+                <Pressable style={styles.closeButton} onPress={handleClose} android_ripple={{ color: colors.ripple, foreground: true }}>
+                    <X size={24} color={colors.text} />
+                </Pressable>
+            </View>
 
-                    {/* Profile name input */}
-                    <View style={styles.input}>
-                        <Input placeholder="Profile name" value={profileName} onChangeText={setProfileName} style={{ color: colors.text, backgroundColor: colors.surfaceRaised }} />
-                    </View>
+            {/* Profile name input */}
+            <View style={styles.input}>
+                <Input placeholder="Profile name" value={profileName} onChangeText={setProfileName} style={{ color: colors.text, backgroundColor: colors.surfaceRaised }} />
+            </View>
 
-                    {/* Training settings preview */}
-                    <View style={styles.settingsPreview}>
-                        <Text style={styles.previewTitle}>Current Training Settings (will be saved):</Text>
-                        <ScrollView nestedScrollEnabled={true}>
-                            <Text style={styles.previewText}>{settingsPreview}</Text>
-                            <View style={styles.tableContainer}>
-                                <Text style={styles.tableTitle}>Stat Targets by Distance:</Text>
-                                <View style={styles.table}>
-                                    {/* Header Row */}
-                                    <View style={styles.tableRow}>
-                                        {TABLE_HEADERS.map((header, index) => (
-                                            <View key={index} style={[styles.tableCell, { borderRightWidth: index < TABLE_HEADERS.length - 1 ? 1 : 0 }]}>
-                                                <Text style={styles.tableHeaderText}>{header}</Text>
-                                            </View>
-                                        ))}
+            {/* Training settings preview */}
+            <View style={styles.settingsPreview}>
+                <Text style={styles.previewTitle}>Current Training Settings (will be saved):</Text>
+                <ScrollView nestedScrollEnabled={true}>
+                    <Text style={styles.previewText}>{settingsPreview}</Text>
+                    <View style={styles.tableContainer}>
+                        <Text style={styles.tableTitle}>Stat Targets by Distance:</Text>
+                        <View style={styles.table}>
+                            {/* Header Row */}
+                            <View style={styles.tableRow}>
+                                {TABLE_HEADERS.map((header, index) => (
+                                    <View key={index} style={[styles.tableCell, { borderRightWidth: index < TABLE_HEADERS.length - 1 ? 1 : 0 }]}>
+                                        <Text style={styles.tableHeaderText}>{header}</Text>
                                     </View>
-                                    {/* Data Rows for each distance type and stat */}
-                                    {tableData.map((row, rowIndex) => (
-                                        <View key={rowIndex} style={styles.tableRow}>
-                                            <View style={[styles.tableCell, { borderRightWidth: 1 }]}>
-                                                <Text style={styles.tableCellText}>{row.distance}</Text>
-                                            </View>
-                                            <View style={[styles.tableCell, { borderRightWidth: 1 }]}>
-                                                <Text style={styles.tableCellText}>{row.speed}</Text>
-                                            </View>
-                                            <View style={[styles.tableCell, { borderRightWidth: 1 }]}>
-                                                <Text style={styles.tableCellText}>{row.stamina}</Text>
-                                            </View>
-                                            <View style={[styles.tableCell, { borderRightWidth: 1 }]}>
-                                                <Text style={styles.tableCellText}>{row.power}</Text>
-                                            </View>
-                                            <View style={[styles.tableCell, { borderRightWidth: 1 }]}>
-                                                <Text style={styles.tableCellText}>{row.guts}</Text>
-                                            </View>
-                                            <View style={[styles.tableCell, { borderRightWidth: 0 }]}>
-                                                <Text style={styles.tableCellText}>{row.wit}</Text>
-                                            </View>
-                                        </View>
-                                    ))}
-                                </View>
+                                ))}
                             </View>
-                        </ScrollView>
+                            {/* Data Rows for each distance type and stat */}
+                            {tableData.map((row, rowIndex) => (
+                                <View key={rowIndex} style={styles.tableRow}>
+                                    <View style={[styles.tableCell, { borderRightWidth: 1 }]}>
+                                        <Text style={styles.tableCellText}>{row.distance}</Text>
+                                    </View>
+                                    <View style={[styles.tableCell, { borderRightWidth: 1 }]}>
+                                        <Text style={styles.tableCellText}>{row.speed}</Text>
+                                    </View>
+                                    <View style={[styles.tableCell, { borderRightWidth: 1 }]}>
+                                        <Text style={styles.tableCellText}>{row.stamina}</Text>
+                                    </View>
+                                    <View style={[styles.tableCell, { borderRightWidth: 1 }]}>
+                                        <Text style={styles.tableCellText}>{row.power}</Text>
+                                    </View>
+                                    <View style={[styles.tableCell, { borderRightWidth: 1 }]}>
+                                        <Text style={styles.tableCellText}>{row.guts}</Text>
+                                    </View>
+                                    <View style={[styles.tableCell, { borderRightWidth: 0 }]}>
+                                        <Text style={styles.tableCellText}>{row.wit}</Text>
+                                    </View>
+                                </View>
+                            ))}
+                        </View>
                     </View>
+                </ScrollView>
+            </View>
 
             <View style={styles.buttonRow}>
                 <CustomButton onPress={handleClose} variant="outline" disabled={isCreating}>

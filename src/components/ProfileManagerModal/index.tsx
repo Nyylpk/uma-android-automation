@@ -385,116 +385,112 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
         <>
             <GlassModal visible={visible && !showDeleteDialog} onRequestClose={onClose} contentStyle={styles.modalContent}>
                 <View style={styles.header}>
-                            <Text style={styles.title}>Manage Profiles</Text>
-                            <Pressable style={styles.closeButton} onPress={onClose} android_ripple={{ color: colors.ripple, foreground: true }}>
-                                <X size={24} color={colors.text} />
-                            </Pressable>
-                        </View>
+                    <Text style={styles.title}>Manage Profiles</Text>
+                    <Pressable style={styles.closeButton} onPress={onClose} android_ripple={{ color: colors.ripple, foreground: true }}>
+                        <X size={24} color={colors.text} />
+                    </Pressable>
+                </View>
 
-                        {/*
-                         * We use manual touch handlers to manage scrolling because the standard
-                         * native ScrollView events are swallowed by the RNModal or
-                         * its containing overlays in this project's environment.
-                         */}
-                        <ScrollView
-                            style={styles.mainScroll}
-                            contentContainerStyle={styles.mainScrollContent}
-                            showsVerticalScrollIndicator={true}
-                            nestedScrollEnabled={true}
-                            onTouchStart={handleTouchStart}
-                            onTouchMove={handleTouchMove}
-                            onTouchEnd={handleTouchEnd}
-                            ref={scrollViewRef}
-                            onScroll={(event) => {
-                                const offsetY = event.nativeEvent.contentOffset.y
-                                currentScrollY.current = offsetY
-                            }}
-                        >
-                            <View style={styles.profileList}>
-                                {profiles.length === 0 ? (
-                                    <View style={styles.emptyState}>
-                                        <Text style={styles.emptyText}>No profiles yet.</Text>
-                                    </View>
-                                ) : (
-                                    <>
-                                        {/* Map through the profiles and display them. */}
-                                        {profiles.map((profile) => {
-                                            const isEditing = editingProfileId === profile.id
-                                            return (
-                                                <View key={profile.id} style={styles.profileItem}>
-                                                    {isEditing ? (
-                                                        <Input
-                                                            placeholder="Profile name"
-                                                            value={profileName}
-                                                            onChangeText={setProfileName}
-                                                            onSubmitEditing={handleUpdateProfile}
-                                                            style={[styles.profileNameInput, { color: colors.text, backgroundColor: colors.bg }]}
-                                                            autoFocus
-                                                        />
-                                                    ) : (
-                                                        <Text style={styles.profileName}>{profile.name}</Text>
-                                                    )}
-                                                    <View style={styles.profileActions}>
-                                                        {isEditing ? (
-                                                            <>
-                                                                {/* Save button */}
-                                                                <Pressable style={styles.actionButton} onPress={handleUpdateProfile} android_ripple={{ color: colors.ripple, foreground: true }}>
-                                                                    <Check size={18} color={colors.brand} />
-                                                                </Pressable>
-                                                                {/* Cancel button */}
-                                                                <Pressable style={styles.actionButton} onPress={handleCancelEdit} android_ripple={{ color: colors.ripple, foreground: true }}>
-                                                                    <X size={18} color={colors.text} />
-                                                                </Pressable>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                {/* Edit button */}
-                                                                <Pressable
-                                                                    style={styles.actionButton}
-                                                                    onPress={() => handleEditProfile(profile.id)}
-                                                                    android_ripple={{ color: colors.ripple, foreground: true }}
-                                                                >
-                                                                    <Edit2 size={18} color={colors.brand} />
-                                                                </Pressable>
-                                                                {/* Delete button */}
-                                                                <Pressable
-                                                                    style={styles.actionButton}
-                                                                    onPress={() => handleDeleteClick(profile.id)}
-                                                                    android_ripple={{ color: colors.ripple, foreground: true }}
-                                                                >
-                                                                    <Trash2 size={18} color={colors.destructive} />
-                                                                </Pressable>
-                                                            </>
-                                                        )}
-                                                        {/* Save button */}
-                                                        {!isEditing && onOverwriteSettings && (
-                                                            <Pressable
-                                                                style={styles.actionButton}
-                                                                onPress={() => handleSaveClick(profile.id)}
-                                                                android_ripple={{ color: colors.ripple, foreground: true }}
-                                                            >
-                                                                <Save size={18} color={colors.brand} />
-                                                            </Pressable>
-                                                        )}
-                                                    </View>
-                                                </View>
-                                            )
-                                        })}
-                                    </>
-                                )}
+                {/*
+                 * We use manual touch handlers to manage scrolling because the standard
+                 * native ScrollView events are swallowed by the RNModal or
+                 * its containing overlays in this project's environment.
+                 */}
+                <ScrollView
+                    style={styles.mainScroll}
+                    contentContainerStyle={styles.mainScrollContent}
+                    showsVerticalScrollIndicator={true}
+                    nestedScrollEnabled={true}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    ref={scrollViewRef}
+                    onScroll={(event) => {
+                        const offsetY = event.nativeEvent.contentOffset.y
+                        currentScrollY.current = offsetY
+                    }}
+                >
+                    <View style={styles.profileList}>
+                        {profiles.length === 0 ? (
+                            <View style={styles.emptyState}>
+                                <Text style={styles.emptyText}>No profiles yet.</Text>
                             </View>
+                        ) : (
+                            <>
+                                {/* Map through the profiles and display them. */}
+                                {profiles.map((profile) => {
+                                    const isEditing = editingProfileId === profile.id
+                                    return (
+                                        <View key={profile.id} style={styles.profileItem}>
+                                            {isEditing ? (
+                                                <Input
+                                                    placeholder="Profile name"
+                                                    value={profileName}
+                                                    onChangeText={setProfileName}
+                                                    onSubmitEditing={handleUpdateProfile}
+                                                    style={[styles.profileNameInput, { color: colors.text, backgroundColor: colors.bg }]}
+                                                    autoFocus
+                                                />
+                                            ) : (
+                                                <Text style={styles.profileName}>{profile.name}</Text>
+                                            )}
+                                            <View style={styles.profileActions}>
+                                                {isEditing ? (
+                                                    <>
+                                                        {/* Save button */}
+                                                        <Pressable style={styles.actionButton} onPress={handleUpdateProfile} android_ripple={{ color: colors.ripple, foreground: true }}>
+                                                            <Check size={18} color={colors.brand} />
+                                                        </Pressable>
+                                                        {/* Cancel button */}
+                                                        <Pressable style={styles.actionButton} onPress={handleCancelEdit} android_ripple={{ color: colors.ripple, foreground: true }}>
+                                                            <X size={18} color={colors.text} />
+                                                        </Pressable>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        {/* Edit button */}
+                                                        <Pressable
+                                                            style={styles.actionButton}
+                                                            onPress={() => handleEditProfile(profile.id)}
+                                                            android_ripple={{ color: colors.ripple, foreground: true }}
+                                                        >
+                                                            <Edit2 size={18} color={colors.brand} />
+                                                        </Pressable>
+                                                        {/* Delete button */}
+                                                        <Pressable
+                                                            style={styles.actionButton}
+                                                            onPress={() => handleDeleteClick(profile.id)}
+                                                            android_ripple={{ color: colors.ripple, foreground: true }}
+                                                        >
+                                                            <Trash2 size={18} color={colors.destructive} />
+                                                        </Pressable>
+                                                    </>
+                                                )}
+                                                {/* Save button */}
+                                                {!isEditing && onOverwriteSettings && (
+                                                    <Pressable style={styles.actionButton} onPress={() => handleSaveClick(profile.id)} android_ripple={{ color: colors.ripple, foreground: true }}>
+                                                        <Save size={18} color={colors.brand} />
+                                                    </Pressable>
+                                                )}
+                                            </View>
+                                        </View>
+                                    )
+                                })}
+                            </>
+                        )}
+                    </View>
 
-                            {/* Comparison modal */}
-                            {showComparison && comparisonData && overwriteProfileId && (
-                                <ProfileComparison
-                                    comparison={comparisonData}
-                                    onConfirm={() => handleConfirmOverwrite(overwriteProfileId)}
-                                    onCancel={handleCancelOverwrite}
-                                    actionType="overwrite"
-                                    category="training"
-                                />
-                            )}
-                        </ScrollView>
+                    {/* Comparison modal */}
+                    {showComparison && comparisonData && overwriteProfileId && (
+                        <ProfileComparison
+                            comparison={comparisonData}
+                            onConfirm={() => handleConfirmOverwrite(overwriteProfileId)}
+                            onCancel={handleCancelOverwrite}
+                            actionType="overwrite"
+                            category="training"
+                        />
+                    )}
+                </ScrollView>
             </GlassModal>
 
             {/* Delete dialog */}

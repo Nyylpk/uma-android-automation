@@ -136,9 +136,7 @@ const PermissionSetupDialog = ({ open, onOpenChange, onAllGranted }: PermissionS
                     </View>
                 )}
                 {renderRow(2, overlayGranted, "Display over other apps", "Lets the bot draw its on-screen control overlay.", () => StartModule.openOverlaySettings())}
-                {renderRow(3, batteryGranted, "Disable battery optimization", "Stops Android from killing the bot during long automation runs.", () =>
-                    StartModule.openBatteryOptimizationSettings()
-                )}
+                {renderRow(3, batteryGranted, "Disable battery optimization", "Stops Android from killing the bot during long automation runs.", () => StartModule.openBatteryOptimizationSettings())}
             </View>
 
             <View style={styles.footer}>

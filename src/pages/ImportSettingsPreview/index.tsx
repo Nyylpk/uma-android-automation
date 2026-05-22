@@ -172,10 +172,7 @@ const ImportSettingsPreview = () => {
                         {Object.entries(groupedChanges).map(([category, categoryChanges]) => (
                             <Section key={category} label={category}>
                                 {categoryChanges.map((item, index) => (
-                                    <View
-                                        key={`${item.category}-${item.key}-${index}`}
-                                        style={[styles.settingItem, index % 2 === 1 && { backgroundColor: colors.surfaceRaised }]}
-                                    >
+                                    <View key={`${item.category}-${item.key}-${index}`} style={[styles.settingItem, index % 2 === 1 && { backgroundColor: colors.surfaceRaised }]}>
                                         <Text style={[styles.settingKey, TYPE.monoValue]}>{item.key}</Text>
                                         <View style={styles.settingValues}>
                                             <View style={styles.valuePair}>

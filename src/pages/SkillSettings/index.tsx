@@ -207,8 +207,8 @@ const SkillSettings = () => {
                                         <Text style={styles.infoLabel}>There are two different groups of Running Style skills.</Text>
                                         <View style={styles.infoBlock}>
                                             <Text style={styles.infoDescription}>
-                                                The first are skills that specifically say in their description that they are for a specific running style. These cannot be activated unless the
-                                                trainee is using that running style.
+                                                The first are skills that specifically say in their description that they are for a specific running style. These cannot be activated unless the trainee
+                                                is using that running style.
                                             </Text>
                                         </View>
                                         <View style={styles.infoBlock}>
@@ -220,8 +220,8 @@ const SkillSettings = () => {
                                         <View style={styles.infoBlock}>
                                             <Text style={styles.infoDescription}>
                                                 This setting will filter skills based on both of these conditions. This helps us avoid having situations like an End Closer purchasing a skill like
-                                                "Keeping the Lead". This skill doesn't require using the Front Runner style to activate, but it does require the runner to be in the lead mid-race
-                                                which is very unlikely for an End Closer.
+                                                "Keeping the Lead". This skill doesn't require using the Front Runner style to activate, but it does require the runner to be in the lead mid-race which
+                                                is very unlikely for an End Closer.
                                             </Text>
                                         </View>
                                         <Text style={[styles.infoLabel, { marginTop: 12 }]}>Detailed breakdown of examples:</Text>
@@ -288,8 +288,8 @@ const SkillSettings = () => {
                                 />
                                 <InfoContainer>
                                     <Text style={styles.infoDescription}>
-                                        As of 2026-02-19, there are no skills that only apply to the Turf surface type. The only track surface specific skills are ones for Dirt. So if you choose
-                                        Dirt, all skills will still be available for purchase. However if you choose Turf, then all the Dirt skills will be ignored.
+                                        As of 2026-02-19, there are no skills that only apply to the Turf surface type. The only track surface specific skills are ones for Dirt. So if you choose Dirt,
+                                        all skills will still be available for purchase. However if you choose Turf, then all the Dirt skills will be ignored.
                                     </Text>
                                 </InfoContainer>
                             </View>

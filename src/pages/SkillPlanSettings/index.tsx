@@ -386,7 +386,8 @@ const SkillPlanSettings: FC<SkillPlanSettingsProps> = ({ planKey, name, title, d
                     <View style={{ flex: 1 }}>
                         <Text style={styles.sectionTitle}>{sectionTitle}</Text>
                         <Text style={[styles.inputDescription, { marginTop: 0 }]}>
-                            Selected <Text style={[TYPE.monoValue, { color: colors.text }]}>{activeIds.length}</Text> / <Text style={[TYPE.monoValue, { color: colors.text }]}>{filteredSkills.length}</Text> skills
+                            Selected <Text style={[TYPE.monoValue, { color: colors.text }]}>{activeIds.length}</Text> /{" "}
+                            <Text style={[TYPE.monoValue, { color: colors.text }]}>{filteredSkills.length}</Text> skills
                         </Text>
                     </View>
                     <View style={{ flexDirection: "row", gap: 8 }}>

@@ -27,10 +27,7 @@ export const GlassModal = ({ visible, onRequestClose, children, contentStyle, di
     const { colors } = useTheme()
     return (
         <Modal transparent visible={visible} animationType="fade" onRequestClose={onRequestClose} statusBarTranslucent>
-            <Pressable
-                style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.glassBackdrop }}
-                onPress={dismissOnBackdropPress ? onRequestClose : undefined}
-            >
+            <Pressable style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.glassBackdrop }} onPress={dismissOnBackdropPress ? onRequestClose : undefined}>
                 <GlassSurface intensity={40} style={{ borderRadius: 16, overflow: "hidden", maxWidth: "90%", maxHeight: "85%" }}>
                     <Pressable onPress={(e) => e.stopPropagation()} style={contentStyle}>
                         {children}

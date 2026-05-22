@@ -515,8 +515,7 @@ const LLMSettings = () => {
                                     <>
                                         <Text style={styles.statusRow}>
                                             RAM: <Text style={[TYPE.monoValue, { color: colors.text }]}>{formatBytes(deviceCaps.totalRamBytes)}</Text> (
-                                            <Text style={[TYPE.monoValue, { color: colors.text }]}>{formatBytes(deviceCaps.availRamBytes)}</Text> free) · Acceleration:{" "}
-                                            {accelerationTierLabel(tier)}
+                                            <Text style={[TYPE.monoValue, { color: colors.text }]}>{formatBytes(deviceCaps.availRamBytes)}</Text> free) · Acceleration: {accelerationTierLabel(tier)}
                                         </Text>
                                         <Text style={styles.hint}>
                                             {recommended

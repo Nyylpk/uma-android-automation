@@ -158,24 +158,9 @@ const Settings = () => {
         return (
             <>
                 <Section label="GAMEPLAY">
-                    <Row
-                        title="Training"
-                        description="Stat priorities, training behavior, and customization."
-                        right={chevron}
-                        onPress={() => navigation.navigate("TrainingSettings" as never)}
-                    />
-                    <Row
-                        title="Training Events"
-                        description="Training event preferences and event selection."
-                        right={chevron}
-                        onPress={() => navigation.navigate("TrainingEventSettings" as never)}
-                    />
-                    <Row
-                        title="Racing"
-                        description="Racing behavior, retries, and mandatory race handling."
-                        right={chevron}
-                        onPress={() => navigation.navigate("RacingSettings" as never)}
-                    />
+                    <Row title="Training" description="Stat priorities, training behavior, and customization." right={chevron} onPress={() => navigation.navigate("TrainingSettings" as never)} />
+                    <Row title="Training Events" description="Training event preferences and event selection." right={chevron} onPress={() => navigation.navigate("TrainingEventSettings" as never)} />
+                    <Row title="Racing" description="Racing behavior, retries, and mandatory race handling." right={chevron} onPress={() => navigation.navigate("RacingSettings" as never)} />
                     <Row title="Skills" description="Skill purchasing behavior." right={chevron} onPress={() => navigation.navigate("SkillSettings" as never)} />
                 </Section>
 
@@ -189,18 +174,8 @@ const Settings = () => {
                 </Section>
 
                 <Section label="INTEGRATIONS">
-                    <Row
-                        title="Discord"
-                        description="Discord notifications when the bot stops."
-                        right={chevron}
-                        onPress={() => navigation.navigate("DiscordSettings" as never)}
-                    />
-                    <Row
-                        title="LLM"
-                        description="On-device docs search and chat model downloads."
-                        right={chevron}
-                        onPress={() => navigation.navigate("LLMSettings" as never)}
-                    />
+                    <Row title="Discord" description="Discord notifications when the bot stops." right={chevron} onPress={() => navigation.navigate("DiscordSettings" as never)} />
+                    <Row title="LLM" description="On-device docs search and chat model downloads." right={chevron} onPress={() => navigation.navigate("LLMSettings" as never)} />
                 </Section>
 
                 <Section label="TOOLS">
@@ -210,12 +185,7 @@ const Settings = () => {
                         right={chevron}
                         onPress={() => navigation.navigate("EventLogVisualizer" as never)}
                     />
-                    <Row
-                        title="Debug"
-                        description="Debug mode, template matching, and diagnostic tests."
-                        right={chevron}
-                        onPress={() => navigation.navigate("DebugSettings" as never)}
-                    />
+                    <Row title="Debug" description="Debug mode, template matching, and diagnostic tests." right={chevron} onPress={() => navigation.navigate("DebugSettings" as never)} />
                 </Section>
             </>
         )
@@ -402,7 +372,9 @@ const Settings = () => {
 
                 <SearchableItem id="settings-management-title" title="Settings Management" description="Import and export settings from JSON file or access the app's data directory.">
                     <Text style={[TYPE.h2, { color: colors.text }]}>Settings Management</Text>
-                    <Text style={[TYPE.caption, { color: colors.textMuted, marginTop: 2, marginBottom: SPACING.md }]}>Import and export settings from JSON file or access the app's data directory.</Text>
+                    <Text style={[TYPE.caption, { color: colors.textMuted, marginTop: 2, marginBottom: SPACING.md }]}>
+                        Import and export settings from JSON file or access the app's data directory.
+                    </Text>
                 </SearchableItem>
 
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>

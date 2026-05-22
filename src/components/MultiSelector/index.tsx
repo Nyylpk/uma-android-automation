@@ -337,57 +337,57 @@ const MultiSelector: React.FC<MultiSelectorProps> = ({
             <GlassModal visible={modalVisible && !selectAll} onRequestClose={() => setModalVisible(false)} contentStyle={styles.modalContent}>
                 {/* Modal Header */}
                 <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>{title}</Text>
-                            <Pressable style={styles.closeButton} onPress={() => setModalVisible(false)} android_ripple={{ color: colors.ripple, foreground: true }}>
-                                <X size={24} color={colors.text} />
-                            </Pressable>
-                        </View>
+                    <Text style={styles.modalTitle}>{title}</Text>
+                    <Pressable style={styles.closeButton} onPress={() => setModalVisible(false)} android_ripple={{ color: colors.ripple, foreground: true }}>
+                        <X size={24} color={colors.text} />
+                    </Pressable>
+                </View>
 
-                        {/* Search Container */}
-                        <View style={styles.searchContainer}>
-                            <Search size={20} color={colors.text} />
-                            <TextInput style={styles.searchInput} placeholder="Search..." placeholderTextColor={colors.textMuted} value={searchQuery} onChangeText={setSearchQuery} />
-                            {searchQuery.length > 0 && (
-                                <Pressable style={styles.clearSearchButton} onPress={() => setSearchQuery("")} android_ripple={{ color: colors.ripple, foreground: true }}>
-                                    <X size={16} color={colors.text} />
-                                </Pressable>
-                            )}
-                        </View>
+                {/* Search Container */}
+                <View style={styles.searchContainer}>
+                    <Search size={20} color={colors.text} />
+                    <TextInput style={styles.searchInput} placeholder="Search..." placeholderTextColor={colors.textMuted} value={searchQuery} onChangeText={setSearchQuery} />
+                    {searchQuery.length > 0 && (
+                        <Pressable style={styles.clearSearchButton} onPress={() => setSearchQuery("")} android_ripple={{ color: colors.ripple, foreground: true }}>
+                            <X size={16} color={colors.text} />
+                        </Pressable>
+                    )}
+                </View>
 
-                        {/* Options List */}
-                        <ScrollView
-                            style={styles.optionsList}
-                            showsVerticalScrollIndicator={false}
-                            nestedScrollEnabled={true}
-                            onTouchStart={handleTouchStart}
-                            onTouchMove={handleTouchMove}
-                            onTouchEnd={handleTouchEnd}
-                            ref={scrollViewRef}
-                            onScroll={(event) => {
-                                const offsetY = event.nativeEvent.contentOffset.y
-                                currentScrollY.current = offsetY
-                            }}
-                        >
-                            {filteredOptions.length > 0 ? (
-                                filteredOptions.map((option) => (
-                                    <View key={option} style={styles.optionItem}>
-                                        <CustomCheckbox checked={selectedOptions.includes(option)} onCheckedChange={(checked) => handleOptionToggle(option, checked)} label={option} className="my-1" />
-                                    </View>
-                                ))
-                            ) : (
-                                <Text style={styles.noResults}>No results found</Text>
-                            )}
-                        </ScrollView>
+                {/* Options List */}
+                <ScrollView
+                    style={styles.optionsList}
+                    showsVerticalScrollIndicator={false}
+                    nestedScrollEnabled={true}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    ref={scrollViewRef}
+                    onScroll={(event) => {
+                        const offsetY = event.nativeEvent.contentOffset.y
+                        currentScrollY.current = offsetY
+                    }}
+                >
+                    {filteredOptions.length > 0 ? (
+                        filteredOptions.map((option) => (
+                            <View key={option} style={styles.optionItem}>
+                                <CustomCheckbox checked={selectedOptions.includes(option)} onCheckedChange={(checked) => handleOptionToggle(option, checked)} label={option} className="my-1" />
+                            </View>
+                        ))
+                    ) : (
+                        <Text style={styles.noResults}>No results found</Text>
+                    )}
+                </ScrollView>
 
-                        {/* Button Row */}
-                        <View style={styles.buttonRow}>
-                            <CustomButton onPress={() => clearAll()} variant="destructive">
-                                Clear All
-                            </CustomButton>
-                            <CustomButton onPress={() => handleSelectAll(true)} variant={isDark ? "default" : "outline"}>
-                                Select All
-                            </CustomButton>
-                        </View>
+                {/* Button Row */}
+                <View style={styles.buttonRow}>
+                    <CustomButton onPress={() => clearAll()} variant="destructive">
+                        Clear All
+                    </CustomButton>
+                    <CustomButton onPress={() => handleSelectAll(true)} variant={isDark ? "default" : "outline"}>
+                        Select All
+                    </CustomButton>
+                </View>
             </GlassModal>
         </View>
     )
