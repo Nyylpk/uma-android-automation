@@ -10,7 +10,6 @@ import { useTheme } from "../../context/ThemeContext"
 import CustomSelect from "../../components/CustomSelect"
 import CustomCheckbox from "../../components/CustomCheckbox"
 import CustomSlider from "../../components/CustomSlider"
-import CustomTitle from "../../components/CustomTitle"
 import CustomButton from "../../components/CustomButton"
 import PageHeader from "../../components/PageHeader"
 import { Row } from "../../components/ui/row"
@@ -22,6 +21,8 @@ import SearchableItem from "../../components/SearchableItem"
 import { useSettings } from "../../context/SettingsContext"
 import { useSettingsFileManager } from "../../hooks/useSettingsFileManager"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
+import { TYPE } from "../../lib/type"
+import { SPACING } from "../../lib/spacing"
 
 /**
  * The main Settings page of the application.
@@ -225,7 +226,10 @@ const Settings = () => {
             <View style={{ marginTop: 16 }}>
                 <Separator style={{ marginVertical: 16 }} />
 
-                <CustomTitle title="Misc Settings" description="General settings for the bot that don't fit into the other categories." />
+                <View style={{ marginBottom: SPACING.lg }}>
+                    <Text style={[TYPE.h2, { color: colors.text }]}>Misc Settings</Text>
+                    <Text style={[TYPE.caption, { color: colors.textMuted, marginTop: 2 }]}>General settings for the bot that don't fit into the other categories.</Text>
+                </View>
 
                 <CustomCheckbox
                     searchId="settings-stop-before-finals"
@@ -396,7 +400,10 @@ const Settings = () => {
 
                 <Separator style={{ marginVertical: 16 }} />
 
-                <CustomTitle searchId="settings-management-title" title="Settings Management" description="Import and export settings from JSON file or access the app's data directory." />
+                <SearchableItem id="settings-management-title" title="Settings Management" description="Import and export settings from JSON file or access the app's data directory.">
+                    <Text style={[TYPE.h2, { color: colors.text }]}>Settings Management</Text>
+                    <Text style={[TYPE.caption, { color: colors.textMuted, marginTop: 2, marginBottom: SPACING.md }]}>Import and export settings from JSON file or access the app's data directory.</Text>
+                </SearchableItem>
 
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                     <CustomButton onPress={handleImportSettings} variant="default" style={{ width: 150 }}>
