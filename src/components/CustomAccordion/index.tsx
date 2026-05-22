@@ -61,7 +61,7 @@ const CustomAccordion: React.FC<CustomAccordionProps> = ({ sections, type = "sin
                 sectionTitle: {
                     fontSize: 16,
                     fontWeight: "600",
-                    color: colors.foreground,
+                    color: colors.text,
                     marginBottom: 0,
                 },
             }),

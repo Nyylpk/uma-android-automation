@@ -43,12 +43,12 @@ const CustomTitle = ({ title, description, style, searchId, searchTitle, searchD
                 sectionTitle: {
                     fontSize: 18,
                     fontWeight: "600",
-                    color: colors.foreground,
+                    color: colors.text,
                     marginBottom: 12,
                 },
                 description: {
                     fontSize: 14,
-                    color: colors.foreground,
+                    color: colors.text,
                     opacity: 0.7,
                     marginBottom: 16,
                     lineHeight: 20,

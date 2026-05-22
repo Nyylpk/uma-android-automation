@@ -136,18 +136,18 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
             <Pressable style={pressSurfaceInner} onLongPress={label ? () => copyToClipboard(label) : undefined} android_ripple={label ? { color: colors.ripple, foreground: true } : undefined}>
                 {label && (
                     <View style={{ marginBottom: 4 }}>
-                        <Text style={{ fontSize: 16, fontWeight: "600", color: colors.foreground }}>{label}</Text>
+                        <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text }}>{label}</Text>
                     </View>
                 )}
                 {description && (
                     <View>
-                        <Text style={{ fontSize: 14, color: colors.foreground, opacity: 0.7, marginBottom: 4 }}>{description}</Text>
+                        <Text style={{ fontSize: 14, color: colors.text, opacity: 0.7, marginBottom: 4 }}>{description}</Text>
                     </View>
                 )}
                 <Select onValueChange={handleValueChange} value={value as any} defaultValue={defaultValue as any} disabled={disabled}>
                     <View ref={triggerRef} style={[{ width: width as any }]} onLayout={onTriggerLayout}>
-                        <SelectTrigger disabled={disabled} style={{ backgroundColor: colors.background, borderColor: colors.border }}>
-                            <SelectValue placeholder={value || defaultValue ? (currentLabel ?? "ERROR") : placeholder} style={{ color: colors.foreground }} />
+                        <SelectTrigger disabled={disabled} style={{ backgroundColor: colors.bg, borderColor: colors.borderHair }}>
+                            <SelectValue placeholder={value || defaultValue ? (currentLabel ?? "ERROR") : placeholder} style={{ color: colors.text }} />
                         </SelectTrigger>
                     </View>
                     <SelectContent style={{ width: triggerWidth }} portalHost={portalHost}>

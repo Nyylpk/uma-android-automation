@@ -121,7 +121,7 @@ const CustomSlider: React.FC<CustomSliderProps> = ({
                 label: {
                     fontSize: 16,
                     fontWeight: "600",
-                    color: colors.foreground,
+                    color: colors.text,
                     marginBottom: 12,
                 },
                 sliderContainer: {
@@ -137,11 +137,11 @@ const CustomSlider: React.FC<CustomSliderProps> = ({
                 },
                 labelText: {
                     fontSize: 12,
-                    color: colors.primary,
+                    color: colors.brand,
                 },
                 descriptionText: {
                     fontSize: 14,
-                    color: colors.foreground,
+                    color: colors.text,
                     opacity: 0.7,
                     marginBottom: 8,
                     marginTop: -4,
@@ -151,13 +151,13 @@ const CustomSlider: React.FC<CustomSliderProps> = ({
                     width: 20,
                     height: 20,
                     borderRadius: 10,
-                    backgroundColor: colors.primary,
+                    backgroundColor: colors.brand,
                     zIndex: 1,
                     top: 10, // Position it in the middle of the slider height.
                 },
                 tooltip: {
                     position: "absolute",
-                    backgroundColor: colors.primary,
+                    backgroundColor: colors.brand,
                     paddingHorizontal: 12,
                     paddingVertical: 8,
                     borderRadius: 6,
@@ -174,7 +174,7 @@ const CustomSlider: React.FC<CustomSliderProps> = ({
                     elevation: 5,
                 },
                 tooltipText: {
-                    color: colors.background,
+                    color: colors.onBrand,
                     fontSize: 12,
                     fontWeight: "600",
                     textAlign: "center",
@@ -189,14 +189,14 @@ const CustomSlider: React.FC<CustomSliderProps> = ({
                     textAlign: "center",
                     fontSize: 18,
                     fontWeight: "600",
-                    color: colors.foreground,
-                    backgroundColor: colors.input,
-                    borderColor: colors.foreground,
+                    color: colors.text,
+                    backgroundColor: colors.surfaceRaised,
+                    borderColor: colors.borderStrong,
                 },
                 unitText: {
                     fontSize: 18,
                     fontWeight: "600",
-                    color: colors.foreground,
+                    color: colors.text,
                     marginLeft: 4,
                 },
             }),
@@ -410,8 +410,8 @@ const CustomSlider: React.FC<CustomSliderProps> = ({
                     minimumValue={min}
                     maximumValue={max}
                     step={step}
-                    minimumTrackTintColor={colors.primary}
-                    maximumTrackTintColor={colors.border}
+                    minimumTrackTintColor={colors.brand}
+                    maximumTrackTintColor={colors.borderHair}
                     thumbTintColor="transparent" // Hide the default thumb
                 />
             </View>

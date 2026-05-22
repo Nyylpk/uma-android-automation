@@ -67,9 +67,9 @@ const CustomButton: React.FC<CustomButtonProps> = ({
             case "outline":
                 return { backgroundColor: isDark ? "black" : "white" }
             case "primary":
-                return { backgroundColor: colors.primary }
+                return { backgroundColor: colors.brand }
             case "secondary":
-                return { backgroundColor: colors.secondary }
+                return { backgroundColor: colors.surfaceRaised }
             case "ghost":
                 return { backgroundColor: "transparent" }
             case "link":
@@ -83,7 +83,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
             case "error":
                 return { backgroundColor: colors.error }
             default:
-                return { backgroundColor: colors.secondary }
+                return { backgroundColor: colors.surfaceRaised }
         }
     }
 
@@ -100,9 +100,9 @@ const CustomButton: React.FC<CustomButtonProps> = ({
             case "outline":
                 return { color: isDark ? "white" : "black" }
             case "primary":
-                return { color: colors.primaryForeground }
+                return { color: colors.onBrand }
             case "secondary":
-                return { color: colors.secondaryForeground }
+                return { color: colors.text }
             case "ghost":
                 return { color: isDark ? "white" : "black" }
             case "link":
@@ -116,7 +116,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
             case "error":
                 return { color: colors.errorContent }
             default:
-                return { color: colors.secondaryForeground }
+                return { color: colors.text }
         }
     }
 
