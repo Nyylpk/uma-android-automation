@@ -18,7 +18,6 @@ import SelectButton from "../../components/SelectButton"
 import PermissionSetupDialog from "../../components/PermissionSetupDialog"
 import { loadDeviceCapabilities, shouldSuggestX8664Variant } from "../../lib/chat/deviceCapabilities"
 import HeroStatusCard, { HeroStatus } from "../../components/HeroStatusCard"
-import { GlassFab } from "../../components/ui/glass-fab"
 import { useProfileContext, DEFAULT_PROFILE_NAME } from "../../context/ProfileContext"
 import { MOTION } from "../../lib/motion"
 import { SPACING } from "../../lib/spacing"
@@ -52,11 +51,6 @@ const styles = StyleSheet.create({
     },
     logBody: {
         flex: 1,
-    },
-    fab: {
-        position: "absolute",
-        right: SPACING.lg,
-        bottom: SPACING.lg,
     },
     button: {
         width: 100,
@@ -370,33 +364,10 @@ Note: Reinstall using the x86_64 release APK for much better performance.`)
     const heroStatus: HeroStatus = isRunning ? "running" : unsupportedReason !== null || abiMismatch ? "error" : readyStatus && deviceMetrics !== null ? "ready" : "stopped"
     const heroCampaign = general.scenario && general.scenario !== "" ? general.scenario : "No campaign selected"
     const heroProfile = currentProfileName ?? DEFAULT_PROFILE_NAME
-    const fabIconName = isRunning ? "stop" : "play"
-    const fabAccessibilityLabel = isRunning ? "Stop bot" : "Start bot"
-
     return (
         <View style={styles.root}>
             {/* MessageLog uses FlashList, which doesn't support sticky headers the same way as ScrollView, so PageHeader stays a sibling above (non-sticky). */}
-            <PageHeader
-                title=""
-                showHomeButton={false}
-                style={{ width: "100%" }}
-                leftComponent={
-                    <SelectButton
-                        variant={getSelectButtonVariant()}
-                        iconName={getSelectButtonIconName()}
-                        options={scenarios}
-                        placeholder={deviceMetrics ? "Select a Scenario" : "Not Ready"}
-                        value={general.scenario}
-                        onValueChange={(value) => {
-                            const newScenario = value || ""
-                            updateGeneral({ scenario: newScenario })
-                            setReadyStatus(newScenario !== "")
-                        }}
-                        onPress={handleButtonPress}
-                    />
-                }
-                rightComponent={renderStatus()}
-            />
+            <PageHeader title="Home" showHomeButton={false} style={{ width: "100%" }} searchOnRight rightComponent={renderStatus()} />
 
             <View style={styles.hero}>
                 <HeroStatusCard
@@ -404,8 +375,21 @@ Note: Reinstall using the x86_64 release APK for much better performance.`)
                     campaign={heroCampaign}
                     profile={heroProfile}
                     mascot={MASCOT_SOURCE}
-                    onStart={handleButtonPress}
-                    startDisabled={!isRunning && (!readyStatus || !isScenarioValid)}
+                    cta={
+                        <SelectButton
+                            variant={getSelectButtonVariant()}
+                            iconName={getSelectButtonIconName()}
+                            options={scenarios}
+                            placeholder={deviceMetrics ? "Select a Scenario" : "Not Ready"}
+                            value={general.scenario}
+                            onValueChange={(value) => {
+                                const newScenario = value || ""
+                                updateGeneral({ scenario: newScenario })
+                                setReadyStatus(newScenario !== "")
+                            }}
+                            onPress={handleButtonPress}
+                        />
+                    }
                 />
             </View>
 
@@ -427,14 +411,6 @@ Note: Reinstall using the x86_64 release APK for much better performance.`)
                     </View>
                 )}
             </View>
-
-            <GlassFab
-                icon={<Ionicons name={fabIconName} size={22} color={colors.brand} />}
-                onPress={handleButtonPress}
-                disabled={!isRunning && (!readyStatus || !isScenarioValid)}
-                accessibilityLabel={fabAccessibilityLabel}
-                style={styles.fab}
-            />
 
             <AlertDialog open={showNotReadyDialog} onOpenChange={setShowNotReadyDialog}>
                 <AlertDialogContent onDismiss={() => setShowNotReadyDialog(false)}>
