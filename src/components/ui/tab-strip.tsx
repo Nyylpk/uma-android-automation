@@ -16,7 +16,7 @@ export interface TabStripItem {
     label: string
 }
 
-/** Props for the TabStrip primitive. */
+/** Props for `TabStrip`. */
 export interface TabStripProps {
     /** Ordered list of tab descriptors. */
     items: TabStripItem[]
@@ -34,6 +34,7 @@ export interface TabStripProps {
  * @param activeKey Key of the currently active tab.
  * @param onChange Callback invoked when the user taps a tab.
  * @param style Optional container style.
+ * @returns A horizontally laid out row of pill-shaped tab buttons with controlled active state.
  */
 const TabStrip: React.FC<TabStripProps> = ({ items, activeKey, onChange, style }) => {
     const { colors } = useTheme()
