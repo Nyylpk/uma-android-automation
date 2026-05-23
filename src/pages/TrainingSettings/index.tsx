@@ -20,7 +20,9 @@ import SearchableItem from "../../components/SearchableItem"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
 import { shallowArrayEqual } from "../../lib/utils"
 import WarningContainer from "../../components/WarningContainer"
+import { Row } from "../../components/ui/row"
 import { Section } from "../../components/ui/section"
+import { Switch } from "../../components/ui/switch"
 import { TYPE } from "../../lib/type"
 import { SPACING } from "../../lib/spacing"
 
@@ -506,103 +508,126 @@ const TrainingSettings = () => {
 
                         {showHeavySections && (
                             <>
-                                {renderStatSelector(
-                                    "Blacklist",
-                                    blacklistItems,
-                                    (value) => setBlacklistItems(value),
-                                    blacklistModalVisible,
-                                    setBlacklistModalVisible,
-                                    "Select which stats to exclude from training. These stats will be skipped during training sessions.",
-                                    "checkbox",
-                                    "training-blacklist"
-                                )}
+                                <Section label="Priorities">
+                                    {renderStatSelector(
+                                        "Blacklist",
+                                        blacklistItems,
+                                        (value) => setBlacklistItems(value),
+                                        blacklistModalVisible,
+                                        setBlacklistModalVisible,
+                                        "Select which stats to exclude from training. These stats will be skipped during training sessions.",
+                                        "checkbox",
+                                        "training-blacklist"
+                                    )}
 
-                                {renderStatSelector(
-                                    "Prioritization",
-                                    statPrioritizationItems,
-                                    (value) => setStatPrioritizationItems(value),
-                                    prioritizationModalVisible,
-                                    setPrioritizationModalVisible,
-                                    "Select the priority order of the stats. The stats will be trained in the order they are selected. If none are selected, then the default order will be used.",
-                                    "priority",
-                                    "training-prioritization"
-                                )}
+                                    {renderStatSelector(
+                                        "Prioritization",
+                                        statPrioritizationItems,
+                                        (value) => setStatPrioritizationItems(value),
+                                        prioritizationModalVisible,
+                                        setPrioritizationModalVisible,
+                                        "Select the priority order of the stats. The stats will be trained in the order they are selected. If none are selected, then the default order will be used.",
+                                        "priority",
+                                        "training-prioritization"
+                                    )}
 
-                                {renderStatSelector(
-                                    "Event Choice Prioritization",
-                                    eventChoiceStatPriorityItems,
-                                    (value) => setEventChoiceStatPriorityItems(value),
-                                    eventChoicePrioritizationModalVisible,
-                                    setEventChoicePrioritizationModalVisible,
-                                    "Select the priority order of stats used when scoring in-game event choices. Events typically grant flat stat gains, so a different ordering than regular training may be optimal.",
-                                    "priority",
-                                    "event-choice-stat-priority"
-                                )}
+                                    {renderStatSelector(
+                                        "Event Choice Prioritization",
+                                        eventChoiceStatPriorityItems,
+                                        (value) => setEventChoiceStatPriorityItems(value),
+                                        eventChoicePrioritizationModalVisible,
+                                        setEventChoicePrioritizationModalVisible,
+                                        "Select the priority order of stats used when scoring in-game event choices. Events typically grant flat stat gains, so a different ordering than regular training may be optimal.",
+                                        "priority",
+                                        "event-choice-stat-priority"
+                                    )}
 
-                                {renderStatSelector(
-                                    "Summer Training Prioritization",
-                                    summerTrainingStatPriorityItems,
-                                    (value) => setSummerTrainingStatPriorityItems(value),
-                                    summerTrainingPrioritizationModalVisible,
-                                    setSummerTrainingPrioritizationModalVisible,
-                                    "Select the priority order of stats used during Summer Training. Facility levels are maxed during summer with no facility progression, so a different ordering than regular training may be optimal.",
-                                    "priority",
-                                    "summer-training-stat-priority"
-                                )}
+                                    {renderStatSelector(
+                                        "Summer Training Prioritization",
+                                        summerTrainingStatPriorityItems,
+                                        (value) => setSummerTrainingStatPriorityItems(value),
+                                        summerTrainingPrioritizationModalVisible,
+                                        setSummerTrainingPrioritizationModalVisible,
+                                        "Select the priority order of stats used during Summer Training. Facility levels are maxed during summer with no facility progression, so a different ordering than regular training may be optimal.",
+                                        "priority",
+                                        "summer-training-stat-priority"
+                                    )}
+                                </Section>
 
-                                <View style={styles.section}>
-                                    <CustomCheckbox
-                                        checked={disableTrainingOnMaxedStat}
-                                        onCheckedChange={(checked) => updateTrainingSetting("disableTrainingOnMaxedStat", checked)}
-                                        label="Disable Training on Maxed Stats"
+                                <Section label="Behavior">
+                                    <SearchableItem
+                                        id="disable-training-on-maxed-stats"
+                                        title="Disable Training on Maxed Stats"
                                         description="When enabled, training will be skipped for stats that have reached their maximum value."
-                                        className="my-2"
-                                        searchId="disable-training-on-maxed-stats"
-                                    />
-                                </View>
+                                    >
+                                        <Row
+                                            title="Disable Training on Maxed Stats"
+                                            description="When enabled, training will be skipped for stats that have reached their maximum value."
+                                            right={
+                                                <Switch
+                                                    checked={disableTrainingOnMaxedStat}
+                                                    onCheckedChange={(checked) => updateTrainingSetting("disableTrainingOnMaxedStat", checked)}
+                                                />
+                                            }
+                                        />
+                                    </SearchableItem>
 
-                                <View style={styles.section}>
-                                    <CustomSlider
-                                        value={maximumFailureChance}
-                                        placeholder={defaultSettings.training.maximumFailureChance}
-                                        onValueChange={(value) => updateTrainingSetting("maximumFailureChance", value)}
-                                        min={5}
-                                        max={95}
-                                        step={5}
-                                        label="Set Maximum Failure Chance"
-                                        labelUnit="%"
-                                        showValue={true}
-                                        showLabels={true}
-                                        description="Set the maximum acceptable failure chance for training sessions. Training with higher failure rates will be avoided."
-                                        searchId="maximum-failure-chance"
-                                    />
-                                </View>
-
-                                <View style={styles.section}>
-                                    <CustomCheckbox
-                                        checked={enableRiskyTraining}
-                                        onCheckedChange={(checked) => updateTrainingSetting("enableRiskyTraining", checked)}
-                                        label="Enable Riskier Training"
+                                    <SearchableItem
+                                        id="enable-riskier-training"
+                                        title="Enable Riskier Training"
                                         description="When enabled, trainings with high main stat gains will use a separate, higher maximum failure chance threshold."
-                                        className="my-2"
-                                        searchId="enable-riskier-training"
-                                    />
-                                    <CustomSlider
-                                        value={riskyTrainingMinStatGain || defaultSettings.training.riskyTrainingMinStatGain}
-                                        placeholder={defaultSettings.training.riskyTrainingMinStatGain}
-                                        onValueChange={(value) => updateTrainingSetting("riskyTrainingMinStatGain", value)}
-                                        min={20}
-                                        max={100}
-                                        step={5}
-                                        label="Minimum Main Stat Gain Threshold"
-                                        labelUnit=""
-                                        showValue={true}
-                                        showLabels={true}
-                                        description="When a training's main stat gain meets or exceeds this value, it will be considered for risky training."
-                                        searchId="risky-training-min-stat-gain"
-                                        searchCondition={enableRiskyTraining}
-                                        parentId="enable-riskier-training"
-                                    />
+                                    >
+                                        <Row
+                                            title="Enable Riskier Training"
+                                            description="When enabled, trainings with high main stat gains will use a separate, higher maximum failure chance threshold."
+                                            right={
+                                                <Switch
+                                                    checked={enableRiskyTraining}
+                                                    onCheckedChange={(checked) => updateTrainingSetting("enableRiskyTraining", checked)}
+                                                />
+                                            }
+                                        />
+                                    </SearchableItem>
+                                </Section>
+
+                                <Section label="Limits">
+                                    <View style={{ padding: SPACING.md }}>
+                                        <CustomSlider
+                                            value={maximumFailureChance}
+                                            placeholder={defaultSettings.training.maximumFailureChance}
+                                            onValueChange={(value) => updateTrainingSetting("maximumFailureChance", value)}
+                                            min={5}
+                                            max={95}
+                                            step={5}
+                                            label="Set Maximum Failure Chance"
+                                            labelUnit="%"
+                                            showValue={true}
+                                            showLabels={true}
+                                            description="Set the maximum acceptable failure chance for training sessions. Training with higher failure rates will be avoided."
+                                            searchId="maximum-failure-chance"
+                                        />
+                                    </View>
+                                    <View style={{ padding: SPACING.md }}>
+                                        <CustomSlider
+                                            value={riskyTrainingMinStatGain || defaultSettings.training.riskyTrainingMinStatGain}
+                                            placeholder={defaultSettings.training.riskyTrainingMinStatGain}
+                                            onValueChange={(value) => updateTrainingSetting("riskyTrainingMinStatGain", value)}
+                                            min={20}
+                                            max={100}
+                                            step={5}
+                                            label="Minimum Main Stat Gain Threshold"
+                                            labelUnit=""
+                                            showValue={true}
+                                            showLabels={true}
+                                            description="When a training's main stat gain meets or exceeds this value, it will be considered for risky training."
+                                            searchId="risky-training-min-stat-gain"
+                                            searchCondition={enableRiskyTraining}
+                                            parentId="enable-riskier-training"
+                                        />
+                                    </View>
+                                </Section>
+
+                                <View style={styles.section}>
                                     <CustomSlider
                                         value={riskyTrainingMaxFailureChance || defaultSettings.training.riskyTrainingMaxFailureChance}
                                         placeholder={defaultSettings.training.riskyTrainingMaxFailureChance}
