@@ -21,9 +21,7 @@ import TrainingSettings from "./pages/TrainingSettings"
 import TrainingEventSettings from "./pages/TrainingEventSettings"
 import RacingSettings from "./pages/RacingSettings"
 import SmartRaceSolverSettings from "./pages/SmartRaceSolverSettings"
-import SkillSettings from "./pages/SkillSettings"
-import SkillPlanSettings from "./pages/SkillPlanSettings"
-import { skillPlanSettingsPages } from "./pages/SkillPlanSettings/config"
+import Skills from "./pages/Skills"
 import EventLogVisualizer from "./pages/EventLogVisualizer"
 import ImportSettingsPreview from "./pages/ImportSettingsPreview"
 import ScenarioOverridesSettings from "./pages/ScenarioOverridesSettings"
@@ -56,12 +54,7 @@ function SettingsStack() {
             <Stack.Screen name="TrainingEventSettings" component={TrainingEventSettings} />
             <Stack.Screen name="RacingSettings" component={RacingSettings} />
             <Stack.Screen name="SmartRaceSolverSettings" component={SmartRaceSolverSettings} />
-            <Stack.Screen name="SkillSettings" component={SkillSettings} />
-            {Object.entries(skillPlanSettingsPages).map(([key, config]) => (
-                <Stack.Screen key={key} name={config.name}>
-                    {(props) => <SkillPlanSettings {...props} planKey={config.planKey} name={config.name} title={config.title} description={config.description} />}
-                </Stack.Screen>
-            ))}
+            <Stack.Screen name="Skills" component={Skills} initialParams={{ tab: "skillPointCheck" }} />
             <Stack.Screen name="EventLogVisualizer" component={EventLogVisualizer} />
             <Stack.Screen name="ImportSettingsPreview" component={ImportSettingsPreview} />
             <Stack.Screen name="ScenarioOverridesSettings" component={ScenarioOverridesSettings} />

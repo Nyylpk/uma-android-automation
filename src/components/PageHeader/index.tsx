@@ -34,13 +34,10 @@ const pageNameMapping: Record<string, string> = {
     TrainingEventSettings: "Training Events",
     RacingSettings: "Racing",
     SmartRaceSolverSettings: "Smart Race Solver",
-    SkillSettings: "Skills",
+    Skills: "Skills",
     DebugSettings: "Debug",
     EventLogVisualizer: "Event Log Visualizer",
     ImportSettingsPreview: "Import Settings Preview",
-    SkillPlanSettingsSkillPointCheck: "Skill Plan: Skill Point Check",
-    SkillPlanSettingsPreFinals: "Skill Plan: Pre-Finals",
-    SkillPlanSettingsCareerComplete: "Skill Plan: Career Complete",
 }
 
 /**
