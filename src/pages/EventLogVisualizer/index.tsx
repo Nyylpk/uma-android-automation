@@ -14,7 +14,9 @@ import { Snackbar } from "react-native-paper"
 import { useSettings } from "../../context/SettingsContext"
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../components/ui/tooltip"
 import { Info } from "lucide-react-native"
-import CustomCheckbox from "../../components/CustomCheckbox"
+import { Row } from "../../components/ui/row"
+import { Switch } from "../../components/ui/switch"
+import Ionicons from "@react-native-vector-icons/ionicons"
 import PageHeader from "../../components/PageHeader"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
 import WarningContainer from "../../components/WarningContainer"
@@ -184,11 +186,11 @@ const EventLogVisualizer: React.FC = () => {
                 <PageHeader title="Event Log Visualizer" style={{ marginBottom: 12 }} />
 
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 8 }}>
-                    <CustomButton onPress={openDataDirectory} variant="default">
-                        📁 Open Data Directory
+                    <CustomButton variant="outline" style={{ flex: 1 }} icon={<Ionicons name="folder-outline" size={16} color={colors.text} />} onPress={openDataDirectory}>
+                        Open Data Directory
                     </CustomButton>
-                    <CustomButton onPress={onPickFiles} variant="default">
-                        📂 Select Log Files
+                    <CustomButton variant="primary" style={{ flex: 1 }} icon={<Ionicons name="folder-open" size={16} color={colors.onBrand} />} onPress={onPickFiles}>
+                        Select Log Files
                     </CustomButton>
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -215,14 +217,11 @@ const EventLogVisualizer: React.FC = () => {
                     </Tooltip>
                 </View>
 
-                <View style={{ marginTop: 8, marginBottom: 12 }}>
-                    <CustomCheckbox
-                        checked={showTriggers}
-                        onCheckedChange={(checked) => setShowTriggers(!!checked)}
-                        label="Show trigger lines"
-                        description="Display the exact log lines that triggered each action per day."
-                    />
-                </View>
+                <Row
+                    title="Show trigger lines"
+                    description="Display the log lines behind each action"
+                    right={<Switch checked={showTriggers} onCheckedChange={(checked) => setShowTriggers(!!checked)} />}
+                />
 
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                     <View style={[styles.toggleContainer, { flex: 1 }]}>
