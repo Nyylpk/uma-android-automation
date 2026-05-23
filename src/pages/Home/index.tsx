@@ -229,6 +229,7 @@ const Home = () => {
             logErrorWithTimestamp("[Home] Failed to save settings:", error)
             setSnackbarMessage(`Failed to save settings before starting: ${error}`)
             setSnackbarOpen(true)
+            return
         }
         StartModule.start()
     }
@@ -420,6 +421,7 @@ Note: Reinstall using the x86_64 release APK for much better performance.`)
                     accessibilityRole="button"
                     accessibilityState={{ expanded: logExpanded }}
                     android_ripple={{ color: colors.ripple, foreground: true }}
+                    hitSlop={{ top: 8, bottom: 8 }}
                     style={styles.logHeader}
                 >
                     <Text style={{ ...TYPE.h2, color: colors.text }}>Activity Log</Text>
@@ -435,6 +437,7 @@ Note: Reinstall using the x86_64 release APK for much better performance.`)
             <GlassFab
                 icon={<Ionicons name={fabIconName} size={22} color={colors.brand} />}
                 onPress={handleButtonPress}
+                disabled={!isRunning && (!readyStatus || !isScenarioValid)}
                 accessibilityLabel={fabAccessibilityLabel}
                 style={styles.fab}
             />
