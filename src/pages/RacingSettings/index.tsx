@@ -216,11 +216,7 @@ const RacingSettings = () => {
                             //////////////////////////////////////////////////////////////////////////////////////////////////
                             Fan Farming */}
                         <Section label="Fan Farming">
-                            <SearchableItem
-                                id="enable-farming-fans"
-                                title="Enable Farming Fans"
-                                description="When enabled, the bot will start running extra races to gain fans."
-                            >
+                            <SearchableItem id="enable-farming-fans" title="Enable Farming Fans" description="When enabled, the bot will start running extra races to gain fans.">
                                 <Row
                                     title="Enable Farming Fans"
                                     description="When enabled, the bot will start running extra races to gain fans."
@@ -256,12 +252,7 @@ const RacingSettings = () => {
                                 <Row
                                     title="Ignore Consecutive Race Warning"
                                     description="When enabled, the bot will ignore the warning popup about consecutive races and continue racing."
-                                    right={
-                                        <Switch
-                                            checked={ignoreConsecutiveRaceWarning}
-                                            onCheckedChange={(checked) => updateRacingSetting("ignoreConsecutiveRaceWarning", checked)}
-                                        />
-                                    }
+                                    right={<Switch checked={ignoreConsecutiveRaceWarning} onCheckedChange={(checked) => updateRacingSetting("ignoreConsecutiveRaceWarning", checked)} />}
                                 />
                             </SearchableItem>
                             <SearchableItem
@@ -272,19 +263,10 @@ const RacingSettings = () => {
                                 <Row
                                     title="Ignore Low Energy Racing Block"
                                     description="Skip the safety check that prevents racing at <=1% energy after 3+ consecutive races. Useful to avoid the larger -80 penalty from skipping derby races."
-                                    right={
-                                        <Switch
-                                            checked={ignoreLowEnergyRacingBlock}
-                                            onCheckedChange={(checked) => updateRacingSetting("ignoreLowEnergyRacingBlock", checked)}
-                                        />
-                                    }
+                                    right={<Switch checked={ignoreLowEnergyRacingBlock} onCheckedChange={(checked) => updateRacingSetting("ignoreLowEnergyRacingBlock", checked)} />}
                                 />
                             </SearchableItem>
-                            <SearchableItem
-                                id="disable-race-retries"
-                                title="Disable Race Retries"
-                                description="When enabled, the bot will not retry mandatory races if they fail and will stop."
-                            >
+                            <SearchableItem id="disable-race-retries" title="Disable Race Retries" description="When enabled, the bot will not retry mandatory races if they fail and will stop.">
                                 <Row
                                     title="Disable Race Retries"
                                     description="When enabled, the bot will not retry mandatory races if they fail and will stop."
@@ -312,12 +294,7 @@ const RacingSettings = () => {
                                 <Row
                                     title="Complete Career on Failure"
                                     description="Proceed to the career completion screen when a mandatory race fails after retries are exhausted, instead of stopping at the Try Again dialog."
-                                    right={
-                                        <Switch
-                                            checked={enableCompleteCareerOnFailure}
-                                            onCheckedChange={(checked) => updateRacingSetting("enableCompleteCareerOnFailure", checked)}
-                                        />
-                                    }
+                                    right={<Switch checked={enableCompleteCareerOnFailure} onCheckedChange={(checked) => updateRacingSetting("enableCompleteCareerOnFailure", checked)} />}
                                 />
                             </SearchableItem>
                             <SearchableItem
@@ -328,12 +305,7 @@ const RacingSettings = () => {
                                 <Row
                                     title="Stop on Mandatory Races"
                                     description="When enabled, the bot will automatically stop when it encounters a mandatory race, allowing you to handle them manually."
-                                    right={
-                                        <Switch
-                                            checked={enableStopOnMandatoryRaces}
-                                            onCheckedChange={(checked) => updateRacingSetting("enableStopOnMandatoryRaces", checked)}
-                                        />
-                                    }
+                                    right={<Switch checked={enableStopOnMandatoryRaces} onCheckedChange={(checked) => updateRacingSetting("enableStopOnMandatoryRaces", checked)} />}
                                 />
                             </SearchableItem>
                         </Section>
@@ -350,22 +322,13 @@ const RacingSettings = () => {
                                 <Row
                                     title="Per-Distance Strategy"
                                     description="Set different race strategies per track distance (Short, Mile, Medium, Long) instead of a single strategy for all races."
-                                    right={
-                                        <Switch
-                                            checked={enablePerDistanceStrategy}
-                                            onCheckedChange={(checked) => updateRacingSetting("enablePerDistanceStrategy", checked)}
-                                        />
-                                    }
+                                    right={<Switch checked={enablePerDistanceStrategy} onCheckedChange={(checked) => updateRacingSetting("enablePerDistanceStrategy", checked)} />}
                                 />
                             </SearchableItem>
 
                             {!enablePerDistanceStrategy ? (
                                 <>
-                                    <SearchableItem
-                                        id="junior-year-race-strategy"
-                                        title="Junior Year Race Strategy"
-                                        description="The race strategy to use for all races during Junior Year."
-                                    >
+                                    <SearchableItem id="junior-year-race-strategy" title="Junior Year Race Strategy" description="The race strategy to use for all races during Junior Year.">
                                         <Row
                                             title="Junior Year Strategy"
                                             description="Strategy used for all races during Junior Year. Auto picks the strategy closest to the front of the pack."

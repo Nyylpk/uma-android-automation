@@ -665,12 +665,7 @@ const TrainingEventSettings = () => {
                                 <Row
                                     title="Prioritize Energy Options"
                                     description="When enabled, the bot will prioritize training event choices that provide energy recovery or avoid energy consumption, helping to maintain optimal energy levels for training sessions."
-                                    right={
-                                        <Switch
-                                            checked={enablePrioritizeEnergyOptions}
-                                            onCheckedChange={(checked) => updateTrainingEventSetting("enablePrioritizeEnergyOptions", checked)}
-                                        />
-                                    }
+                                    right={<Switch checked={enablePrioritizeEnergyOptions} onCheckedChange={(checked) => updateTrainingEventSetting("enablePrioritizeEnergyOptions", checked)} />}
                                 />
                             </SearchableItem>
                         </Section>
@@ -695,12 +690,7 @@ const TrainingEventSettings = () => {
                                     <Row
                                         title="Enable Automatic OCR Retry for Training Events"
                                         description="When enabled, the bot will automatically retry OCR detection with adjusted settings if the initial attempt for a training event title fails or has low confidence."
-                                        right={
-                                            <Switch
-                                                checked={enableAutomaticOCRRetry}
-                                                onCheckedChange={(checked) => updateTrainingEventSetting("enableAutomaticOCRRetry", checked)}
-                                            />
-                                        }
+                                        right={<Switch checked={enableAutomaticOCRRetry} onCheckedChange={(checked) => updateTrainingEventSetting("enableAutomaticOCRRetry", checked)} />}
                                     />
                                 </SearchableItem>
 
@@ -726,12 +716,7 @@ const TrainingEventSettings = () => {
                                     <Row
                                         title="Hide OCR String Comparison Results"
                                         description="If enabled, the bot will suppress detailed logging of individual string similarity scores during training event detection to keep the logs cleaner."
-                                        right={
-                                            <Switch
-                                                checked={enableHideOCRComparisonResults}
-                                                onCheckedChange={(checked) => updateTrainingEventSetting("enableHideOCRComparisonResults", checked)}
-                                            />
-                                        }
+                                        right={<Switch checked={enableHideOCRComparisonResults} onCheckedChange={(checked) => updateTrainingEventSetting("enableHideOCRComparisonResults", checked)} />}
                                     />
                                 </SearchableItem>
                             </View>
@@ -750,11 +735,7 @@ const TrainingEventSettings = () => {
                                     </Text>
                                 </SearchableItem>
 
-                                <Pressable
-                                    onPress={() => setEventOverrideModalVisible(true)}
-                                    android_ripple={{ color: colors.ripple, foreground: true }}
-                                    accessibilityRole="button"
-                                >
+                                <Pressable onPress={() => setEventOverrideModalVisible(true)} android_ripple={{ color: colors.ripple, foreground: true }} accessibilityRole="button">
                                     <GlassSurface style={styles.ctaCard}>
                                         <View style={styles.ctaCardInner}>
                                             <View style={styles.ctaCardIcon}>

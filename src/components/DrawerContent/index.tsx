@@ -445,12 +445,7 @@ const DrawerContent: React.FC<DrawerContentComponentProps> = (props) => {
                         <Text style={[styles.menuItemText, isActive && styles.menuItemTextActive]}>{item.label}</Text>
                     </Pressable>
                     {hasChildren && (
-                        <Pressable
-                            onPress={() => toggleSection(item.route)}
-                            style={styles.chevronButton}
-                            hitSlop={12}
-                            android_ripple={{ color: colors.ripple, foreground: true }}
-                        >
+                        <Pressable onPress={() => toggleSection(item.route)} style={styles.chevronButton} hitSlop={12} android_ripple={{ color: colors.ripple, foreground: true }}>
                             <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={20} color={colors.textMuted} />
                         </Pressable>
                     )}
@@ -502,12 +497,7 @@ const DrawerContent: React.FC<DrawerContentComponentProps> = (props) => {
                 {visibleRecent.length > 0 && (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recentStrip} contentContainerStyle={{ alignItems: "center" }}>
                         {visibleRecent.map((route) => (
-                            <Pressable
-                                key={route}
-                                style={styles.recentChip}
-                                android_ripple={{ color: colors.ripple, foreground: true }}
-                                onPress={() => handleNavigation(route)}
-                            >
+                            <Pressable key={route} style={styles.recentChip} android_ripple={{ color: colors.ripple, foreground: true }} onPress={() => handleNavigation(route)}>
                                 <Text style={styles.recentChipText}>{ROUTE_LABELS[route]}</Text>
                             </Pressable>
                         ))}

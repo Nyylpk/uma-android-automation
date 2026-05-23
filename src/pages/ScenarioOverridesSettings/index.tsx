@@ -274,7 +274,10 @@ const ScenarioOverridesSettings = () => {
                                                             onPress={() => {
                                                                 const currentGrades = scenarioOverrides.trackblazerRetryRacesBeforeFinalGrades
                                                                 if (currentGrades.includes(grade)) {
-                                                                    updateOverrideSetting("trackblazerRetryRacesBeforeFinalGrades", currentGrades.filter((g) => g !== grade))
+                                                                    updateOverrideSetting(
+                                                                        "trackblazerRetryRacesBeforeFinalGrades",
+                                                                        currentGrades.filter((g) => g !== grade)
+                                                                    )
                                                                 } else {
                                                                     updateOverrideSetting("trackblazerRetryRacesBeforeFinalGrades", [...currentGrades, grade])
                                                                 }
@@ -310,7 +313,10 @@ const ScenarioOverridesSettings = () => {
                                                             onPress={() => {
                                                                 const current = scenarioOverrides.trackblazerPreferredDistances
                                                                 if (current.includes(distance)) {
-                                                                    updateOverrideSetting("trackblazerPreferredDistances", current.filter((d) => d !== distance))
+                                                                    updateOverrideSetting(
+                                                                        "trackblazerPreferredDistances",
+                                                                        current.filter((d) => d !== distance)
+                                                                    )
                                                                 } else {
                                                                     updateOverrideSetting("trackblazerPreferredDistances", [...current, distance])
                                                                 }
@@ -346,7 +352,10 @@ const ScenarioOverridesSettings = () => {
                                                             onPress={() => {
                                                                 const current = scenarioOverrides.trackblazerPreferredSurfaces
                                                                 if (current.includes(surface)) {
-                                                                    updateOverrideSetting("trackblazerPreferredSurfaces", current.filter((s) => s !== surface))
+                                                                    updateOverrideSetting(
+                                                                        "trackblazerPreferredSurfaces",
+                                                                        current.filter((s) => s !== surface)
+                                                                    )
                                                                 } else {
                                                                     updateOverrideSetting("trackblazerPreferredSurfaces", [...current, surface])
                                                                 }
@@ -510,7 +519,10 @@ const ScenarioOverridesSettings = () => {
                                                             onPress={() => {
                                                                 const currentGrades = scenarioOverrides.trackblazerShopCheckGrades
                                                                 if (currentGrades.includes(grade)) {
-                                                                    updateOverrideSetting("trackblazerShopCheckGrades", currentGrades.filter((g) => g !== grade))
+                                                                    updateOverrideSetting(
+                                                                        "trackblazerShopCheckGrades",
+                                                                        currentGrades.filter((g) => g !== grade)
+                                                                    )
                                                                 } else {
                                                                     updateOverrideSetting("trackblazerShopCheckGrades", [...currentGrades, grade])
                                                                 }

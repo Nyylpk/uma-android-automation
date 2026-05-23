@@ -477,11 +477,7 @@ const Settings = () => {
                 </AlertDialogContent>
             </AlertDialog>
 
-            <Snackbar
-                visible={snackbarMessage !== null}
-                onDismiss={() => setSnackbarMessage(null)}
-                style={{ backgroundColor: colors.surfaceRaised, borderRadius: 10 }}
-            >
+            <Snackbar visible={snackbarMessage !== null} onDismiss={() => setSnackbarMessage(null)} style={{ backgroundColor: colors.surfaceRaised, borderRadius: 10 }}>
                 {snackbarMessage ?? ""}
             </Snackbar>
         </View>

@@ -367,13 +367,7 @@ Note: Reinstall using the x86_64 release APK for much better performance.`)
 
     // Map the existing bot state to the hero card's status pill. Running takes priority. Warnings (unsupported display
     // or ABI mismatch) surface as "error". An unselected scenario lands on "stopped". Otherwise the bot is "ready".
-    const heroStatus: HeroStatus = isRunning
-        ? "running"
-        : unsupportedReason !== null || abiMismatch
-        ? "error"
-        : readyStatus && deviceMetrics !== null
-        ? "ready"
-        : "stopped"
+    const heroStatus: HeroStatus = isRunning ? "running" : unsupportedReason !== null || abiMismatch ? "error" : readyStatus && deviceMetrics !== null ? "ready" : "stopped"
     const heroCampaign = general.scenario && general.scenario !== "" ? general.scenario : "No campaign selected"
     const heroProfile = currentProfileName ?? DEFAULT_PROFILE_NAME
     const fabIconName = isRunning ? "stop" : "play"
@@ -441,7 +435,6 @@ Note: Reinstall using the x86_64 release APK for much better performance.`)
                 accessibilityLabel={fabAccessibilityLabel}
                 style={styles.fab}
             />
-
 
             <AlertDialog open={showNotReadyDialog} onOpenChange={setShowNotReadyDialog}>
                 <AlertDialogContent onDismiss={() => setShowNotReadyDialog(false)}>

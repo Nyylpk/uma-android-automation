@@ -504,7 +504,11 @@ const LLMSettings = () => {
                 <InfoContainer>Retrieve-only search always works. The options below add optional natural-language answers backed by an on-device model.</InfoContainer>
 
                 <View style={styles.section}>
-                    <SearchableItem id="llm-enable-ask-the-docs" title="Enable Ask the Docs feature" description="Show the Ask the Docs page in the navigation drawer and reveal the rest of these LLM options. Off by default.">
+                    <SearchableItem
+                        id="llm-enable-ask-the-docs"
+                        title="Enable Ask the Docs feature"
+                        description="Show the Ask the Docs page in the navigation drawer and reveal the rest of these LLM options. Off by default."
+                    >
                         <Row
                             title="Ask the Docs"
                             description="On-device LLM that summarizes docs"
@@ -516,31 +520,33 @@ const LLMSettings = () => {
                 {enableAskTheDocs && (
                     <>
                         <Section label="Device Fitness">
-                            {deviceCaps ? (() => {
-                                const totalRamGb = deviceCaps.totalRamBytes / 1024 / 1024 / 1024
-                                const freeRamGb = deviceCaps.availRamBytes / 1024 / 1024 / 1024
-                                const fillRatio = totalRamGb > 0 ? Math.min(1, Math.max(0, freeRamGb / totalRamGb)) : 0
-                                return (
-                                    <View style={{ paddingHorizontal: SPACING.md, paddingVertical: SPACING.md }}>
-                                        <RamGauge
-                                            label="Free RAM headroom"
-                                            verdict={`${freeRamGb.toFixed(1)} GB`}
-                                            fillRatio={fillRatio}
-                                            markers={[
-                                                { label: "0.5B", position: 0.07 },
-                                                { label: "1.5B", position: 0.17 },
-                                                { label: "3B", position: 0.32 },
-                                                { label: "7B", position: 0.7 },
-                                            ]}
-                                        />
-                                        <Text style={[styles.hint, { marginTop: SPACING.sm }]}>
-                                            {recommended
-                                                ? `Recommended preset based on free RAM: ${recommended.label}.`
-                                                : "Free RAM is below the threshold for any preset. Generation may crash; consider closing background apps before downloading."}
-                                        </Text>
-                                    </View>
-                                )
-                            })() : (
+                            {deviceCaps ? (
+                                (() => {
+                                    const totalRamGb = deviceCaps.totalRamBytes / 1024 / 1024 / 1024
+                                    const freeRamGb = deviceCaps.availRamBytes / 1024 / 1024 / 1024
+                                    const fillRatio = totalRamGb > 0 ? Math.min(1, Math.max(0, freeRamGb / totalRamGb)) : 0
+                                    return (
+                                        <View style={{ paddingHorizontal: SPACING.md, paddingVertical: SPACING.md }}>
+                                            <RamGauge
+                                                label="Free RAM headroom"
+                                                verdict={`${freeRamGb.toFixed(1)} GB`}
+                                                fillRatio={fillRatio}
+                                                markers={[
+                                                    { label: "0.5B", position: 0.07 },
+                                                    { label: "1.5B", position: 0.17 },
+                                                    { label: "3B", position: 0.32 },
+                                                    { label: "7B", position: 0.7 },
+                                                ]}
+                                            />
+                                            <Text style={[styles.hint, { marginTop: SPACING.sm }]}>
+                                                {recommended
+                                                    ? `Recommended preset based on free RAM: ${recommended.label}.`
+                                                    : "Free RAM is below the threshold for any preset. Generation may crash; consider closing background apps before downloading."}
+                                            </Text>
+                                        </View>
+                                    )
+                                })()
+                            ) : (
                                 <View style={{ paddingHorizontal: SPACING.md, paddingVertical: SPACING.md }}>
                                     <Text style={styles.hint}>Reading device capabilities...</Text>
                                 </View>
@@ -564,16 +570,22 @@ const LLMSettings = () => {
                                                 <Text style={{ ...TYPE.caption, color: colors.textMuted }}>{Math.round(EMBEDDER_SIZE_BYTES / 1024 / 1024)} MB · One-time download · Free</Text>
                                             </View>
                                             {!isEmbedderDownloading ? (
-                                                <CustomButton variant="primary" onPress={handleDownloadEmbedder}>Download</CustomButton>
+                                                <CustomButton variant="primary" onPress={handleDownloadEmbedder}>
+                                                    Download
+                                                </CustomButton>
                                             ) : (
-                                                <CustomButton variant="destructive" onPress={handleCancel}>Cancel</CustomButton>
+                                                <CustomButton variant="destructive" onPress={handleCancel}>
+                                                    Cancel
+                                                </CustomButton>
                                             )}
                                         </View>
                                     </GlassSurface>
                                 ) : (
                                     <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm }}>
                                         <Text style={{ ...TYPE.caption, color: colors.textMuted, flex: 1 }}>Engine installed · {Math.round(EMBEDDER_SIZE_BYTES / 1024 / 1024)} MB</Text>
-                                        <CustomButton variant="destructive" onPress={handleDeleteEmbedder}>Delete</CustomButton>
+                                        <CustomButton variant="destructive" onPress={handleDeleteEmbedder}>
+                                            Delete
+                                        </CustomButton>
                                     </View>
                                 )}
                                 {embedderProgressText && <Text style={[styles.hint, { paddingHorizontal: SPACING.md, marginTop: SPACING.xs }]}>{embedderProgressText}</Text>}
@@ -720,7 +732,15 @@ const LLMSettings = () => {
                                     <Pressable
                                         onPress={handleResetTuning}
                                         android_ripple={{ color: colors.ripple, foreground: true }}
-                                        style={{ marginLeft: "auto", paddingHorizontal: SPACING.sm, paddingVertical: 2, backgroundColor: colors.brandSubtle, borderColor: colors.brandBorder, borderWidth: 1, borderRadius: RADII.pill }}
+                                        style={{
+                                            marginLeft: "auto",
+                                            paddingHorizontal: SPACING.sm,
+                                            paddingVertical: 2,
+                                            backgroundColor: colors.brandSubtle,
+                                            borderColor: colors.brandBorder,
+                                            borderWidth: 1,
+                                            borderRadius: RADII.pill,
+                                        }}
                                         hitSlop={6}
                                     >
                                         <Text style={{ ...TYPE.caption, color: colors.brand }}>Reset</Text>

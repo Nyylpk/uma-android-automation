@@ -563,12 +563,7 @@ const TrainingSettings = () => {
                                         <Row
                                             title="Disable Training on Maxed Stats"
                                             description="When enabled, training will be skipped for stats that have reached their maximum value."
-                                            right={
-                                                <Switch
-                                                    checked={disableTrainingOnMaxedStat}
-                                                    onCheckedChange={(checked) => updateTrainingSetting("disableTrainingOnMaxedStat", checked)}
-                                                />
-                                            }
+                                            right={<Switch checked={disableTrainingOnMaxedStat} onCheckedChange={(checked) => updateTrainingSetting("disableTrainingOnMaxedStat", checked)} />}
                                         />
                                     </SearchableItem>
 
@@ -580,12 +575,7 @@ const TrainingSettings = () => {
                                         <Row
                                             title="Enable Riskier Training"
                                             description="When enabled, trainings with high main stat gains will use a separate, higher maximum failure chance threshold."
-                                            right={
-                                                <Switch
-                                                    checked={enableRiskyTraining}
-                                                    onCheckedChange={(checked) => updateTrainingSetting("enableRiskyTraining", checked)}
-                                                />
-                                            }
+                                            right={<Switch checked={enableRiskyTraining} onCheckedChange={(checked) => updateTrainingSetting("enableRiskyTraining", checked)} />}
                                         />
                                     </SearchableItem>
                                 </Section>

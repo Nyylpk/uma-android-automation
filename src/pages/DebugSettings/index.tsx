@@ -320,11 +320,12 @@ const DebugSettings = () => {
                                                 <Text style={{ ...TYPE.body, color: colors.text, fontWeight: "600" as const }}>Remote Log Viewer</Text>
                                                 <Text style={{ ...TYPE.caption, color: colors.textMuted }}>Same WiFi required</Text>
                                             </View>
-                                            <SearchableItem id="settings-enable-remote-log-viewer" title="Enable Remote Log Viewer" description="Starts an HTTP server on this device when the bot runs. Open the URL shown below in a browser on your computer to view logs in real-time.">
-                                                <Switch
-                                                    checked={debug.enableRemoteLogViewer}
-                                                    onCheckedChange={(checked) => updateDebug({ enableRemoteLogViewer: checked })}
-                                                />
+                                            <SearchableItem
+                                                id="settings-enable-remote-log-viewer"
+                                                title="Enable Remote Log Viewer"
+                                                description="Starts an HTTP server on this device when the bot runs. Open the URL shown below in a browser on your computer to view logs in real-time."
+                                            >
+                                                <Switch checked={debug.enableRemoteLogViewer} onCheckedChange={(checked) => updateDebug({ enableRemoteLogViewer: checked })} />
                                             </SearchableItem>
                                         </View>
                                         {debug.enableRemoteLogViewer && (
@@ -332,7 +333,14 @@ const DebugSettings = () => {
                                                 <Pressable
                                                     onPress={handleCopyRlvUrl}
                                                     android_ripple={{ color: colors.ripple, foreground: true }}
-                                                    style={{ padding: SPACING.sm, backgroundColor: colors.surfaceRaised, borderRadius: RADII.md, flexDirection: "row", alignItems: "center", gap: SPACING.sm }}
+                                                    style={{
+                                                        padding: SPACING.sm,
+                                                        backgroundColor: colors.surfaceRaised,
+                                                        borderRadius: RADII.md,
+                                                        flexDirection: "row",
+                                                        alignItems: "center",
+                                                        gap: SPACING.sm,
+                                                    }}
                                                 >
                                                     <Text style={{ ...TYPE.monoLabel, color: colors.brand, flex: 1 }}>{rlvUrl}</Text>
                                                     <Ionicons name="copy-outline" size={14} color={colors.textMuted} />

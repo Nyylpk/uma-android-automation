@@ -31,7 +31,15 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ campaign, onSwitch }) => {
                 body: { flex: 1 },
                 lbl: { ...TYPE.monoLabel, color: colors.textMuted },
                 name: { ...TYPE.h2, color: colors.text },
-                btn: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, backgroundColor: colors.surfaceRaised, borderRadius: RADII.lg, flexDirection: "row", alignItems: "center", gap: SPACING.xs },
+                btn: {
+                    paddingHorizontal: SPACING.md,
+                    paddingVertical: SPACING.sm,
+                    backgroundColor: colors.surfaceRaised,
+                    borderRadius: RADII.lg,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: SPACING.xs,
+                },
                 btnLabel: { ...TYPE.body, color: colors.text, fontWeight: "600" },
             }),
         [colors]

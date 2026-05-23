@@ -124,86 +124,85 @@ const DiscordSettings = () => {
         [colors, isDark]
     )
 
-    const steps: WizardStep[] = useMemo(() => [
-        {
-            n: 1,
-            title: "Create a Discord bot",
-            body: (
-                <Text style={{ ...TYPE.caption, color: colors.textMuted, marginTop: SPACING.xs }}>
-                    Visit developer.discord.com and create a bot application. Make sure it shares a server with you.
-                </Text>
-            ),
-        },
-        {
-            n: 2,
-            title: "Paste bot token",
-            body: (
-                <SearchableItem id="discordBotToken" title="Discord Bot Token" description="The token generated from the Discord Developer Portal. Your Discord bot must share a server with you.">
-                    <Pressable android_ripple={{ color: colors.ripple, foreground: true }}>
-                        <TextInput
-                            style={[styles.textInput, !enableDiscordNotifications && styles.textInputDisabled]}
-                            value={discordToken}
-                            onChangeText={(text) => updateDiscordSetting("discordToken", text)}
-                            placeholder="Enter your Discord bot token..."
-                            placeholderTextColor={colors.textSubtle}
-                            editable={enableDiscordNotifications}
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                        />
-                    </Pressable>
-                </SearchableItem>
-            ),
-        },
-        {
-            n: 3,
-            title: "Set your User ID",
-            body: (
-                <SearchableItem
-                    id="discordUserID"
-                    title="Discord User ID"
-                    description="Your Discord user ID. Enable Developer Mode in Discord settings, then click your name and select 'Copy User ID'."
-                >
-                    <Pressable android_ripple={{ color: colors.ripple, foreground: true }}>
-                        <TextInput
-                            style={[styles.textInput, !enableDiscordNotifications && styles.textInputDisabled]}
-                            value={discordUserID}
-                            onChangeText={(text) => updateDiscordSetting("discordUserID", text)}
-                            placeholder="Enter your Discord user ID..."
-                            placeholderTextColor={colors.textSubtle}
-                            editable={enableDiscordNotifications}
-                            keyboardType="numeric"
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                        />
-                    </Pressable>
-                </SearchableItem>
-            ),
-        },
-        {
-            n: 4,
-            title: "Test connection",
-            body: (
-                <View style={{ marginTop: SPACING.xs }}>
-                    <CustomButton variant="primary" disabled={!canTest} onPress={handleTestConnection} isLoading={isTesting}>
-                        Test Connection
-                    </CustomButton>
-                    {!canTest && (
-                        <Text style={{ ...TYPE.caption, color: colors.textMuted, textAlign: "center", marginTop: SPACING.xs }}>
-                            Enabled once token + user ID are filled
-                        </Text>
-                    )}
-                    {testResult && (
-                        <View style={[styles.resultContainer, testResult.success ? styles.resultSuccess : styles.resultFailure]}>
-                            <Text style={styles.resultText}>
-                                {testResult.success ? "Sent: " : "Error: "}
-                                {testResult.message}
-                            </Text>
-                        </View>
-                    )}
-                </View>
-            ),
-        },
-    ], [styles, colors, enableDiscordNotifications, discordToken, discordUserID, canTest, isTesting, testResult, handleTestConnection, updateDiscordSetting])
+    const steps: WizardStep[] = useMemo(
+        () => [
+            {
+                n: 1,
+                title: "Create a Discord bot",
+                body: (
+                    <Text style={{ ...TYPE.caption, color: colors.textMuted, marginTop: SPACING.xs }}>
+                        Visit developer.discord.com and create a bot application. Make sure it shares a server with you.
+                    </Text>
+                ),
+            },
+            {
+                n: 2,
+                title: "Paste bot token",
+                body: (
+                    <SearchableItem id="discordBotToken" title="Discord Bot Token" description="The token generated from the Discord Developer Portal. Your Discord bot must share a server with you.">
+                        <Pressable android_ripple={{ color: colors.ripple, foreground: true }}>
+                            <TextInput
+                                style={[styles.textInput, !enableDiscordNotifications && styles.textInputDisabled]}
+                                value={discordToken}
+                                onChangeText={(text) => updateDiscordSetting("discordToken", text)}
+                                placeholder="Enter your Discord bot token..."
+                                placeholderTextColor={colors.textSubtle}
+                                editable={enableDiscordNotifications}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                            />
+                        </Pressable>
+                    </SearchableItem>
+                ),
+            },
+            {
+                n: 3,
+                title: "Set your User ID",
+                body: (
+                    <SearchableItem
+                        id="discordUserID"
+                        title="Discord User ID"
+                        description="Your Discord user ID. Enable Developer Mode in Discord settings, then click your name and select 'Copy User ID'."
+                    >
+                        <Pressable android_ripple={{ color: colors.ripple, foreground: true }}>
+                            <TextInput
+                                style={[styles.textInput, !enableDiscordNotifications && styles.textInputDisabled]}
+                                value={discordUserID}
+                                onChangeText={(text) => updateDiscordSetting("discordUserID", text)}
+                                placeholder="Enter your Discord user ID..."
+                                placeholderTextColor={colors.textSubtle}
+                                editable={enableDiscordNotifications}
+                                keyboardType="numeric"
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                            />
+                        </Pressable>
+                    </SearchableItem>
+                ),
+            },
+            {
+                n: 4,
+                title: "Test connection",
+                body: (
+                    <View style={{ marginTop: SPACING.xs }}>
+                        <CustomButton variant="primary" disabled={!canTest} onPress={handleTestConnection} isLoading={isTesting}>
+                            Test Connection
+                        </CustomButton>
+                        {!canTest && <Text style={{ ...TYPE.caption, color: colors.textMuted, textAlign: "center", marginTop: SPACING.xs }}>Enabled once token + user ID are filled</Text>}
+                        {testResult && (
+                            <View style={[styles.resultContainer, testResult.success ? styles.resultSuccess : styles.resultFailure]}>
+                                <Text style={styles.resultText}>
+                                    {testResult.success ? "Sent: " : "Error: "}
+                                    {testResult.message}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                ),
+            },
+        ],
+        [styles, colors, enableDiscordNotifications, discordToken, discordUserID, canTest, isTesting, testResult, handleTestConnection, updateDiscordSetting]
+    )
 
     return (
         <View style={styles.root}>

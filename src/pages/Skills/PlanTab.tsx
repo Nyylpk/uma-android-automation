@@ -264,11 +264,7 @@ const PlanTab: React.FC<PlanTabProps> = ({ planKey }) => {
                 {isSkillPointCheck && (
                     <>
                         <View style={styles.enableCard}>
-                            <SearchableItem
-                                id="enable-skill-point-check"
-                                title="Enable Skill Point Check"
-                                description="Stop the bot when the skill point threshold is reached"
-                            >
+                            <SearchableItem id="enable-skill-point-check" title="Enable Skill Point Check" description="Stop the bot when the skill point threshold is reached">
                                 <Row
                                     title="Enable Skill Point Check"
                                     description="Enables check for a skill point threshold. When reached, the bot stops (or runs the Skill Plan, see below)."
@@ -340,11 +336,7 @@ const PlanTab: React.FC<PlanTabProps> = ({ planKey }) => {
                             </Text>
                             <View style={[styles.filterCard, styles.gridRow, { marginTop: SPACING.sm }]}>
                                 <View style={styles.gridCell}>
-                                    <SearchableItem
-                                        id={`exclude-green-skills-${config.name}`}
-                                        title="Skip All Green Skills"
-                                        description="Exclude green stat-trigger skills"
-                                    >
+                                    <SearchableItem id={`exclude-green-skills-${config.name}`} title="Skip All Green Skills" description="Exclude green stat-trigger skills">
                                         <Row
                                             title="Skip Green Skills"
                                             description="No green (stat-trigger) skills."
@@ -353,11 +345,7 @@ const PlanTab: React.FC<PlanTabProps> = ({ planKey }) => {
                                     </SearchableItem>
                                 </View>
                                 <View style={styles.gridCell}>
-                                    <SearchableItem
-                                        id={`exclude-red-skills-${config.name}`}
-                                        title="Skip All Red Skills (Debuffs)"
-                                        description="Exclude red debuff skills"
-                                    >
+                                    <SearchableItem id={`exclude-red-skills-${config.name}`} title="Skip All Red Skills (Debuffs)" description="Exclude red debuff skills">
                                         <Row
                                             title="Skip Red Skills"
                                             description="No red debuff skills."
@@ -366,11 +354,7 @@ const PlanTab: React.FC<PlanTabProps> = ({ planKey }) => {
                                     </SearchableItem>
                                 </View>
                                 <View style={styles.gridCell}>
-                                    <SearchableItem
-                                        id={`exclude-unique-skills-${config.name}`}
-                                        title="Skip All Unique Skills"
-                                        description="Exclude inherited unique (legacy) skills"
-                                    >
+                                    <SearchableItem id={`exclude-unique-skills-${config.name}`} title="Skip All Unique Skills" description="Exclude inherited unique (legacy) skills">
                                         <Row
                                             title="Skip Unique Skills"
                                             description="No inherited unique skills."
@@ -448,11 +432,7 @@ const PlanTab: React.FC<PlanTabProps> = ({ planKey }) => {
                             </View>
 
                             <View style={styles.selectedToggleRow}>
-                                <SearchableItem
-                                    id={`show-selected-skills-${config.name}`}
-                                    title="Show Only Selected Skills"
-                                    description="Filter the list to only currently-selected skills"
-                                >
+                                <SearchableItem id={`show-selected-skills-${config.name}`} title="Show Only Selected Skills" description="Filter the list to only currently-selected skills">
                                     <Row
                                         title="Show Only Selected Skills"
                                         right={
