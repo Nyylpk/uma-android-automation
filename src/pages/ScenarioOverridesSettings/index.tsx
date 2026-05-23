@@ -2,6 +2,7 @@ import { useMemo, useContext, useRef, useState, useCallback, useEffect } from "r
 import { View, Text, ScrollView, StyleSheet, Image, Pressable, InteractionManager } from "react-native"
 import { Divider } from "react-native-paper"
 import { useRoute } from "@react-navigation/native"
+import { useNavigation } from "@react-navigation/native"
 import { useTheme } from "../../context/ThemeContext"
 import { ScenarioOverridesContext, BotMetaContext, GeneralMiscContext, Settings } from "../../context/BotStateContext"
 import { SearchPageProvider } from "../../context/SearchPageContext"
@@ -14,21 +15,12 @@ import { CircleCheckBig, Trash2 } from "lucide-react-native"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
 import trackblazerIcons from "./icons"
 import { Section } from "../../components/ui/section"
+import { SectionLabel } from "../../components/ui/section-label"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../../components/ui/alert-dialog"
+import CampaignCard from "../../components/CampaignCard"
 import { TYPE } from "../../lib/type"
 import { SPACING } from "../../lib/spacing"
-
-/**
- * Maps a settings searchId prefix to the accordion section value it lives under.
- * Used to auto-expand the right section when the user navigates here from in-app search.
- */
-const SECTION_BY_SEARCH_PREFIX: ReadonlyArray<readonly [string, string]> = [["trackblazer-", "trackblazer"]]
-
-/**
- * Maps a Home-page scenario value to the accordion section value it should default-expand.
- */
-const SECTION_BY_SCENARIO: Readonly<Record<string, string>> = {
-    Trackblazer: "trackblazer",
-}
+import { RADII } from "../../lib/radii"
 
 /**
  * The Scenario Overrides Settings page.
@@ -41,24 +33,13 @@ const ScenarioOverridesSettings = () => {
     const { defaultSettings } = useContext(BotMetaContext)
     const { general } = useContext(GeneralMiscContext)
     const route = useRoute<any>()
+    const navigation = useNavigation<any>()
     const scrollViewRef = useRef<ScrollView>(null)
 
     const [searchQuery, setSearchQuery] = useState("")
+    const [showResetAll, setShowResetAll] = useState(false)
 
-    // Compute which accordion sections should be expanded on first render.
-    // Priority: a `targetId` route param from in-app search wins, otherwise default to the user's currently selected scenario.
-    // Captured once at first render so re-entering the page or changing the scenario later does not stomp on the user's manual toggles.
-    const accordionDefaultValue = useMemo<string[]>(() => {
-        const targetId = typeof route.params?.targetId === "string" ? (route.params.targetId as string) : undefined
-        if (targetId) {
-            for (const [prefix, section] of SECTION_BY_SEARCH_PREFIX) {
-                if (targetId.startsWith(prefix)) return [section]
-            }
-        }
-        const fromScenario = SECTION_BY_SCENARIO[general.scenario as string]
-        return fromScenario ? [fromScenario] : []
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+    const activeCampaign = (general.scenario as string) || "Trackblazer"
 
     // Two-phase mount, mirroring the TrainingSettings deferral pattern from PR #299. Renders the page header on the first paint
     // so navigation feels instant; the heavy accordion body commits one tick later via InteractionManager. When navigating in
@@ -110,6 +91,62 @@ const ScenarioOverridesSettings = () => {
         [scenarioOverrides.trackblazerExcludedItems, updateOverrideSetting]
     )
 
+    /** Navigate to the Home page where the campaign picker lives. */
+    const handleSwitch = useCallback(() => {
+        navigation.navigate("Home" as never)
+    }, [navigation])
+
+    /** Reset Racing section sliders to defaults. */
+    const resetRacingDefaults = useCallback(() => {
+        updateOverrideSetting("trackblazerConsecutiveRacesLimit", defaultSettings.scenarioOverrides.trackblazerConsecutiveRacesLimit)
+        updateOverrideSetting("trackblazerMaxRetriesPerRace", defaultSettings.scenarioOverrides.trackblazerMaxRetriesPerRace)
+        updateOverrideSetting("trackblazerRetryRacesBeforeFinalGrades", defaultSettings.scenarioOverrides.trackblazerRetryRacesBeforeFinalGrades)
+        updateOverrideSetting("trackblazerPreferredDistances", defaultSettings.scenarioOverrides.trackblazerPreferredDistances)
+        updateOverrideSetting("trackblazerPreferredSurfaces", defaultSettings.scenarioOverrides.trackblazerPreferredSurfaces)
+    }, [updateOverrideSetting, defaultSettings])
+
+    /** Reset Energy & Resources section sliders to defaults. */
+    const resetEnergyDefaults = useCallback(() => {
+        updateOverrideSetting("trackblazerEnergyThreshold", defaultSettings.scenarioOverrides.trackblazerEnergyThreshold)
+        updateOverrideSetting("trackblazerSkipBadMoodItemsBelowGain", defaultSettings.scenarioOverrides.trackblazerSkipBadMoodItemsBelowGain)
+    }, [updateOverrideSetting, defaultSettings])
+
+    /** Reset Training section sliders to defaults. */
+    const resetTrainingDefaults = useCallback(() => {
+        updateOverrideSetting("trackblazerSkipRiskyCharmTrainingBelowGain", defaultSettings.scenarioOverrides.trackblazerSkipRiskyCharmTrainingBelowGain)
+        updateOverrideSetting("trackblazerIrregularTrainingMinStatGain", defaultSettings.scenarioOverrides.trackblazerIrregularTrainingMinStatGain)
+        updateOverrideSetting("trackblazerEnableIrregularTraining", defaultSettings.scenarioOverrides.trackblazerEnableIrregularTraining)
+        updateOverrideSetting("trackblazerWhistleForcesTraining", defaultSettings.scenarioOverrides.trackblazerWhistleForcesTraining)
+    }, [updateOverrideSetting, defaultSettings])
+
+    /** Reset Shop & Items section sliders to defaults. */
+    const resetShopDefaults = useCallback(() => {
+        updateOverrideSetting("trackblazerShopCheckFrequency", defaultSettings.scenarioOverrides.trackblazerShopCheckFrequency)
+        updateOverrideSetting("trackblazerShopCheckGrades", defaultSettings.scenarioOverrides.trackblazerShopCheckGrades)
+        updateOverrideSetting("trackblazerExcludedItems", defaultSettings.scenarioOverrides.trackblazerExcludedItems)
+    }, [updateOverrideSetting, defaultSettings])
+
+    /** Reset Item Conservation section sliders to defaults. */
+    const resetConservationDefaults = useCallback(() => {
+        updateOverrideSetting("trackblazerEnergyItemReserve", defaultSettings.scenarioOverrides.trackblazerEnergyItemReserve)
+        updateOverrideSetting("trackblazerCupcakeReserve", defaultSettings.scenarioOverrides.trackblazerCupcakeReserve)
+        updateOverrideSetting("trackblazerMasterHammerFinaleReserve", defaultSettings.scenarioOverrides.trackblazerMasterHammerFinaleReserve)
+        updateOverrideSetting("trackblazerArtisanHammerMinStockForG3", defaultSettings.scenarioOverrides.trackblazerArtisanHammerMinStockForG3)
+        updateOverrideSetting("trackblazerArtisanHammerMinStockForG2", defaultSettings.scenarioOverrides.trackblazerArtisanHammerMinStockForG2)
+        updateOverrideSetting("trackblazerGlowStickFinalReserve", defaultSettings.scenarioOverrides.trackblazerGlowStickFinalReserve)
+        updateOverrideSetting("trackblazerGlowStickMinFans", defaultSettings.scenarioOverrides.trackblazerGlowStickMinFans)
+    }, [updateOverrideSetting, defaultSettings])
+
+    /** Reset all scenario overrides to defaults. */
+    const resetAllDefaults = useCallback(() => {
+        resetRacingDefaults()
+        resetEnergyDefaults()
+        resetTrainingDefaults()
+        resetShopDefaults()
+        resetConservationDefaults()
+        setShowResetAll(false)
+    }, [resetRacingDefaults, resetEnergyDefaults, resetTrainingDefaults, resetShopDefaults, resetConservationDefaults])
+
     const styles = useMemo(
         () =>
             StyleSheet.create({
@@ -138,21 +175,22 @@ const ScenarioOverridesSettings = () => {
                     justifyContent: "space-between",
                     alignItems: "center",
                 },
-                conservationSectionHeader: {
-                    fontSize: 18,
-                    fontWeight: "600",
-                    color: colors.text,
-                    marginTop: 8,
-                    marginBottom: 4,
-                },
                 conservationSectionIntro: {
                     fontSize: 13,
                     color: colors.text,
                     opacity: 0.7,
                     marginBottom: 12,
                 },
+                resetLink: { ...TYPE.caption, color: colors.brand, fontWeight: "600" } as any,
             }),
         [colors]
+    )
+
+    /** Shared "Reset" pressable used in each section label's right slot. */
+    const makeResetLink = (onPress: () => void) => (
+        <Pressable onPress={onPress} android_ripple={{ color: colors.ripple, foreground: true }} hitSlop={8}>
+            <Text style={styles.resetLink}>Reset</Text>
+        </Pressable>
     )
 
     return (
@@ -168,112 +206,226 @@ const ScenarioOverridesSettings = () => {
                 >
                     <PageHeader title="Scenario Overrides Settings" />
                     <View className="m-1">
+                        <View style={{ marginBottom: SPACING.lg }}>
+                            <CampaignCard campaign={activeCampaign} onSwitch={handleSwitch} />
+                        </View>
+
                         {showBody && (
-                            <Section label="Trackblazer Overrides" collapsible defaultOpen={accordionDefaultValue.includes("trackblazer")}>
-                                <View style={{ padding: SPACING.md }}>
-                                    <Text style={styles.accordionDescription}>Specific overrides for the Trackblazer scenario.</Text>
+                            <>
+                                {/* Racing */}
+                                <View style={{ marginBottom: SPACING.lg }}>
+                                    <SectionLabel label="Racing" right={makeResetLink(resetRacingDefaults)} />
+                                    <View style={{ backgroundColor: colors.surface, borderRadius: RADII.lg, borderWidth: 1, borderColor: colors.borderHair, overflow: "hidden", padding: SPACING.md }}>
+                                        <View style={styles.section}>
+                                            <CustomSlider
+                                                searchId="trackblazer-consecutive-races-limit"
+                                                value={scenarioOverrides.trackblazerConsecutiveRacesLimit}
+                                                placeholder={defaultSettings.scenarioOverrides.trackblazerConsecutiveRacesLimit}
+                                                onValueChange={(value) => updateOverrideSetting("trackblazerConsecutiveRacesLimit", value)}
+                                                onSlidingComplete={(value) => updateOverrideSetting("trackblazerConsecutiveRacesLimit", value)}
+                                                min={3}
+                                                max={30}
+                                                step={1}
+                                                label="Consecutive Races Limit"
+                                                labelUnit=""
+                                                showValue={true}
+                                                showLabels={true}
+                                                description="Sets the maximum number of consecutive races the bot is allowed to run in the Trackblazer scenario before stopping. Note that a -30 stat penalty can apply starting from 3 consecutive races."
+                                            />
+                                        </View>
 
-                                    <View style={styles.section}>
-                                        <CustomSlider
-                                            searchId="trackblazer-consecutive-races-limit"
-                                            value={scenarioOverrides.trackblazerConsecutiveRacesLimit}
-                                            placeholder={defaultSettings.scenarioOverrides.trackblazerConsecutiveRacesLimit}
-                                            onValueChange={(value) => updateOverrideSetting("trackblazerConsecutiveRacesLimit", value)}
-                                            onSlidingComplete={(value) => updateOverrideSetting("trackblazerConsecutiveRacesLimit", value)}
-                                            min={3}
-                                            max={30}
-                                            step={1}
-                                            label="Consecutive Races Limit"
-                                            labelUnit=""
-                                            showValue={true}
-                                            showLabels={true}
-                                            description="Sets the maximum number of consecutive races the bot is allowed to run in the Trackblazer scenario before stopping. Note that a -30 stat penalty can apply starting from 3 consecutive races."
-                                        />
+                                        <View style={styles.section}>
+                                            <CustomSlider
+                                                searchId="trackblazer-max-retries-per-race"
+                                                value={scenarioOverrides.trackblazerMaxRetriesPerRace}
+                                                placeholder={defaultSettings.scenarioOverrides.trackblazerMaxRetriesPerRace}
+                                                onValueChange={(value) => updateOverrideSetting("trackblazerMaxRetriesPerRace", value)}
+                                                onSlidingComplete={(value) => updateOverrideSetting("trackblazerMaxRetriesPerRace", value)}
+                                                min={0}
+                                                max={5}
+                                                step={1}
+                                                label="Max Retries per Race"
+                                                labelUnit=""
+                                                showValue={true}
+                                                showLabels={true}
+                                                description="The maximum number of times the bot will attempt to retry a failed race in the Trackblazer scenario."
+                                            />
+                                        </View>
+
+                                        <View style={styles.section}>
+                                            <Text style={{ fontSize: 16, color: colors.text, marginBottom: 8 }}>Race Grades to use Race Retries on</Text>
+                                            <Text style={{ fontSize: 14, color: colors.text, opacity: 0.7, marginBottom: 12 }}>
+                                                Select which race grades should allow using a Race Retry in the Trackblazer scenario.
+                                            </Text>
+                                            <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                                                {["G1", "G2", "G3"].map((grade) => {
+                                                    const selected = scenarioOverrides.trackblazerRetryRacesBeforeFinalGrades.includes(grade)
+                                                    return (
+                                                        <Pressable
+                                                            key={grade}
+                                                            style={{
+                                                                padding: 10,
+                                                                borderRadius: 8,
+                                                                marginRight: 8,
+                                                                marginBottom: 8,
+                                                                overflow: "hidden",
+                                                                backgroundColor: selected ? colors.brand : colors.surface,
+                                                            }}
+                                                            onPress={() => {
+                                                                const currentGrades = scenarioOverrides.trackblazerRetryRacesBeforeFinalGrades
+                                                                if (currentGrades.includes(grade)) {
+                                                                    updateOverrideSetting("trackblazerRetryRacesBeforeFinalGrades", currentGrades.filter((g) => g !== grade))
+                                                                } else {
+                                                                    updateOverrideSetting("trackblazerRetryRacesBeforeFinalGrades", [...currentGrades, grade])
+                                                                }
+                                                            }}
+                                                            android_ripple={{ color: selected ? colors.rippleInverse : colors.ripple, foreground: true }}
+                                                        >
+                                                            <Text style={{ fontSize: 14, fontWeight: "600", color: selected ? colors.onBrand : colors.text }}>{grade}</Text>
+                                                        </Pressable>
+                                                    )
+                                                })}
+                                            </View>
+                                        </View>
+
+                                        <View style={styles.section}>
+                                            <Text style={{ fontSize: 16, color: colors.text, marginBottom: 8 }}>Preferred Track Distances</Text>
+                                            <Text style={{ fontSize: 14, color: colors.text, opacity: 0.7, marginBottom: 12 }}>
+                                                Select preferred track distances for extra race selection. Matching races will be prioritized. Leave empty for no preference.
+                                            </Text>
+                                            <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                                                {["Sprint", "Mile", "Medium", "Long"].map((distance) => {
+                                                    const selected = scenarioOverrides.trackblazerPreferredDistances.includes(distance)
+                                                    return (
+                                                        <Pressable
+                                                            key={distance}
+                                                            style={{
+                                                                padding: 10,
+                                                                borderRadius: 8,
+                                                                marginRight: 8,
+                                                                marginBottom: 8,
+                                                                overflow: "hidden",
+                                                                backgroundColor: selected ? colors.brand : colors.surface,
+                                                            }}
+                                                            onPress={() => {
+                                                                const current = scenarioOverrides.trackblazerPreferredDistances
+                                                                if (current.includes(distance)) {
+                                                                    updateOverrideSetting("trackblazerPreferredDistances", current.filter((d) => d !== distance))
+                                                                } else {
+                                                                    updateOverrideSetting("trackblazerPreferredDistances", [...current, distance])
+                                                                }
+                                                            }}
+                                                            android_ripple={{ color: selected ? colors.rippleInverse : colors.ripple, foreground: true }}
+                                                        >
+                                                            <Text style={{ fontSize: 14, fontWeight: "600", color: selected ? colors.onBrand : colors.text }}>{distance}</Text>
+                                                        </Pressable>
+                                                    )
+                                                })}
+                                            </View>
+                                        </View>
+
+                                        <View style={styles.section}>
+                                            <Text style={{ fontSize: 16, color: colors.text, marginBottom: 8 }}>Preferred Track Surfaces</Text>
+                                            <Text style={{ fontSize: 14, color: colors.text, opacity: 0.7, marginBottom: 12 }}>
+                                                Select preferred track surfaces for extra race selection. Matching races will be prioritized. Leave empty for no preference.
+                                            </Text>
+                                            <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                                                {["Turf", "Dirt"].map((surface) => {
+                                                    const selected = scenarioOverrides.trackblazerPreferredSurfaces.includes(surface)
+                                                    return (
+                                                        <Pressable
+                                                            key={surface}
+                                                            style={{
+                                                                padding: 10,
+                                                                borderRadius: 8,
+                                                                marginRight: 8,
+                                                                marginBottom: 8,
+                                                                overflow: "hidden",
+                                                                backgroundColor: selected ? colors.brand : colors.surface,
+                                                            }}
+                                                            onPress={() => {
+                                                                const current = scenarioOverrides.trackblazerPreferredSurfaces
+                                                                if (current.includes(surface)) {
+                                                                    updateOverrideSetting("trackblazerPreferredSurfaces", current.filter((s) => s !== surface))
+                                                                } else {
+                                                                    updateOverrideSetting("trackblazerPreferredSurfaces", [...current, surface])
+                                                                }
+                                                            }}
+                                                            android_ripple={{ color: selected ? colors.rippleInverse : colors.ripple, foreground: true }}
+                                                        >
+                                                            <Text style={{ fontSize: 14, fontWeight: "600", color: selected ? colors.onBrand : colors.text }}>{surface}</Text>
+                                                        </Pressable>
+                                                    )
+                                                })}
+                                            </View>
+                                        </View>
                                     </View>
+                                </View>
 
-                                    <View style={styles.section}>
-                                        <CustomSlider
-                                            searchId="trackblazer-energy-threshold"
-                                            value={scenarioOverrides.trackblazerEnergyThreshold}
-                                            placeholder={defaultSettings.scenarioOverrides.trackblazerEnergyThreshold}
-                                            onValueChange={(value) => updateOverrideSetting("trackblazerEnergyThreshold", value)}
-                                            onSlidingComplete={(value) => updateOverrideSetting("trackblazerEnergyThreshold", value)}
-                                            min={0}
-                                            max={100}
-                                            step={5}
-                                            label="Energy Threshold to use Energy Items"
-                                            labelUnit=""
-                                            showValue={true}
-                                            showLabels={true}
-                                            description="The energy level below which the bot will attempt to use energy-restoring items in the Trackblazer scenario."
-                                        />
+                                {/* Energy & Resources */}
+                                <View style={{ marginBottom: SPACING.lg }}>
+                                    <SectionLabel label="Energy & Resources" right={makeResetLink(resetEnergyDefaults)} />
+                                    <View style={{ backgroundColor: colors.surface, borderRadius: RADII.lg, borderWidth: 1, borderColor: colors.borderHair, overflow: "hidden", padding: SPACING.md }}>
+                                        <View style={styles.section}>
+                                            <CustomSlider
+                                                searchId="trackblazer-energy-threshold"
+                                                value={scenarioOverrides.trackblazerEnergyThreshold}
+                                                placeholder={defaultSettings.scenarioOverrides.trackblazerEnergyThreshold}
+                                                onValueChange={(value) => updateOverrideSetting("trackblazerEnergyThreshold", value)}
+                                                onSlidingComplete={(value) => updateOverrideSetting("trackblazerEnergyThreshold", value)}
+                                                min={0}
+                                                max={100}
+                                                step={5}
+                                                label="Energy Threshold to use Energy Items"
+                                                labelUnit=""
+                                                showValue={true}
+                                                showLabels={true}
+                                                description="The energy level below which the bot will attempt to use energy-restoring items in the Trackblazer scenario."
+                                            />
+                                        </View>
+
+                                        <View style={styles.section}>
+                                            <CustomSlider
+                                                searchId="trackblazer-skip-bad-mood-items-below-gain"
+                                                value={scenarioOverrides.trackblazerSkipBadMoodItemsBelowGain}
+                                                placeholder={defaultSettings.scenarioOverrides.trackblazerSkipBadMoodItemsBelowGain}
+                                                onValueChange={(value) => updateOverrideSetting("trackblazerSkipBadMoodItemsBelowGain", value)}
+                                                onSlidingComplete={(value) => updateOverrideSetting("trackblazerSkipBadMoodItemsBelowGain", value)}
+                                                min={0}
+                                                max={50}
+                                                step={1}
+                                                label="Skip Items During Bad Mood Below Stat Gain"
+                                                labelUnit=""
+                                                showValue={true}
+                                                showLabels={true}
+                                                description="When mood is BAD or AWFUL, refuse to use Reset Whistle / Good-Luck Charm / Megaphone if the selected training's main stat gain is below this floor. Prevents wasting items on structurally low-return turns where the mood multiplier caps the stat gains."
+                                            />
+                                        </View>
                                     </View>
+                                </View>
 
-                                    <View style={styles.section}>
-                                        <CustomSlider
-                                            searchId="trackblazer-max-retries-per-race"
-                                            value={scenarioOverrides.trackblazerMaxRetriesPerRace}
-                                            placeholder={defaultSettings.scenarioOverrides.trackblazerMaxRetriesPerRace}
-                                            onValueChange={(value) => updateOverrideSetting("trackblazerMaxRetriesPerRace", value)}
-                                            onSlidingComplete={(value) => updateOverrideSetting("trackblazerMaxRetriesPerRace", value)}
-                                            min={0}
-                                            max={5}
-                                            step={1}
-                                            label="Max Retries per Race"
-                                            labelUnit=""
-                                            showValue={true}
-                                            showLabels={true}
-                                            description="The maximum number of times the bot will attempt to retry a failed race in the Trackblazer scenario."
-                                        />
-                                    </View>
+                                {/* Training */}
+                                <View style={{ marginBottom: SPACING.lg }}>
+                                    <SectionLabel label="Training" right={makeResetLink(resetTrainingDefaults)} />
+                                    <View style={{ backgroundColor: colors.surface, borderRadius: RADII.lg, borderWidth: 1, borderColor: colors.borderHair, overflow: "hidden", padding: SPACING.md }}>
+                                        <View style={styles.section}>
+                                            <CustomSlider
+                                                searchId="trackblazer-skip-risky-charm-training-below-gain"
+                                                value={scenarioOverrides.trackblazerSkipRiskyCharmTrainingBelowGain}
+                                                placeholder={defaultSettings.scenarioOverrides.trackblazerSkipRiskyCharmTrainingBelowGain}
+                                                onValueChange={(value) => updateOverrideSetting("trackblazerSkipRiskyCharmTrainingBelowGain", value)}
+                                                onSlidingComplete={(value) => updateOverrideSetting("trackblazerSkipRiskyCharmTrainingBelowGain", value)}
+                                                min={20}
+                                                max={100}
+                                                step={5}
+                                                label="Skip Risky Charm Training Below Stat Gain"
+                                                labelUnit=""
+                                                showValue={true}
+                                                showLabels={true}
+                                                description="When a Good-Luck Charm is available to override a risky training's failure chance, skip that training anyway if its main stat gain is below this value. Prevents committing the Charm to low-value risky picks."
+                                            />
+                                        </View>
 
-                                    <View style={styles.section}>
-                                        <CustomSlider
-                                            searchId="trackblazer-skip-risky-charm-training-below-gain"
-                                            value={scenarioOverrides.trackblazerSkipRiskyCharmTrainingBelowGain}
-                                            placeholder={defaultSettings.scenarioOverrides.trackblazerSkipRiskyCharmTrainingBelowGain}
-                                            onValueChange={(value) => updateOverrideSetting("trackblazerSkipRiskyCharmTrainingBelowGain", value)}
-                                            onSlidingComplete={(value) => updateOverrideSetting("trackblazerSkipRiskyCharmTrainingBelowGain", value)}
-                                            min={20}
-                                            max={100}
-                                            step={5}
-                                            label="Skip Risky Charm Training Below Stat Gain"
-                                            labelUnit=""
-                                            showValue={true}
-                                            showLabels={true}
-                                            description="When a Good-Luck Charm is available to override a risky training's failure chance, skip that training anyway if its main stat gain is below this value. Prevents committing the Charm to low-value risky picks."
-                                        />
-                                    </View>
-
-                                    <View style={styles.section}>
-                                        <CustomSlider
-                                            searchId="trackblazer-skip-bad-mood-items-below-gain"
-                                            value={scenarioOverrides.trackblazerSkipBadMoodItemsBelowGain}
-                                            placeholder={defaultSettings.scenarioOverrides.trackblazerSkipBadMoodItemsBelowGain}
-                                            onValueChange={(value) => updateOverrideSetting("trackblazerSkipBadMoodItemsBelowGain", value)}
-                                            onSlidingComplete={(value) => updateOverrideSetting("trackblazerSkipBadMoodItemsBelowGain", value)}
-                                            min={0}
-                                            max={50}
-                                            step={1}
-                                            label="Skip Items During Bad Mood Below Stat Gain"
-                                            labelUnit=""
-                                            showValue={true}
-                                            showLabels={true}
-                                            description="When mood is BAD or AWFUL, refuse to use Reset Whistle / Good-Luck Charm / Megaphone if the selected training's main stat gain is below this floor. Prevents wasting items on structurally low-return turns where the mood multiplier caps the stat gains."
-                                        />
-                                    </View>
-
-                                    <View style={styles.section}>
-                                        <CustomCheckbox
-                                            searchId="trackblazer-enable-irregular-training"
-                                            checked={scenarioOverrides.trackblazerEnableIrregularTraining}
-                                            onCheckedChange={(checked) => updateOverrideSetting("trackblazerEnableIrregularTraining", checked)}
-                                            label="Enable Irregular Training"
-                                            description="When enabled, the bot will occasionally check for highly profitable training sessions before opting for extra races."
-                                        />
-                                    </View>
-
-                                    {scenarioOverrides.trackblazerEnableIrregularTraining && (
                                         <View style={styles.section}>
                                             <CustomSlider
                                                 searchId="trackblazer-irregular-training-min-stat-gain"
@@ -291,402 +443,336 @@ const ScenarioOverridesSettings = () => {
                                                 description="Sets the minimum main stat gain required to skip racing and perform Irregular Training instead."
                                             />
                                         </View>
-                                    )}
 
-                                    <View style={styles.section}>
-                                        <CustomCheckbox
-                                            searchId="trackblazer-whistle-forces-training"
-                                            checked={scenarioOverrides.trackblazerWhistleForcesTraining}
-                                            onCheckedChange={(checked) => updateOverrideSetting("trackblazerWhistleForcesTraining", checked)}
-                                            label="Reset Whistle Forces Training"
-                                            description="Whether or not using a Reset Whistle means it can ignore the failure chance thresholds in the Training Settings page. If enabled, the bot will pick the best available training after usage even if it's risky."
-                                        />
-                                    </View>
-
-                                    <View style={styles.section}>
-                                        <CustomSlider
-                                            searchId="trackblazer-shop-check-frequency"
-                                            value={scenarioOverrides.trackblazerShopCheckFrequency}
-                                            placeholder={defaultSettings.scenarioOverrides.trackblazerShopCheckFrequency}
-                                            onValueChange={(value) => updateOverrideSetting("trackblazerShopCheckFrequency", value)}
-                                            onSlidingComplete={(value) => updateOverrideSetting("trackblazerShopCheckFrequency", value)}
-                                            min={1}
-                                            max={4}
-                                            step={1}
-                                            label="Shop Check Frequency"
-                                            labelUnit=""
-                                            showValue={true}
-                                            showLabels={true}
-                                            description="Sets the frequency of shop checks after races in the Trackblazer scenario. 1 = every race, 2 = 1 day after, 3 = 2 days after, etc."
-                                        />
-                                    </View>
-
-                                    <View style={styles.section}>
-                                        <Text style={{ fontSize: 16, color: colors.text, marginBottom: 8 }}>Race Grades to check Shop Afterwards</Text>
-                                        <Text style={{ fontSize: 14, color: colors.text, opacity: 0.7, marginBottom: 12 }}>
-                                            Select which race grades should trigger a shop check after the race in the Trackblazer scenario.
-                                        </Text>
-                                        <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-                                            {["G1", "G2", "G3"].map((grade) => {
-                                                const selected = scenarioOverrides.trackblazerShopCheckGrades.includes(grade)
-                                                return (
-                                                    <Pressable
-                                                        key={grade}
-                                                        style={{
-                                                            padding: 10,
-                                                            borderRadius: 8,
-                                                            marginRight: 8,
-                                                            marginBottom: 8,
-                                                            overflow: "hidden",
-                                                            backgroundColor: selected ? colors.brand : colors.surface,
-                                                        }}
-                                                        onPress={() => {
-                                                            const currentGrades = scenarioOverrides.trackblazerShopCheckGrades
-                                                            if (currentGrades.includes(grade)) {
-                                                                updateOverrideSetting(
-                                                                    "trackblazerShopCheckGrades",
-                                                                    currentGrades.filter((g) => g !== grade)
-                                                                )
-                                                            } else {
-                                                                updateOverrideSetting("trackblazerShopCheckGrades", [...currentGrades, grade])
-                                                            }
-                                                        }}
-                                                        android_ripple={{ color: selected ? colors.rippleInverse : colors.ripple, foreground: true }}
-                                                    >
-                                                        <Text style={{ fontSize: 14, fontWeight: "600", color: selected ? colors.onBrand : colors.text }}>{grade}</Text>
-                                                    </Pressable>
-                                                )
-                                            })}
-                                        </View>
-                                    </View>
-
-                                    <View style={styles.section}>
-                                        <Text style={{ fontSize: 16, color: colors.text, marginBottom: 8 }}>Race Grades to use Race Retries on</Text>
-                                        <Text style={{ fontSize: 14, color: colors.text, opacity: 0.7, marginBottom: 12 }}>
-                                            Select which race grades should allow using a Race Retry in the Trackblazer scenario.
-                                        </Text>
-                                        <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-                                            {["G1", "G2", "G3"].map((grade) => {
-                                                const selected = scenarioOverrides.trackblazerRetryRacesBeforeFinalGrades.includes(grade)
-                                                return (
-                                                    <Pressable
-                                                        key={grade}
-                                                        style={{
-                                                            padding: 10,
-                                                            borderRadius: 8,
-                                                            marginRight: 8,
-                                                            marginBottom: 8,
-                                                            overflow: "hidden",
-                                                            backgroundColor: selected ? colors.brand : colors.surface,
-                                                        }}
-                                                        onPress={() => {
-                                                            const currentGrades = scenarioOverrides.trackblazerRetryRacesBeforeFinalGrades
-                                                            if (currentGrades.includes(grade)) {
-                                                                updateOverrideSetting(
-                                                                    "trackblazerRetryRacesBeforeFinalGrades",
-                                                                    currentGrades.filter((g) => g !== grade)
-                                                                )
-                                                            } else {
-                                                                updateOverrideSetting("trackblazerRetryRacesBeforeFinalGrades", [...currentGrades, grade])
-                                                            }
-                                                        }}
-                                                        android_ripple={{ color: selected ? colors.rippleInverse : colors.ripple, foreground: true }}
-                                                    >
-                                                        <Text style={{ fontSize: 14, fontWeight: "600", color: selected ? colors.onBrand : colors.text }}>{grade}</Text>
-                                                    </Pressable>
-                                                )
-                                            })}
-                                        </View>
-                                    </View>
-
-                                    <View style={styles.section}>
-                                        <Text style={{ fontSize: 16, color: colors.text, marginBottom: 8 }}>Preferred Track Distances</Text>
-                                        <Text style={{ fontSize: 14, color: colors.text, opacity: 0.7, marginBottom: 12 }}>
-                                            Select preferred track distances for extra race selection. Matching races will be prioritized. Leave empty for no preference.
-                                        </Text>
-                                        <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-                                            {["Sprint", "Mile", "Medium", "Long"].map((distance) => {
-                                                const selected = scenarioOverrides.trackblazerPreferredDistances.includes(distance)
-                                                return (
-                                                    <Pressable
-                                                        key={distance}
-                                                        style={{
-                                                            padding: 10,
-                                                            borderRadius: 8,
-                                                            marginRight: 8,
-                                                            marginBottom: 8,
-                                                            overflow: "hidden",
-                                                            backgroundColor: selected ? colors.brand : colors.surface,
-                                                        }}
-                                                        onPress={() => {
-                                                            const current = scenarioOverrides.trackblazerPreferredDistances
-                                                            if (current.includes(distance)) {
-                                                                updateOverrideSetting(
-                                                                    "trackblazerPreferredDistances",
-                                                                    current.filter((d) => d !== distance)
-                                                                )
-                                                            } else {
-                                                                updateOverrideSetting("trackblazerPreferredDistances", [...current, distance])
-                                                            }
-                                                        }}
-                                                        android_ripple={{ color: selected ? colors.rippleInverse : colors.ripple, foreground: true }}
-                                                    >
-                                                        <Text style={{ fontSize: 14, fontWeight: "600", color: selected ? colors.onBrand : colors.text }}>{distance}</Text>
-                                                    </Pressable>
-                                                )
-                                            })}
-                                        </View>
-                                    </View>
-
-                                    <View style={styles.section}>
-                                        <Text style={{ fontSize: 16, color: colors.text, marginBottom: 8 }}>Preferred Track Surfaces</Text>
-                                        <Text style={{ fontSize: 14, color: colors.text, opacity: 0.7, marginBottom: 12 }}>
-                                            Select preferred track surfaces for extra race selection. Matching races will be prioritized. Leave empty for no preference.
-                                        </Text>
-                                        <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-                                            {["Turf", "Dirt"].map((surface) => {
-                                                const selected = scenarioOverrides.trackblazerPreferredSurfaces.includes(surface)
-                                                return (
-                                                    <Pressable
-                                                        key={surface}
-                                                        style={{
-                                                            padding: 10,
-                                                            borderRadius: 8,
-                                                            marginRight: 8,
-                                                            marginBottom: 8,
-                                                            overflow: "hidden",
-                                                            backgroundColor: selected ? colors.brand : colors.surface,
-                                                        }}
-                                                        onPress={() => {
-                                                            const current = scenarioOverrides.trackblazerPreferredSurfaces
-                                                            if (current.includes(surface)) {
-                                                                updateOverrideSetting(
-                                                                    "trackblazerPreferredSurfaces",
-                                                                    current.filter((s) => s !== surface)
-                                                                )
-                                                            } else {
-                                                                updateOverrideSetting("trackblazerPreferredSurfaces", [...current, surface])
-                                                            }
-                                                        }}
-                                                        android_ripple={{ color: selected ? colors.rippleInverse : colors.ripple, foreground: true }}
-                                                    >
-                                                        <Text style={{ fontSize: 14, fontWeight: "600", color: selected ? colors.onBrand : colors.text }}>{surface}</Text>
-                                                    </Pressable>
-                                                )
-                                            })}
-                                        </View>
-                                    </View>
-
-                                    <Divider style={{ marginVertical: 16 }} />
-
-                                    <View style={styles.section}>
-                                        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 12 }}>
-                                            <View style={{ flex: 1 }}>
-                                                <Text style={{ fontSize: 16, color: colors.text }}>Items to Exclude from Shop</Text>
-                                                <Text style={{ fontSize: 14, color: colors.text, opacity: 0.7, marginTop: 4 }}>
-                                                    Selected <Text style={[TYPE.monoValue, { color: colors.text }]}>{scenarioOverrides.trackblazerExcludedItems.length}</Text> /{" "}
-                                                    <Text style={[TYPE.monoValue, { color: colors.text }]}>{Object.keys(trackblazerIcons).length}</Text> items
-                                                </Text>
-                                            </View>
-                                            <View style={{ flexDirection: "row", gap: 8 }}>
-                                                <CustomButton icon={<Trash2 size={16} color={colors.text} />} onPress={() => updateOverrideSetting("trackblazerExcludedItems", [])}>
-                                                    Clear
-                                                </CustomButton>
-                                            </View>
-                                        </View>
-
-                                        <Text style={{ fontSize: 14, color: colors.text, opacity: 0.7, marginBottom: 12 }}>
-                                            Select items that the bot will never purchase from the shop in the Trackblazer scenario.
-                                        </Text>
-
-                                        <View style={{ marginBottom: 16 }}>
-                                            <Input
-                                                style={{
-                                                    borderWidth: 1,
-                                                    borderColor: colors.borderHair,
-                                                    borderRadius: 8,
-                                                    padding: 12,
-                                                    fontSize: 16,
-                                                    color: colors.text,
-                                                    backgroundColor: colors.bg,
-                                                    marginBottom: 12,
-                                                }}
-                                                value={searchQuery}
-                                                onChangeText={setSearchQuery}
-                                                placeholder="Search items by name..."
+                                        <View style={styles.section}>
+                                            <CustomCheckbox
+                                                searchId="trackblazer-enable-irregular-training"
+                                                checked={scenarioOverrides.trackblazerEnableIrregularTraining}
+                                                onCheckedChange={(checked) => updateOverrideSetting("trackblazerEnableIrregularTraining", checked)}
+                                                label="Enable Irregular Training"
+                                                description="When enabled, the bot will occasionally check for highly profitable training sessions before opting for extra races."
                                             />
-                                            <View style={{ height: 400 }}>
-                                                <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
-                                                    {filteredItems.map((itemName) => (
-                                                        <Pressable
-                                                            key={itemName}
-                                                            onPress={() => handleItemPress(itemName)}
-                                                            style={styles.itemContainer}
-                                                            android_ripple={{ color: colors.ripple, foreground: true }}
-                                                        >
-                                                            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
-                                                                <Image source={trackblazerIcons[itemName].icon} style={{ width: 48, height: 48, marginRight: 8 }} />
-                                                                <View style={{ flex: 1 }}>
-                                                                    <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text }}>{itemName}</Text>
-                                                                    <Text style={{ fontSize: 12, color: colors.text, opacity: 0.6, marginTop: 2 }}>{trackblazerIcons[itemName].description}</Text>
-                                                                </View>
-                                                                {scenarioOverrides.trackblazerExcludedItems.includes(itemName) && <CircleCheckBig size={18} color={"green"} />}
-                                                            </View>
-                                                        </Pressable>
-                                                    ))}
-                                                </ScrollView>
-                                            </View>
                                         </View>
-                                    </View>
 
-                                    <Divider style={{ marginVertical: 16 }} />
-
-                                    <Text style={styles.conservationSectionHeader}>Item Conservation</Text>
-                                    <Text style={styles.conservationSectionIntro}>
-                                        Controls how aggressively the bot saves items for high-value turns. Set any threshold to 0 to disable that conservation rule and use items freely.
-                                    </Text>
-
-                                    <Text style={[TYPE.monoLabel, { color: colors.textMuted, marginTop: SPACING.lg, marginBottom: SPACING.sm }]}>ENERGY</Text>
-
-                                    <View style={styles.section}>
-                                        <CustomSlider
-                                            searchId="trackblazer-energy-item-reserve"
-                                            value={scenarioOverrides.trackblazerEnergyItemReserve}
-                                            placeholder={defaultSettings.scenarioOverrides.trackblazerEnergyItemReserve}
-                                            onValueChange={(value) => updateOverrideSetting("trackblazerEnergyItemReserve", value)}
-                                            onSlidingComplete={(value) => updateOverrideSetting("trackblazerEnergyItemReserve", value)}
-                                            min={0}
-                                            max={3}
-                                            step={1}
-                                            label="Energy Item Emergency Reserve"
-                                            labelUnit=""
-                                            showValue={true}
-                                            showLabels={true}
-                                            description="Number of energy items (lowest-tier first) to keep reserved for emergency race recovery when energy hits 1% or below with 3+ consecutive races."
-                                        />
-                                    </View>
-
-                                    <Text style={[TYPE.monoLabel, { color: colors.textMuted, marginTop: SPACING.lg, marginBottom: SPACING.sm }]}>MOOD</Text>
-
-                                    <View style={styles.section}>
-                                        <CustomSlider
-                                            searchId="trackblazer-cupcake-reserve"
-                                            value={scenarioOverrides.trackblazerCupcakeReserve}
-                                            placeholder={defaultSettings.scenarioOverrides.trackblazerCupcakeReserve}
-                                            onValueChange={(value) => updateOverrideSetting("trackblazerCupcakeReserve", value)}
-                                            onSlidingComplete={(value) => updateOverrideSetting("trackblazerCupcakeReserve", value)}
-                                            min={0}
-                                            max={3}
-                                            step={1}
-                                            label="Cupcake Reserve for Kale Juice Synergy"
-                                            labelUnit=""
-                                            showValue={true}
-                                            showLabels={true}
-                                            description="Number of cupcakes (Plain preferred) to keep so the mood penalty from Royal Kale Juice can be offset."
-                                        />
-                                    </View>
-
-                                    <Text style={[TYPE.monoLabel, { color: colors.textMuted, marginTop: SPACING.lg, marginBottom: SPACING.sm }]}>RACE ITEMS</Text>
-                                    <Text style={styles.conservationSectionIntro}>
-                                        Reserves and stock floors below take effect starting Turn 65 (right after Senior Year Summer training). Before Turn 65, the bot uses Hammers freely on every
-                                        race it takes. The Glow Stick Min Fans floor is the only race-item threshold that applies before Turn 65.
-                                    </Text>
-
-                                    <View style={styles.section}>
-                                        <CustomSlider
-                                            searchId="trackblazer-master-hammer-finale-reserve"
-                                            value={scenarioOverrides.trackblazerMasterHammerFinaleReserve}
-                                            placeholder={defaultSettings.scenarioOverrides.trackblazerMasterHammerFinaleReserve}
-                                            onValueChange={(value) => updateOverrideSetting("trackblazerMasterHammerFinaleReserve", value)}
-                                            onSlidingComplete={(value) => updateOverrideSetting("trackblazerMasterHammerFinaleReserve", value)}
-                                            min={0}
-                                            max={3}
-                                            step={1}
-                                            label="Master Cleat Hammer Finale Reserve"
-                                            labelUnit=""
-                                            showValue={true}
-                                            showLabels={true}
-                                            description="Master Cleat Hammers held back for the Finale days (73-75). Pre-finale days only spend the surplus above this reserve, and only on G1/G2 races."
-                                        />
-                                    </View>
-
-                                    <View style={styles.section}>
-                                        <CustomSlider
-                                            searchId="trackblazer-artisan-hammer-min-stock-for-g3"
-                                            value={scenarioOverrides.trackblazerArtisanHammerMinStockForG3}
-                                            placeholder={defaultSettings.scenarioOverrides.trackblazerArtisanHammerMinStockForG3}
-                                            onValueChange={(value) => updateOverrideSetting("trackblazerArtisanHammerMinStockForG3", value)}
-                                            onSlidingComplete={(value) => updateOverrideSetting("trackblazerArtisanHammerMinStockForG3", value)}
-                                            min={0}
-                                            max={3}
-                                            step={1}
-                                            label="Artisan Hammer Min Stock for G3"
-                                            labelUnit=""
-                                            showValue={true}
-                                            showLabels={true}
-                                            description="Minimum Artisan Cleat Hammer inventory before the bot is allowed to spend one on a G3 race."
-                                        />
-                                    </View>
-
-                                    <View style={styles.section}>
-                                        <CustomSlider
-                                            searchId="trackblazer-artisan-hammer-min-stock-for-g2"
-                                            value={scenarioOverrides.trackblazerArtisanHammerMinStockForG2}
-                                            placeholder={defaultSettings.scenarioOverrides.trackblazerArtisanHammerMinStockForG2}
-                                            onValueChange={(value) => updateOverrideSetting("trackblazerArtisanHammerMinStockForG2", value)}
-                                            onSlidingComplete={(value) => updateOverrideSetting("trackblazerArtisanHammerMinStockForG2", value)}
-                                            min={0}
-                                            max={3}
-                                            step={1}
-                                            label="Artisan Hammer Min Stock for G2"
-                                            labelUnit=""
-                                            showValue={true}
-                                            showLabels={true}
-                                            description="Minimum Artisan Cleat Hammer inventory before the bot is allowed to spend one on a G2 race. G1 is always allowed."
-                                        />
-                                    </View>
-
-                                    <View style={styles.section}>
-                                        <CustomSlider
-                                            searchId="trackblazer-glow-stick-final-reserve"
-                                            value={scenarioOverrides.trackblazerGlowStickFinalReserve}
-                                            placeholder={defaultSettings.scenarioOverrides.trackblazerGlowStickFinalReserve}
-                                            onValueChange={(value) => updateOverrideSetting("trackblazerGlowStickFinalReserve", value)}
-                                            onSlidingComplete={(value) => updateOverrideSetting("trackblazerGlowStickFinalReserve", value)}
-                                            min={0}
-                                            max={3}
-                                            step={1}
-                                            label="Glow Stick Final-Day Reserve"
-                                            labelUnit=""
-                                            showValue={true}
-                                            showLabels={true}
-                                            description="Glow Sticks held back for Day 75 (the Final). Pre-final-day races only spend sticks above this reserve."
-                                        />
-                                    </View>
-
-                                    <View style={styles.section}>
-                                        <CustomSlider
-                                            searchId="trackblazer-glow-stick-min-fans"
-                                            value={scenarioOverrides.trackblazerGlowStickMinFans}
-                                            placeholder={defaultSettings.scenarioOverrides.trackblazerGlowStickMinFans}
-                                            onValueChange={(value) => updateOverrideSetting("trackblazerGlowStickMinFans", value)}
-                                            onSlidingComplete={(value) => updateOverrideSetting("trackblazerGlowStickMinFans", value)}
-                                            min={0}
-                                            max={30000}
-                                            step={1000}
-                                            label="Glow Stick Minimum Fans"
-                                            labelUnit=""
-                                            showValue={true}
-                                            showLabels={true}
-                                            description="Minimum projected fan gain on a race before the bot uses a Glow Stick on it. Applies on standard and finale days."
-                                        />
+                                        <View style={styles.section}>
+                                            <CustomCheckbox
+                                                searchId="trackblazer-whistle-forces-training"
+                                                checked={scenarioOverrides.trackblazerWhistleForcesTraining}
+                                                onCheckedChange={(checked) => updateOverrideSetting("trackblazerWhistleForcesTraining", checked)}
+                                                label="Reset Whistle Forces Training"
+                                                description="Whether or not using a Reset Whistle means it can ignore the failure chance thresholds in the Training Settings page. If enabled, the bot will pick the best available training after usage even if it's risky."
+                                            />
+                                        </View>
                                     </View>
                                 </View>
-                            </Section>
+
+                                {/* Shop & Items */}
+                                <View style={{ marginBottom: SPACING.lg }}>
+                                    <SectionLabel label="Shop & Items" right={makeResetLink(resetShopDefaults)} />
+                                    <View style={{ backgroundColor: colors.surface, borderRadius: RADII.lg, borderWidth: 1, borderColor: colors.borderHair, overflow: "hidden", padding: SPACING.md }}>
+                                        <View style={styles.section}>
+                                            <CustomSlider
+                                                searchId="trackblazer-shop-check-frequency"
+                                                value={scenarioOverrides.trackblazerShopCheckFrequency}
+                                                placeholder={defaultSettings.scenarioOverrides.trackblazerShopCheckFrequency}
+                                                onValueChange={(value) => updateOverrideSetting("trackblazerShopCheckFrequency", value)}
+                                                onSlidingComplete={(value) => updateOverrideSetting("trackblazerShopCheckFrequency", value)}
+                                                min={1}
+                                                max={4}
+                                                step={1}
+                                                label="Shop Check Frequency"
+                                                labelUnit=""
+                                                showValue={true}
+                                                showLabels={true}
+                                                description="Sets the frequency of shop checks after races in the Trackblazer scenario. 1 = every race, 2 = 1 day after, 3 = 2 days after, etc."
+                                            />
+                                        </View>
+
+                                        <View style={styles.section}>
+                                            <Text style={{ fontSize: 16, color: colors.text, marginBottom: 8 }}>Race Grades to check Shop Afterwards</Text>
+                                            <Text style={{ fontSize: 14, color: colors.text, opacity: 0.7, marginBottom: 12 }}>
+                                                Select which race grades should trigger a shop check after the race in the Trackblazer scenario.
+                                            </Text>
+                                            <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+                                                {["G1", "G2", "G3"].map((grade) => {
+                                                    const selected = scenarioOverrides.trackblazerShopCheckGrades.includes(grade)
+                                                    return (
+                                                        <Pressable
+                                                            key={grade}
+                                                            style={{
+                                                                padding: 10,
+                                                                borderRadius: 8,
+                                                                marginRight: 8,
+                                                                marginBottom: 8,
+                                                                overflow: "hidden",
+                                                                backgroundColor: selected ? colors.brand : colors.surface,
+                                                            }}
+                                                            onPress={() => {
+                                                                const currentGrades = scenarioOverrides.trackblazerShopCheckGrades
+                                                                if (currentGrades.includes(grade)) {
+                                                                    updateOverrideSetting("trackblazerShopCheckGrades", currentGrades.filter((g) => g !== grade))
+                                                                } else {
+                                                                    updateOverrideSetting("trackblazerShopCheckGrades", [...currentGrades, grade])
+                                                                }
+                                                            }}
+                                                            android_ripple={{ color: selected ? colors.rippleInverse : colors.ripple, foreground: true }}
+                                                        >
+                                                            <Text style={{ fontSize: 14, fontWeight: "600", color: selected ? colors.onBrand : colors.text }}>{grade}</Text>
+                                                        </Pressable>
+                                                    )
+                                                })}
+                                            </View>
+                                        </View>
+
+                                        <Divider style={{ marginVertical: 16 }} />
+
+                                        <View style={styles.section}>
+                                            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 12 }}>
+                                                <View style={{ flex: 1 }}>
+                                                    <Text style={{ fontSize: 16, color: colors.text }}>Items to Exclude from Shop</Text>
+                                                    <Text style={{ fontSize: 14, color: colors.text, opacity: 0.7, marginTop: 4 }}>
+                                                        Selected <Text style={[TYPE.monoValue, { color: colors.text }]}>{scenarioOverrides.trackblazerExcludedItems.length}</Text> /{" "}
+                                                        <Text style={[TYPE.monoValue, { color: colors.text }]}>{Object.keys(trackblazerIcons).length}</Text> items
+                                                    </Text>
+                                                </View>
+                                                <View style={{ flexDirection: "row", gap: 8 }}>
+                                                    <CustomButton icon={<Trash2 size={16} color={colors.text} />} onPress={() => updateOverrideSetting("trackblazerExcludedItems", [])}>
+                                                        Clear
+                                                    </CustomButton>
+                                                </View>
+                                            </View>
+
+                                            <Text style={{ fontSize: 14, color: colors.text, opacity: 0.7, marginBottom: 12 }}>
+                                                Select items that the bot will never purchase from the shop in the Trackblazer scenario.
+                                            </Text>
+
+                                            <View style={{ marginBottom: 16 }}>
+                                                <Input
+                                                    style={{
+                                                        borderWidth: 1,
+                                                        borderColor: colors.borderHair,
+                                                        borderRadius: 8,
+                                                        padding: 12,
+                                                        fontSize: 16,
+                                                        color: colors.text,
+                                                        backgroundColor: colors.bg,
+                                                        marginBottom: 12,
+                                                    }}
+                                                    value={searchQuery}
+                                                    onChangeText={setSearchQuery}
+                                                    placeholder="Search items by name..."
+                                                />
+                                                <View style={{ height: 400 }}>
+                                                    <ScrollView nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
+                                                        {filteredItems.map((itemName) => (
+                                                            <Pressable
+                                                                key={itemName}
+                                                                onPress={() => handleItemPress(itemName)}
+                                                                style={styles.itemContainer}
+                                                                android_ripple={{ color: colors.ripple, foreground: true }}
+                                                            >
+                                                                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
+                                                                    <Image source={trackblazerIcons[itemName].icon} style={{ width: 48, height: 48, marginRight: 8 }} />
+                                                                    <View style={{ flex: 1 }}>
+                                                                        <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text }}>{itemName}</Text>
+                                                                        <Text style={{ fontSize: 12, color: colors.text, opacity: 0.6, marginTop: 2 }}>{trackblazerIcons[itemName].description}</Text>
+                                                                    </View>
+                                                                    {scenarioOverrides.trackblazerExcludedItems.includes(itemName) && <CircleCheckBig size={18} color={"green"} />}
+                                                                </View>
+                                                            </Pressable>
+                                                        ))}
+                                                    </ScrollView>
+                                                </View>
+                                            </View>
+                                        </View>
+                                    </View>
+                                </View>
+
+                                {/* Item Conservation */}
+                                <View style={{ marginBottom: SPACING.lg }}>
+                                    <SectionLabel label="Item Conservation" right={makeResetLink(resetConservationDefaults)} />
+                                    <View style={{ backgroundColor: colors.surface, borderRadius: RADII.lg, borderWidth: 1, borderColor: colors.borderHair, overflow: "hidden", padding: SPACING.md }}>
+                                        <Text style={styles.conservationSectionIntro}>
+                                            Controls how aggressively the bot saves items for high-value turns. Set any threshold to 0 to disable that conservation rule and use items freely.
+                                        </Text>
+
+                                        <Text style={[TYPE.monoLabel, { color: colors.textMuted, marginTop: SPACING.lg, marginBottom: SPACING.sm }]}>ENERGY</Text>
+
+                                        <View style={styles.section}>
+                                            <CustomSlider
+                                                searchId="trackblazer-energy-item-reserve"
+                                                value={scenarioOverrides.trackblazerEnergyItemReserve}
+                                                placeholder={defaultSettings.scenarioOverrides.trackblazerEnergyItemReserve}
+                                                onValueChange={(value) => updateOverrideSetting("trackblazerEnergyItemReserve", value)}
+                                                onSlidingComplete={(value) => updateOverrideSetting("trackblazerEnergyItemReserve", value)}
+                                                min={0}
+                                                max={3}
+                                                step={1}
+                                                label="Energy Item Emergency Reserve"
+                                                labelUnit=""
+                                                showValue={true}
+                                                showLabels={true}
+                                                description="Number of energy items (lowest-tier first) to keep reserved for emergency race recovery when energy hits 1% or below with 3+ consecutive races."
+                                            />
+                                        </View>
+
+                                        <Text style={[TYPE.monoLabel, { color: colors.textMuted, marginTop: SPACING.lg, marginBottom: SPACING.sm }]}>MOOD</Text>
+
+                                        <View style={styles.section}>
+                                            <CustomSlider
+                                                searchId="trackblazer-cupcake-reserve"
+                                                value={scenarioOverrides.trackblazerCupcakeReserve}
+                                                placeholder={defaultSettings.scenarioOverrides.trackblazerCupcakeReserve}
+                                                onValueChange={(value) => updateOverrideSetting("trackblazerCupcakeReserve", value)}
+                                                onSlidingComplete={(value) => updateOverrideSetting("trackblazerCupcakeReserve", value)}
+                                                min={0}
+                                                max={3}
+                                                step={1}
+                                                label="Cupcake Reserve for Kale Juice Synergy"
+                                                labelUnit=""
+                                                showValue={true}
+                                                showLabels={true}
+                                                description="Number of cupcakes (Plain preferred) to keep so the mood penalty from Royal Kale Juice can be offset."
+                                            />
+                                        </View>
+
+                                        <Text style={[TYPE.monoLabel, { color: colors.textMuted, marginTop: SPACING.lg, marginBottom: SPACING.sm }]}>RACE ITEMS</Text>
+                                        <Text style={styles.conservationSectionIntro}>
+                                            Reserves and stock floors below take effect starting Turn 65 (right after Senior Year Summer training). Before Turn 65, the bot uses Hammers freely on every
+                                            race it takes. The Glow Stick Min Fans floor is the only race-item threshold that applies before Turn 65.
+                                        </Text>
+
+                                        <View style={styles.section}>
+                                            <CustomSlider
+                                                searchId="trackblazer-master-hammer-finale-reserve"
+                                                value={scenarioOverrides.trackblazerMasterHammerFinaleReserve}
+                                                placeholder={defaultSettings.scenarioOverrides.trackblazerMasterHammerFinaleReserve}
+                                                onValueChange={(value) => updateOverrideSetting("trackblazerMasterHammerFinaleReserve", value)}
+                                                onSlidingComplete={(value) => updateOverrideSetting("trackblazerMasterHammerFinaleReserve", value)}
+                                                min={0}
+                                                max={3}
+                                                step={1}
+                                                label="Master Cleat Hammer Finale Reserve"
+                                                labelUnit=""
+                                                showValue={true}
+                                                showLabels={true}
+                                                description="Master Cleat Hammers held back for the Finale days (73-75). Pre-finale days only spend the surplus above this reserve, and only on G1/G2 races."
+                                            />
+                                        </View>
+
+                                        <View style={styles.section}>
+                                            <CustomSlider
+                                                searchId="trackblazer-artisan-hammer-min-stock-for-g3"
+                                                value={scenarioOverrides.trackblazerArtisanHammerMinStockForG3}
+                                                placeholder={defaultSettings.scenarioOverrides.trackblazerArtisanHammerMinStockForG3}
+                                                onValueChange={(value) => updateOverrideSetting("trackblazerArtisanHammerMinStockForG3", value)}
+                                                onSlidingComplete={(value) => updateOverrideSetting("trackblazerArtisanHammerMinStockForG3", value)}
+                                                min={0}
+                                                max={3}
+                                                step={1}
+                                                label="Artisan Hammer Min Stock for G3"
+                                                labelUnit=""
+                                                showValue={true}
+                                                showLabels={true}
+                                                description="Minimum Artisan Cleat Hammer inventory before the bot is allowed to spend one on a G3 race."
+                                            />
+                                        </View>
+
+                                        <View style={styles.section}>
+                                            <CustomSlider
+                                                searchId="trackblazer-artisan-hammer-min-stock-for-g2"
+                                                value={scenarioOverrides.trackblazerArtisanHammerMinStockForG2}
+                                                placeholder={defaultSettings.scenarioOverrides.trackblazerArtisanHammerMinStockForG2}
+                                                onValueChange={(value) => updateOverrideSetting("trackblazerArtisanHammerMinStockForG2", value)}
+                                                onSlidingComplete={(value) => updateOverrideSetting("trackblazerArtisanHammerMinStockForG2", value)}
+                                                min={0}
+                                                max={3}
+                                                step={1}
+                                                label="Artisan Hammer Min Stock for G2"
+                                                labelUnit=""
+                                                showValue={true}
+                                                showLabels={true}
+                                                description="Minimum Artisan Cleat Hammer inventory before the bot is allowed to spend one on a G2 race. G1 is always allowed."
+                                            />
+                                        </View>
+
+                                        <View style={styles.section}>
+                                            <CustomSlider
+                                                searchId="trackblazer-glow-stick-final-reserve"
+                                                value={scenarioOverrides.trackblazerGlowStickFinalReserve}
+                                                placeholder={defaultSettings.scenarioOverrides.trackblazerGlowStickFinalReserve}
+                                                onValueChange={(value) => updateOverrideSetting("trackblazerGlowStickFinalReserve", value)}
+                                                onSlidingComplete={(value) => updateOverrideSetting("trackblazerGlowStickFinalReserve", value)}
+                                                min={0}
+                                                max={3}
+                                                step={1}
+                                                label="Glow Stick Final-Day Reserve"
+                                                labelUnit=""
+                                                showValue={true}
+                                                showLabels={true}
+                                                description="Glow Sticks held back for Day 75 (the Final). Pre-final-day races only spend sticks above this reserve."
+                                            />
+                                        </View>
+
+                                        <View style={styles.section}>
+                                            <CustomSlider
+                                                searchId="trackblazer-glow-stick-min-fans"
+                                                value={scenarioOverrides.trackblazerGlowStickMinFans}
+                                                placeholder={defaultSettings.scenarioOverrides.trackblazerGlowStickMinFans}
+                                                onValueChange={(value) => updateOverrideSetting("trackblazerGlowStickMinFans", value)}
+                                                onSlidingComplete={(value) => updateOverrideSetting("trackblazerGlowStickMinFans", value)}
+                                                min={0}
+                                                max={30000}
+                                                step={1000}
+                                                label="Glow Stick Minimum Fans"
+                                                labelUnit=""
+                                                showValue={true}
+                                                showLabels={true}
+                                                description="Minimum projected fan gain on a race before the bot uses a Glow Stick on it. Applies on standard and finale days."
+                                            />
+                                        </View>
+                                    </View>
+                                </View>
+
+                                {/* Reset All footer */}
+                                <Pressable
+                                    onPress={() => setShowResetAll(true)}
+                                    android_ripple={{ color: colors.ripple, foreground: true }}
+                                    style={{
+                                        padding: SPACING.md,
+                                        backgroundColor: "rgba(239, 68, 68, 0.08)",
+                                        borderColor: colors.destructive,
+                                        borderWidth: 1,
+                                        borderRadius: RADII.lg,
+                                        alignItems: "center",
+                                        marginTop: SPACING.xl,
+                                        marginBottom: SPACING.xl,
+                                    }}
+                                >
+                                    <Text style={{ ...TYPE.body, color: colors.destructive, fontWeight: "600" }}>Reset {activeCampaign} to Defaults</Text>
+                                </Pressable>
+                            </>
                         )}
                     </View>
                 </ScrollView>
             </SearchPageProvider>
+
+            <AlertDialog open={showResetAll} onOpenChange={setShowResetAll}>
+                <AlertDialogContent onDismiss={() => setShowResetAll(false)}>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Reset {activeCampaign} to Defaults</AlertDialogTitle>
+                        <AlertDialogDescription>All {activeCampaign} overrides will be reset to their default values. This cannot be undone.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onPress={() => setShowResetAll(false)}>
+                            <Text>Cancel</Text>
+                        </AlertDialogCancel>
+                        <AlertDialogAction onPress={resetAllDefaults}>
+                            <Text>Reset</Text>
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </View>
     )
 }
