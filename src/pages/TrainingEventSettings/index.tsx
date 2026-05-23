@@ -1,6 +1,7 @@
 import { useContext, useState, useMemo, useCallback, useRef } from "react"
 import { View, Text, ScrollView, StyleSheet, Pressable, TextInput, Dimensions } from "react-native"
 import { GlassModal } from "../../components/ui/glass-modal"
+import { GlassSurface } from "../../components/ui/glass-surface"
 import { FlashList } from "@shopify/flash-list"
 import { useTheme } from "../../context/ThemeContext"
 import { TrainingEventContext, defaultSettings } from "../../context/BotStateContext"
@@ -9,10 +10,13 @@ import CustomCheckbox from "../../components/CustomCheckbox"
 import CustomSelect from "../../components/CustomSelect"
 import CustomButton from "../../components/CustomButton"
 import SearchableItem from "../../components/SearchableItem"
+import { Row } from "../../components/ui/row"
 import { Section } from "../../components/ui/section"
+import { Switch } from "../../components/ui/switch"
 import { TYPE } from "../../lib/type"
 import { SPACING } from "../../lib/spacing"
-import { Search, X } from "lucide-react-native"
+import { RADII } from "../../lib/radii"
+import { Plus, Search, X } from "lucide-react-native"
 import PageHeader from "../../components/PageHeader"
 import CustomSlider from "../../components/CustomSlider"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
@@ -363,6 +367,31 @@ const TrainingEventSettings = () => {
         return overrides
     }, [characterEventOverrides, supportEventOverrides, scenarioEventOverrides, allEvents])
 
+    // Event names that belong to each special-event accordion. Used to compute count pills shown at the top of each category.
+    const holidayEventNames = ["New Year's Resolutions", "New Year's Shrine Visit"]
+    const raceResultEventNames = ["Victory!", "Solid Showing", "Defeat"]
+    const trainingFailureEventNames = ["Get Well Soon!", "Don't Overdo It!"]
+    const miscEventNames = ["Extra Training", "Acupuncture (Just an Acupuncturist, No Worries! ☆)", "Etsuko's Exhaustive Coverage", "A Team at Last"]
+
+    /**
+     * Count how many of the given event names have an entry in `specialEventOverrides`. Counts every present key, including ones that were set back to a default value.
+     * @param names Event names that belong to a single accordion category.
+     * @returns Number of events in `names` that are present in `specialEventOverrides`.
+     */
+    const countOverrides = useCallback(
+        (names: string[]) => {
+            const overrides = specialEventOverrides || {}
+            return names.reduce((acc, name) => (overrides[name] ? acc + 1 : acc), 0)
+        },
+        [specialEventOverrides]
+    )
+
+    const holidayCount = countOverrides(holidayEventNames)
+    const raceResultCount = countOverrides(raceResultEventNames)
+    const trainingFailureCount = countOverrides(trainingFailureEventNames)
+    const miscCount = countOverrides(miscEventNames)
+    const totalOverrideCount = currentOverrides.length
+
     /**
      * Render a single event item for the selection list.
      * @param event The event data to render.
@@ -562,6 +591,54 @@ const TrainingEventSettings = () => {
                     opacity: 0.6,
                     padding: 20,
                 },
+                categoryHeader: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: SPACING.sm,
+                    paddingHorizontal: SPACING.xs,
+                    paddingBottom: SPACING.sm,
+                },
+                categoryHeaderTitle: {
+                    ...TYPE.body,
+                    color: colors.text,
+                    fontWeight: "600",
+                    flex: 1,
+                },
+                countPill: {
+                    ...TYPE.monoLabel,
+                    color: colors.brand,
+                    paddingHorizontal: SPACING.sm,
+                    paddingVertical: 2,
+                    backgroundColor: colors.brandSubtle,
+                    borderRadius: RADII.pill,
+                },
+                ctaCard: {
+                    borderRadius: RADII.lg,
+                    overflow: "hidden",
+                },
+                ctaCardInner: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: SPACING.md,
+                    padding: SPACING.md,
+                },
+                ctaCardIcon: {
+                    width: 32,
+                    height: 32,
+                    borderRadius: 999,
+                    backgroundColor: colors.brand,
+                    alignItems: "center",
+                    justifyContent: "center",
+                },
+                ctaCardTitle: {
+                    ...TYPE.body,
+                    color: colors.brand,
+                    fontWeight: "600",
+                },
+                ctaCardCaption: {
+                    ...TYPE.caption,
+                    color: colors.textMuted,
+                },
             }),
         [colors]
     )
@@ -579,16 +656,24 @@ const TrainingEventSettings = () => {
                 >
                     <PageHeader title="Training Event Settings" />
                     <View className="m-1">
-                        <View style={styles.section}>
-                            <CustomCheckbox
-                                searchId="prioritize-energy-options"
-                                checked={enablePrioritizeEnergyOptions}
-                                onCheckedChange={(checked: boolean) => updateTrainingEventSetting("enablePrioritizeEnergyOptions", checked)}
-                                label="Prioritize Energy Options"
+                        <Section label="General">
+                            <SearchableItem
+                                id="prioritize-energy-options"
+                                title="Prioritize Energy Options"
                                 description="When enabled, the bot will prioritize training event choices that provide energy recovery or avoid energy consumption, helping to maintain optimal energy levels for training sessions."
-                                className="my-2"
-                            />
-                        </View>
+                            >
+                                <Row
+                                    title="Prioritize Energy Options"
+                                    description="When enabled, the bot will prioritize training event choices that provide energy recovery or avoid energy consumption, helping to maintain optimal energy levels for training sessions."
+                                    right={
+                                        <Switch
+                                            checked={enablePrioritizeEnergyOptions}
+                                            onCheckedChange={(checked) => updateTrainingEventSetting("enablePrioritizeEnergyOptions", checked)}
+                                        />
+                                    }
+                                />
+                            </SearchableItem>
+                        </Section>
 
                         <Section label="OCR Recognition Settings">
                             <View style={{ padding: SPACING.md }}>
@@ -602,14 +687,22 @@ const TrainingEventSettings = () => {
                                     </Text>
                                 </SearchableItem>
 
-                                <CustomCheckbox
-                                    searchId="automatic-ocr-retry-training"
-                                    checked={enableAutomaticOCRRetry}
-                                    onCheckedChange={(checked: boolean) => updateTrainingEventSetting("enableAutomaticOCRRetry", checked)}
-                                    label="Enable Automatic OCR Retry for Training Events"
+                                <SearchableItem
+                                    id="automatic-ocr-retry-training"
+                                    title="Enable Automatic OCR Retry for Training Events"
                                     description="When enabled, the bot will automatically retry OCR detection with adjusted settings if the initial attempt for a training event title fails or has low confidence."
-                                    className="my-2"
-                                />
+                                >
+                                    <Row
+                                        title="Enable Automatic OCR Retry for Training Events"
+                                        description="When enabled, the bot will automatically retry OCR detection with adjusted settings if the initial attempt for a training event title fails or has low confidence."
+                                        right={
+                                            <Switch
+                                                checked={enableAutomaticOCRRetry}
+                                                onCheckedChange={(checked) => updateTrainingEventSetting("enableAutomaticOCRRetry", checked)}
+                                            />
+                                        }
+                                    />
+                                </SearchableItem>
 
                                 <CustomSlider
                                     searchId="ocr-confidence-training"
@@ -625,14 +718,22 @@ const TrainingEventSettings = () => {
                                     className="my-2"
                                 />
 
-                                <CustomCheckbox
-                                    searchId="hide-ocr-comparison-results-training"
-                                    checked={enableHideOCRComparisonResults}
-                                    onCheckedChange={(checked: boolean) => updateTrainingEventSetting("enableHideOCRComparisonResults", checked)}
-                                    label="Hide OCR String Comparison Results"
+                                <SearchableItem
+                                    id="hide-ocr-comparison-results-training"
+                                    title="Hide OCR String Comparison Results"
                                     description="If enabled, the bot will suppress detailed logging of individual string similarity scores during training event detection to keep the logs cleaner."
-                                    className="my-2"
-                                />
+                                >
+                                    <Row
+                                        title="Hide OCR String Comparison Results"
+                                        description="If enabled, the bot will suppress detailed logging of individual string similarity scores during training event detection to keep the logs cleaner."
+                                        right={
+                                            <Switch
+                                                checked={enableHideOCRComparisonResults}
+                                                onCheckedChange={(checked) => updateTrainingEventSetting("enableHideOCRComparisonResults", checked)}
+                                            />
+                                        }
+                                    />
+                                </SearchableItem>
                             </View>
                         </Section>
 
@@ -649,9 +750,26 @@ const TrainingEventSettings = () => {
                                     </Text>
                                 </SearchableItem>
 
-                                <CustomButton onPress={() => setEventOverrideModalVisible(true)} variant="default">
-                                    Search Events
-                                </CustomButton>
+                                <Pressable
+                                    onPress={() => setEventOverrideModalVisible(true)}
+                                    android_ripple={{ color: colors.ripple, foreground: true }}
+                                    accessibilityRole="button"
+                                >
+                                    <GlassSurface style={styles.ctaCard}>
+                                        <View style={styles.ctaCardInner}>
+                                            <View style={styles.ctaCardIcon}>
+                                                <Plus size={18} color={colors.onBrand} />
+                                            </View>
+                                            <View style={{ flex: 1 }}>
+                                                <Text style={styles.ctaCardTitle}>Add event override</Text>
+                                                <Text style={styles.ctaCardCaption}>
+                                                    <Text style={[TYPE.monoValue, { color: colors.textMuted }]}>{totalOverrideCount}</Text>
+                                                    {" overrides active · tap to search events"}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                    </GlassSurface>
+                                </Pressable>
                             </View>
                         </Section>
 
@@ -715,6 +833,11 @@ const TrainingEventSettings = () => {
 
                         <Section label="Holiday Events" collapsible defaultOpen={false}>
                             <View style={{ padding: SPACING.md }}>
+                                <View style={styles.categoryHeader}>
+                                    <Text style={styles.categoryHeaderTitle}>Holiday Events</Text>
+                                    <Text style={styles.countPill}>{holidayCount}</Text>
+                                </View>
+
                                 <View style={styles.section}>
                                     <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>New Year's Resolutions (Classic Year)</Text>
                                     <CustomSelect
@@ -741,6 +864,11 @@ const TrainingEventSettings = () => {
 
                         <Section label="Race Result Events" collapsible defaultOpen={false}>
                             <View style={{ padding: SPACING.md }}>
+                                <View style={styles.categoryHeader}>
+                                    <Text style={styles.categoryHeaderTitle}>Race Result Events</Text>
+                                    <Text style={styles.countPill}>{raceResultCount}</Text>
+                                </View>
+
                                 <View style={styles.section}>
                                     <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>Victory!</Text>
                                     <CustomSelect
@@ -799,6 +927,11 @@ const TrainingEventSettings = () => {
 
                         <Section label="Training Failure Events" collapsible defaultOpen={false}>
                             <View style={{ padding: SPACING.md }}>
+                                <View style={styles.categoryHeader}>
+                                    <Text style={styles.categoryHeaderTitle}>Training Failure Events</Text>
+                                    <Text style={styles.countPill}>{trainingFailureCount}</Text>
+                                </View>
+
                                 <View style={styles.section}>
                                     <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>Get Well Soon!</Text>
                                     <CustomSelect
@@ -825,6 +958,11 @@ const TrainingEventSettings = () => {
 
                         <Section label="Miscellaneous Events" collapsible defaultOpen={false}>
                             <View style={{ padding: SPACING.md }}>
+                                <View style={styles.categoryHeader}>
+                                    <Text style={styles.categoryHeaderTitle}>Miscellaneous Events</Text>
+                                    <Text style={styles.countPill}>{miscCount}</Text>
+                                </View>
+
                                 <View style={styles.section}>
                                     <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>Extra Training</Text>
                                     <CustomSelect
