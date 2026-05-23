@@ -45,12 +45,12 @@ const RamGauge: React.FC<RamGaugeProps> = ({ label, verdict, fillRatio, markers,
                 container: { padding: SPACING.md, backgroundColor: colors.surface, borderRadius: RADII.lg, borderWidth: 1, borderColor: colors.border, gap: SPACING.sm },
                 head: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
                 label: { ...TYPE.body, color: colors.text, fontWeight: "600" },
-                verdict: { ...TYPE.monoLabel, color: colors.success, paddingHorizontal: SPACING.sm, paddingVertical: 2, backgroundColor: "rgba(0, 209, 150, 0.12)", borderRadius: RADII.pill },
-                bar: { height: 6, backgroundColor: colors.surfaceRaised, borderRadius: RADII.pill, position: "relative", overflow: "hidden" },
+                verdict: { ...TYPE.monoLabel, color: colors.success, paddingHorizontal: SPACING.sm, paddingVertical: 2, backgroundColor: colors.successSubtle, borderRadius: RADII.pill },
+                bar: { height: 6, backgroundColor: colors.surfaceRaised, borderRadius: RADII.pill, position: "relative" },
                 fill: { position: "absolute", left: 0, top: 0, bottom: 0, backgroundColor: colors.brand, borderRadius: RADII.pill },
                 marker: { position: "absolute", top: -2, bottom: -2, width: 2, backgroundColor: colors.textMuted, opacity: 0.5 },
-                legend: { flexDirection: "row", justifyContent: "space-between" },
-                legendLabel: { ...TYPE.monoLabel, color: colors.textMuted, fontSize: 9 },
+                legend: { position: "relative", height: 12 },
+                legendLabel: { ...TYPE.monoLabel, color: colors.textMuted, fontSize: 9, position: "absolute", transform: [{ translateX: -12 }] },
             }),
         [colors]
     )
@@ -68,7 +68,7 @@ const RamGauge: React.FC<RamGaugeProps> = ({ label, verdict, fillRatio, markers,
             </View>
             <View style={styles.legend}>
                 {markers.map((m, i) => (
-                    <Text key={`l-${m.label}-${i}`} style={styles.legendLabel}>
+                    <Text key={`l-${m.label}-${i}`} style={[styles.legendLabel, { left: `${m.position * 100}%` }]}>
                         {m.label}
                     </Text>
                 ))}
