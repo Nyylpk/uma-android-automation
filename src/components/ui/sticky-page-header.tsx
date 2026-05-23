@@ -11,11 +11,11 @@ export interface StickyPageHeaderProps {
 }
 
 /**
- * Pin-on-scroll wrapper for the app's primary page header. Renders a solid `bg` background with a hairline `borderHair` border at the bottom.
+ * Pin-on-scroll wrapper for the app's primary page header. Renders a solid `bg` background.
  * Consumer should place this as the first child of a `ScrollView` with `stickyHeaderIndices={[0]}` so it pins on scroll.
  *
  * @param props See `StickyPageHeaderProps`.
- * @returns Solid sticky bar with hairline border.
+ * @returns Solid sticky bar.
  */
 export const StickyPageHeader = ({ children, style }: StickyPageHeaderProps) => {
     const { colors } = useTheme()
@@ -24,8 +24,6 @@ export const StickyPageHeader = ({ children, style }: StickyPageHeaderProps) => 
             style={[
                 {
                     backgroundColor: colors.bg,
-                    borderBottomColor: colors.borderHair,
-                    borderBottomWidth: 1,
                     paddingHorizontal: SPACING.lg,
                     paddingVertical: SPACING.sm,
                 },
