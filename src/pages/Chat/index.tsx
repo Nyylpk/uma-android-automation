@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useState } from "react"
 import { View, ScrollView, StyleSheet, TextInput, Text, NativeModules, Pressable } from "react-native"
 import { useFocusEffect } from "@react-navigation/native"
 import { type MarkedStyles } from "react-native-marked"
@@ -52,6 +52,22 @@ const SYSTEM_INSTRUCTIONS =
     '- Do NOT prefix output with "Answer:" or repeat the question.\n' +
     "- Only use facts that appear in the excerpts. Do not invent features, numbers, button names, or behavior.\n" +
     "- If the excerpts do not answer the question, reply with exactly: NOT_IN_DOCS"
+
+/** Props for BlinkingCursor. */
+interface BlinkingCursorProps {
+    /** Color of the cursor block, typically `colors.brand`. */
+    color: string
+}
+
+/** Small blinking caret rendered at the end of a streaming reply. */
+const BlinkingCursor: React.FC<BlinkingCursorProps> = ({ color }) => {
+    const [visible, setVisible] = useState(true)
+    useEffect(() => {
+        const id = setInterval(() => setVisible((v) => !v), 500)
+        return () => clearInterval(id)
+    }, [])
+    return <View style={{ width: 6, height: 12, marginLeft: 2, backgroundColor: color, opacity: visible ? 1 : 0, borderRadius: 1 }} />
+}
 
 const Chat = () => {
     const { colors, isDark } = useTheme()
@@ -474,6 +490,9 @@ const Chat = () => {
                         <MarkdownView theme={markedTheme} mdStyles={markedStyles}>
                             {partialAnswer}
                         </MarkdownView>
+                        <View style={{ flexDirection: "row", alignItems: "center", marginTop: -8 }}>
+                            <BlinkingCursor color={colors.brand} />
+                        </View>
                     </View>
                 )}
 
