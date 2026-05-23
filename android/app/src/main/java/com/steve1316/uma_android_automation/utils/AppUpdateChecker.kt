@@ -50,6 +50,9 @@ class AppUpdateChecker(private val activity: Activity) {
         val releaseNotes: String,
     )
 
+    /** How the dialog should present itself: as an upgrade prompt or as a read-only changelog viewer. */
+    enum class DisplayMode { UPDATE_AVAILABLE, CURRENT_CHANGELOG }
+
     /**
      * Fetches the remote update XML and shows the update dialog if a newer version is available.
      *
@@ -64,8 +67,26 @@ class AppUpdateChecker(private val activity: Activity) {
                     } ?: return@launch
 
                 if (forceShow || isNewerVersion(updateInfo.latestVersion, BuildConfig.VERSION_NAME)) {
-                    showUpdateDialog(updateInfo)
+                    showUpdateDialog(updateInfo, DisplayMode.UPDATE_AVAILABLE)
                 }
+            } catch (_: Exception) {
+                // Silently ignore network or parsing failures.
+            }
+        }
+    }
+
+    /**
+     * Fetches the same remote update XML and shows the dialog as a read-only changelog for the currently installed app version. Reuses the
+     * existing dialog layout/styling but rewrites the title, subtitle, and action button to reflect that no upgrade is being offered.
+     */
+    fun showCurrentChangelog() {
+        CoroutineScope(Dispatchers.Main + SupervisorJob()).launch {
+            try {
+                val updateInfo =
+                    withContext(Dispatchers.IO) {
+                        URL(UPDATE_XML_URL).openStream().use { parseUpdateXml(it) }
+                    } ?: return@launch
+                showUpdateDialog(updateInfo, DisplayMode.CURRENT_CHANGELOG)
             } catch (_: Exception) {
                 // Silently ignore network or parsing failures.
             }
@@ -218,19 +239,40 @@ class AppUpdateChecker(private val activity: Activity) {
     }
 
     /**
-     * Displays the custom update dialog with release notes and Update/Dismiss buttons.
+     * Displays the custom dialog with release notes. In `UPDATE_AVAILABLE` mode it prompts the user to upgrade. In `CURRENT_CHANGELOG` mode
+     * it reuses the same layout but rewrites the title, subtitle, and action button to act as a read-only viewer for the currently
+     * installed version's release notes.
      *
      * @param updateInfo The parsed update metadata to display in the dialog.
+     * @param mode Controls the title, subtitle, and action button copy.
      */
-    private fun showUpdateDialog(updateInfo: UpdateInfo) {
+    private fun showUpdateDialog(updateInfo: UpdateInfo, mode: DisplayMode) {
         if (activity.isFinishing || activity.isDestroyed) return
 
         val dialog = Dialog(activity)
         dialog.setContentView(R.layout.dialog_app_update)
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
-        dialog.findViewById<TextView>(R.id.dialog_subtitle).text =
-            "Version ${updateInfo.latestVersion} is available"
+        val title = dialog.findViewById<TextView>(R.id.dialog_title)
+        val subtitle = dialog.findViewById<TextView>(R.id.dialog_subtitle)
+        val dismissBtn = dialog.findViewById<Button>(R.id.btn_dismiss)
+        val updateBtn = dialog.findViewById<Button>(R.id.btn_update)
+
+        when (mode) {
+            DisplayMode.UPDATE_AVAILABLE -> {
+                title.text = "Update Available"
+                subtitle.text = "Version ${updateInfo.latestVersion} is available"
+                dismissBtn.text = "Dismiss"
+                updateBtn.text = "Update"
+            }
+            DisplayMode.CURRENT_CHANGELOG -> {
+                title.text = "Changelog"
+                subtitle.text = "Installed version v${BuildConfig.VERSION_NAME}"
+                dismissBtn.text = "Close"
+                updateBtn.text = "View on GitHub"
+            }
+        }
+
         dialog.findViewById<TextView>(R.id.dialog_release_notes).text =
             formatReleaseNotes(updateInfo.releaseNotes)
 
@@ -246,11 +288,11 @@ class AppUpdateChecker(private val activity: Activity) {
             }
         }
 
-        dialog.findViewById<Button>(R.id.btn_dismiss).setOnClickListener {
+        dismissBtn.setOnClickListener {
             dialog.dismiss()
         }
 
-        dialog.findViewById<Button>(R.id.btn_update).setOnClickListener {
+        updateBtn.setOnClickListener {
             activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(updateInfo.url)))
             dialog.dismiss()
         }

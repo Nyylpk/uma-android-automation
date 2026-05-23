@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useContext, useRef, useCallback } from "react"
-import { View, Text, StyleSheet, Pressable, Linking, ScrollView } from "react-native"
+import { View, Text, StyleSheet, Pressable, Linking, ScrollView, NativeModules } from "react-native"
 import { DrawerContentScrollView, DrawerContentComponentProps, useDrawerStatus } from "@react-navigation/drawer"
 import { CommonActions } from "@react-navigation/native"
 import Ionicons from "@react-native-vector-icons/ionicons"
@@ -35,8 +35,6 @@ interface DrawerSection {
 
 /** Repository GitHub URL used by the footer GitHub icon. */
 const GITHUB_URL = "https://github.com/steve1316/uma-android-automation"
-/** Repo README anchor used by the footer Docs icon. */
-const DOCS_URL = "https://github.com/steve1316/uma-android-automation#readme"
 /** SQLite category for misc drawer state. */
 const MISC_CATEGORY = "misc"
 /** SQLite key holding the JSON-serialised recent-page route list. */
@@ -488,8 +486,17 @@ const DrawerContent: React.FC<DrawerContentComponentProps> = (props) => {
                 <Pressable style={styles.footerIconButton} android_ripple={{ color: colors.ripple, foreground: true }} onPress={() => Linking.openURL(GITHUB_URL)}>
                     <Ionicons name="logo-github" size={24} color={colors.text} />
                 </Pressable>
-                <Pressable style={styles.footerIconButton} android_ripple={{ color: colors.ripple, foreground: true }} onPress={() => Linking.openURL(DOCS_URL)}>
-                    <Ionicons name="document-text-outline" size={24} color={colors.text} />
+                <Pressable
+                    style={styles.footerIconButton}
+                    android_ripple={{ color: colors.ripple, foreground: true }}
+                    accessibilityLabel="View current changelog"
+                    onPress={() => {
+                        NativeModules.StartModule.showChangelog().catch(() => {
+                            // Swallow failures; the dialog is informational and not critical.
+                        })
+                    }}
+                >
+                    <Ionicons name="newspaper-outline" size={24} color={colors.text} />
                 </Pressable>
             </View>
         </>

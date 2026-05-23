@@ -25,6 +25,7 @@ import com.steve1316.automation_library.utils.MessageLog
 import com.steve1316.automation_library.utils.MyAccessibilityService
 import com.steve1316.automation_library.utils.SettingsHelper
 import com.steve1316.uma_android_automation.bot.Game
+import com.steve1316.uma_android_automation.utils.AppUpdateChecker
 import com.steve1316.uma_android_automation.utils.LogStreamServer
 import dev.kord.common.entity.Snowflake
 import dev.kord.core.Kord
@@ -549,6 +550,26 @@ class StartModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaM
             promise.resolve(ipAddress)
         } catch (e: Exception) {
             promise.reject("IP_ADDRESS_ERROR", "Failed to retrieve device IP address: ${e.message}")
+        }
+    }
+
+    /**
+     * Shows the changelog dialog for the currently installed app version. Reuses [AppUpdateChecker] so the dialog matches the updater UI.
+     *
+     * @param promise Resolves once the dialog has been dispatched on the UI thread. The dialog fetch may still happen asynchronously.
+     */
+    @ReactMethod
+    fun showChangelog(promise: Promise) {
+        try {
+            val activity = this.reactApplicationContext.currentActivity
+            if (activity == null) {
+                promise.reject("NO_ACTIVITY", "Cannot show the changelog because there is no current Activity.")
+                return
+            }
+            AppUpdateChecker(activity).showCurrentChangelog()
+            promise.resolve(null)
+        } catch (e: Exception) {
+            promise.reject("CHANGELOG_ERROR", "Failed to show changelog: ${e.message}")
         }
     }
 
