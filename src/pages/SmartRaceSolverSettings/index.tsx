@@ -1,4 +1,4 @@
-import { useMemo, useContext, useState, useEffect, useRef, useCallback } from "react"
+import { useMemo, useContext, useState, useEffect, useRef, useCallback, ReactNode } from "react"
 import { InteractionManager, View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from "react-native"
 import { Divider } from "react-native-paper"
 import { previewSchedule, SchedulePreview, ScheduleEntry, SolverConfigSnapshot } from "../../lib/solver/preview"
@@ -51,6 +51,9 @@ import { AptitudeRow, EpithetChip } from "./components/Helpers"
 import { GlassFab } from "../../components/ui/glass-fab"
 import { RefreshCw } from "lucide-react-native"
 import { Section } from "../../components/ui/section"
+import { Row } from "../../components/ui/row"
+import { Switch } from "../../components/ui/switch"
+import InfoCallout from "../../components/ui/info-callout"
 import { TYPE } from "../../lib/type"
 import { SPACING } from "../../lib/spacing"
 
@@ -65,6 +68,29 @@ let lastPreviewCache: { key: string; preview: SchedulePreview } | null = null
 // Tracks whether the bundled races/epithets JSON has been shipped to Kotlin.
 // After the first bridge call Kotlin caches its own copy, so subsequent calls omit the payload and save ~150KB of marshalling.
 let bridgeDataPrimed = false
+
+/** Props for SubTopic. */
+interface SubTopicProps {
+    /** Section heading shown in `TYPE.h2`. */
+    title: string
+    /** Body content shown in `TYPE.body` with `textMuted` color. */
+    children: ReactNode
+}
+
+/**
+ * A titled paragraph used inside an InfoCallout body.
+ * @param props See `SubTopicProps`.
+ * @returns A View with a heading and body text.
+ */
+const SubTopic = ({ title, children }: SubTopicProps) => {
+    const { colors } = useTheme()
+    return (
+        <View style={{ marginBottom: SPACING.sm }}>
+            <Text style={[TYPE.h2, { color: colors.text, marginBottom: SPACING.xs }]}>{title}</Text>
+            <Text style={[TYPE.body, { color: colors.textMuted }]}>{children}</Text>
+        </View>
+    )
+}
 
 /**
  * Smart Race Solver settings page. Lets the user configure aptitudes, target/forced epithets,
@@ -205,6 +231,7 @@ const SmartRaceSolverSettings = () => {
     const currentOptimizeMode: OptimizeModeKey = weights.fanWeight > 0.0 ? "FANS_EPITAPH" : "STAT_EPITAPH"
 
     const [presetSearch, setPresetSearch] = useState("")
+    const [distanceFilter, setDistanceFilter] = useState<"all" | "Sprint" | "Mile" | "Medium" | "Long" | "Dirt">("all")
     const [epithetSearch, setEpithetSearch] = useState("")
     const [forcedEpithetSearch, setForcedEpithetSearch] = useState("")
     /** Name of the epithet whose contributing races should be highlighted on the calendar. */
@@ -229,10 +256,19 @@ const SmartRaceSolverSettings = () => {
     // Derived filters
 
     const filteredPresets = useMemo(() => {
-        if (!presetSearch) return allPresets
-        const q = presetSearch.toLowerCase()
-        return allPresets.filter((p) => p.name.toLowerCase().includes(q))
-    }, [allPresets, presetSearch])
+        let list = allPresets
+        if (distanceFilter !== "all") {
+            list = list.filter((p) => {
+                const rank = distanceFilter === "Dirt" ? p.surfaceAptitudes.Dirt : p.distanceAptitudes[distanceFilter]
+                return APTITUDE_RANKS.indexOf(rank) <= APTITUDE_RANKS.indexOf("A")
+            })
+        }
+        if (presetSearch) {
+            const q = presetSearch.toLowerCase()
+            list = list.filter((p) => p.name.toLowerCase().includes(q))
+        }
+        return list
+    }, [allPresets, presetSearch, distanceFilter])
 
     const filteredEpithets = useMemo(() => {
         if (!epithetSearch) return allEpithets
@@ -595,6 +631,10 @@ const SmartRaceSolverSettings = () => {
                 chipCondition: { color: colors.textMuted, fontSize: 10, fontStyle: "italic", marginTop: 2 },
                 chipConditionActive: { color: colors.onBrand, fontSize: 10, fontStyle: "italic", marginTop: 2, opacity: 0.8 },
                 chipNoMatcherDot: { position: "absolute", top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.destructive },
+                distanceChip: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, borderRadius: 20, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+                distanceChipActive: { backgroundColor: colors.accent, borderColor: colors.accent },
+                distanceChipText: { color: colors.text, fontSize: 12, fontWeight: "600" },
+                distanceChipTextActive: { color: colors.text, fontSize: 12, fontWeight: "700" },
                 aptRow: { flexDirection: "row", alignItems: "center", marginVertical: 4 },
                 aptLabel: { width: 70, color: colors.text, fontSize: 13 },
                 aptButtons: { flexDirection: "row", gap: 4, flex: 1 },
@@ -1047,11 +1087,10 @@ const SmartRaceSolverSettings = () => {
                             description="Plans every turn of the career to maximize score by targeting epithet rewards. The bot only races when the solver picks a race; other turns become training or rest."
                             style={styles.section}
                         >
-                            <CustomCheckbox
-                                label="Enable Smart Race Solver"
-                                description="Plans every turn of the 72-turn career to maximize score, deciding for each turn whether to race, train, or rest. The bot only runs the races the solver currently plans and never adds extra ones, even when Farming Fans would otherwise pick one up; the plan itself re-solves each turn so wins and losses reshape the remaining schedule. Activates whenever Force Racing and User In-Game Race Agenda are off."
-                                checked={enableSmartRaceSolver}
-                                onCheckedChange={(checked) => updateRacingSetting("enableSmartRaceSolver", checked)}
+                            <Row
+                                title="Smart Race Solver"
+                                description="Let the solver pick races automatically"
+                                right={<Switch checked={enableSmartRaceSolver} onCheckedChange={(checked) => updateRacingSetting("enableSmartRaceSolver", checked)} />}
                             />
                         </SearchableItem>
 
@@ -1066,44 +1105,29 @@ const SmartRaceSolverSettings = () => {
                                     description="Smart Race Solver overview, loss handling, race-history scrape, and notes on epithets without matchers."
                                     style={styles.section}
                                 >
-                                    <InfoContainer>
-                                        <View>
-                                            <Text style={styles.infoLabel}>How it works</Text>
-                                            <Text style={styles.infoDescription}>
-                                                The solver searches the entire 72-turn career and picks, for every turn, the best decision (Race / Train / Rest) that maximizes your projected score
-                                                against the target epithet rewards. The bot only races on the turns the solver has chosen in the calculated schedule - every other turn becomes training
-                                                or rest, even when Farming Fans would otherwise add an extra race. Hard goal requirements (fan / trophy / goal-points) and the Force Racing setting are
-                                                the only things that can override the schedule.
-                                            </Text>
-
-                                            <View style={styles.infoBlock}>
-                                                <Text style={styles.infoLabel}>What happens when you lose a race</Text>
-                                                <Text style={styles.infoDescription}>
-                                                    A loss is recorded against that turn and the solver immediately re-plans the remaining turns. Epithets that depended on the lost race may shift to
-                                                    alternative paths or drop out entirely, so later races / trainings can change to keep the rest of the run on the highest-scoring track still
-                                                    available.
-                                                </Text>
-                                            </View>
-
-                                            <View style={styles.infoBlock}>
-                                                <Text style={styles.infoLabel}>Race History scrape</Text>
-                                                <Text style={styles.infoDescription}>
-                                                    On bot start (and only when the career is past the pre-debut turns), the bot opens the in-game Career → Race History dialog and scrapes every past
-                                                    race entry. Each row is matched to the race calendar so wins seed your epithet progress and losses are remembered when re-planning. This lets you
-                                                    stop and resume a career mid-run without the solver forgetting what already happened.
-                                                </Text>
-                                            </View>
-                                            <View style={styles.infoBlock}>
-                                                <Text style={styles.infoLabel}>Epithets without matchers</Text>
-                                                <Text style={styles.infoDescription}>
-                                                    Some epithets in the data set have no structured matchers in the code - usually because the in-game condition (like "Win your first G1 in Senior
-                                                    class") is difficult to be modeled as a per-race rule. These are marked with a small red dot in the top-right corner of their chip. The solver
-                                                    treats them as untouched and never picks races to advance them, so they won't be auto-completed. Adding one to Forced makes every candidate schedule
-                                                    infeasible since the condition can never be satisfied, so leave them out of Forced even if you plan to earn them yourself in-game.
-                                                </Text>
-                                            </View>
-                                        </View>
-                                    </InfoContainer>
+                                    <InfoCallout title="How the solver works">
+                                        <SubTopic title="How it works">
+                                            The solver searches the entire 72-turn career and picks, for every turn, the best decision (Race / Train / Rest) that maximizes your projected score
+                                            against the target epithet rewards. The bot only races on the turns the solver has chosen in the calculated schedule - every other turn becomes training
+                                            or rest, even when Farming Fans would otherwise add an extra race. Hard goal requirements (fan / trophy / goal-points) and the Force Racing setting are
+                                            the only things that can override the schedule.
+                                        </SubTopic>
+                                        <SubTopic title="What happens when you lose a race">
+                                            A loss is recorded against that turn and the solver immediately re-plans the remaining turns. Epithets that depended on the lost race may shift to
+                                            alternative paths or drop out entirely, so later races / trainings can change to keep the rest of the run on the highest-scoring track still available.
+                                        </SubTopic>
+                                        <SubTopic title="Race History scrape">
+                                            On bot start (and only when the career is past the pre-debut turns), the bot opens the in-game Career → Race History dialog and scrapes every past
+                                            race entry. Each row is matched to the race calendar so wins seed your epithet progress and losses are remembered when re-planning. This lets you
+                                            stop and resume a career mid-run without the solver forgetting what already happened.
+                                        </SubTopic>
+                                        <SubTopic title="Epithets without matchers">
+                                            Some epithets in the data set have no structured matchers in the code - usually because the in-game condition (like "Win your first G1 in Senior
+                                            class") is difficult to be modeled as a per-race rule. These are marked with a small red dot in the top-right corner of their chip. The solver
+                                            treats them as untouched and never picks races to advance them, so they won't be auto-completed. Adding one to Forced makes every candidate schedule
+                                            infeasible since the condition can never be satisfied, so leave them out of Forced even if you plan to earn them yourself in-game.
+                                        </SubTopic>
+                                    </InfoCallout>
                                 </SearchableItem>
 
                                 {/* Character preset */}
@@ -1118,6 +1142,27 @@ const SmartRaceSolverSettings = () => {
                                     <View style={sectionsDisabledStyle}>
                                         <Text style={styles.sectionTitle}>Character Preset</Text>
                                         <Text style={styles.description}>Selected: {smartRaceSolverCharacterPreset || "(none)"}</Text>
+                                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: SPACING.xs, marginBottom: SPACING.sm }}>
+                                            {(
+                                                [
+                                                    { key: "all", label: "All" },
+                                                    { key: "Sprint", label: "Sprint" },
+                                                    { key: "Mile", label: "Mile" },
+                                                    { key: "Medium", label: "Medium" },
+                                                    { key: "Long", label: "Long" },
+                                                    { key: "Dirt", label: "Dirt" },
+                                                ] as { key: typeof distanceFilter; label: string }[]
+                                            ).map((c) => (
+                                                <Pressable
+                                                    key={c.key}
+                                                    onPress={() => setDistanceFilter(c.key)}
+                                                    style={[styles.distanceChip, distanceFilter === c.key && styles.distanceChipActive]}
+                                                    android_ripple={{ color: colors.ripple, foreground: true }}
+                                                >
+                                                    <Text style={[styles.distanceChipText, distanceFilter === c.key && styles.distanceChipTextActive]}>{c.label}</Text>
+                                                </Pressable>
+                                            ))}
+                                        </ScrollView>
                                         <Input style={styles.input} value={presetSearch} onChangeText={setPresetSearch} placeholder="Search characters..." />
                                         <ScrollView ref={presetScrollRef} style={styles.presetList} nestedScrollEnabled keyboardShouldPersistTaps="handled">
                                             {filteredPresets.map((p) => {
