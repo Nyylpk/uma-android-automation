@@ -1,5 +1,7 @@
-import { useMemo, useContext, useRef, useState, useEffect } from "react"
-import { View, Text, ScrollView, StyleSheet, NativeModules, Linking, AppState, AppStateStatus } from "react-native"
+import { useMemo, useCallback, useContext, useRef, useState, useEffect } from "react"
+import { View, Text, ScrollView, StyleSheet, NativeModules, Pressable, AppState, AppStateStatus } from "react-native"
+import Ionicons from "@react-native-vector-icons/ionicons"
+import * as Clipboard from "expo-clipboard"
 import { useTheme } from "../../context/ThemeContext"
 import { DebugContext, BotMetaContext } from "../../context/BotStateContext"
 import CustomSlider from "../../components/CustomSlider"
@@ -14,8 +16,13 @@ import SearchableItem from "../../components/SearchableItem"
 import { SearchPageProvider } from "../../context/SearchPageContext"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
 import { Section } from "../../components/ui/section"
+import { GlassSurface } from "../../components/ui/glass-surface"
+import { Row } from "../../components/ui/row"
+import { Switch } from "../../components/ui/switch"
+import { SectionLabel } from "../../components/ui/section-label"
 import { TYPE } from "../../lib/type"
 import { SPACING } from "../../lib/spacing"
+import { RADII } from "../../lib/radii"
 
 /**
  * The Debug Settings page.
@@ -201,6 +208,16 @@ const DebugSettings = () => {
         [colors]
     )
 
+    const rlvUrl = `http://${deviceIp === "10.0.2.15" ? "localhost" : deviceIp}:${debug.remoteLogViewerPort}`
+
+    const handleCopyRlvUrl = useCallback(async () => {
+        try {
+            await Clipboard.setStringAsync(rlvUrl)
+        } catch {
+            // swallow - clipboard may fail silently on web/sim
+        }
+    }, [rlvUrl])
+
     return (
         <View style={styles.root}>
             <SearchPageProvider page="DebugSettings" scrollViewRef={scrollViewRef}>
@@ -215,16 +232,14 @@ const DebugSettings = () => {
                     <PageHeader title="Debug Settings" />
                     <View className="m-1">
                         <View style={{ marginTop: 16 }}>
-                            {/* Enable Debug Mode Checkbox */}
-                            <CustomCheckbox
-                                searchId="enable-debug-mode"
-                                checked={debug.enableDebugMode}
-                                onCheckedChange={(checked) => {
-                                    updateDebug({ enableDebugMode: checked })
-                                }}
-                                label="Enable Debug Mode"
-                                description="Allows debugging messages in the log and test images to be created in the /temp/ folder."
-                            />
+                            {/* Enable Debug Mode */}
+                            <SearchableItem id="enable-debug-mode" title="Enable Debug Mode" description="Allows debugging messages in the log and test images to be created in the /temp/ folder.">
+                                <Row
+                                    title="Debug Mode"
+                                    description="Verbose logging and test image capture"
+                                    right={<Switch checked={debug.enableDebugMode} onCheckedChange={(checked) => updateDebug({ enableDebugMode: checked })} />}
+                                />
+                            </SearchableItem>
 
                             {debug.enableDebugMode && (
                                 <WarningContainer style={{ marginTop: 8 }}>⚠️ Significantly extends the average runtime of the bot due to increased IO operations.</WarningContainer>
@@ -295,100 +310,63 @@ const DebugSettings = () => {
 
                             <Separator style={{ marginVertical: 16 }} />
 
-                            <Section label="Remote Log Viewer">
-                                <View style={{ paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md }}>
-                                    <Text style={[TYPE.caption, { color: colors.textMuted, marginBottom: SPACING.md }]}>
-                                        Stream logs in real-time to a browser on your local network. Both devices must be on the same WiFi.
-                                    </Text>
-
-                                    <CustomCheckbox
-                                        searchId="settings-enable-remote-log-viewer"
-                                        checked={debug.enableRemoteLogViewer}
-                                        onCheckedChange={(checked) => {
-                                            updateDebug({ enableRemoteLogViewer: checked })
-                                        }}
-                                        label="Enable Remote Log Viewer"
-                                        description="Starts an HTTP server on this device when the bot runs. Open the URL shown below in a browser on your computer to view logs in real-time."
-                                    />
-
-                                    <View style={debug.enableRemoteLogViewer ? {} : { display: "none" }}>
-                                        <CustomSlider
-                                            searchId="settings-remote-log-viewer-port"
-                                            searchCondition={debug.enableRemoteLogViewer}
-                                            parentId="settings-enable-remote-log-viewer"
-                                            value={debug.remoteLogViewerPort}
-                                            placeholder={defaultSettings.debug.remoteLogViewerPort}
-                                            onValueChange={(value) => {
-                                                updateDebug({ remoteLogViewerPort: value })
-                                            }}
-                                            onSlidingComplete={(value) => {
-                                                updateDebug({ remoteLogViewerPort: value })
-                                            }}
-                                            min={1024}
-                                            max={65535}
-                                            step={1}
-                                            showValue={true}
-                                            showLabels={true}
-                                            label="Server Port"
-                                            description="Port number for the log stream server. Change only if the default conflicts with another service."
-                                        />
-
-                                        <InfoContainer>
-                                            <View>
-                                                <Text style={styles.infoDescription}>📡 When the bot is running, open this URL in a browser:</Text>
-                                                <Text
-                                                    style={[styles.infoLabel, { marginTop: 8, textDecorationLine: "underline" }, TYPE.monoValue]}
-                                                    onPress={() => Linking.openURL(`http://${deviceIp === "10.0.2.15" ? "localhost" : deviceIp}:${debug.remoteLogViewerPort}`)}
-                                                >
-                                                    http://{deviceIp === "10.0.2.15" ? "localhost" : deviceIp}:{debug.remoteLogViewerPort}
-                                                </Text>
-                                                <Text style={[styles.infoDescription, { marginTop: 8 }]}>Both devices must be on the same WiFi network.</Text>
-                                                <Text style={[styles.infoDescription, { marginTop: 8 }]}>
-                                                    Note that connecting to the remote log viewer may take a minute or two to establish the connection for the first time.
-                                                </Text>
-
-                                                <View style={styles.infoBlock}>
-                                                    {deviceIp === "10.0.2.15" ? (
-                                                        <>
-                                                            <Text style={styles.infoLabel}>⚠️ Emulator detected!</Text>
-                                                            <Text style={styles.infoDescription}>
-                                                                Direct connection to the virtual IP <Text style={[TYPE.monoValue, { color: colors.text }]}>{deviceIp}</Text> will fail.
-                                                            </Text>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Text style={styles.infoLabel}>✅ Real device detected or Network Bridge enabled!</Text>
-                                                            <Text style={styles.infoDescription}>
-                                                                Direct connection to the IP <Text style={[TYPE.monoValue, { color: colors.text }]}>{deviceIp}</Text> should work.
-                                                            </Text>
-                                                        </>
-                                                    )}
-                                                </View>
-
-                                                <Separator style={{ marginTop: 16, backgroundColor: "white" }} />
-
-                                                <Text style={[styles.infoLabel, { marginTop: 16 }]}>If using an Emulator, you have two connection options:</Text>
-
-                                                <View style={styles.infoBlock}>
-                                                    <Text style={styles.infoLabel}>Option 1:</Text>
-                                                    <Text style={styles.infoDescription}>
-                                                        In your Emulator settings, enable "Network Bridging" or the equivalent, and restart the emulator to get a real IP.
-                                                    </Text>
-                                                </View>
-
-                                                <View style={styles.infoBlock}>
-                                                    <Text style={styles.infoLabel}>Option 2 (Access on Computer only):</Text>
-                                                    <Text style={styles.infoDescription}>Run these commands on your computer (port may vary) to use your emulator's localhost URL:</Text>
-                                                    <Text style={[styles.infoLabel, { marginTop: 8 }, TYPE.monoValue]}>
-                                                        adb connect localhost:5555{"\n"}
-                                                        adb forward tcp:{debug.remoteLogViewerPort} tcp:{debug.remoteLogViewerPort}
-                                                    </Text>
-                                                </View>
+                            {/* Remote Log Viewer card. */}
+                            <View style={{ marginTop: SPACING.lg }}>
+                                <SectionLabel label="Remote Log Viewer" />
+                                <GlassSurface>
+                                    <View style={{ padding: SPACING.md, gap: SPACING.sm }}>
+                                        <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.sm }}>
+                                            <View style={{ width: 28, height: 28, borderRadius: 999, backgroundColor: colors.brandSubtle, alignItems: "center", justifyContent: "center" }}>
+                                                <Ionicons name="cellular-outline" size={14} color={colors.brand} />
                                             </View>
-                                        </InfoContainer>
+                                            <View style={{ flex: 1 }}>
+                                                <Text style={{ ...TYPE.body, color: colors.text, fontWeight: "600" as const }}>Remote Log Viewer</Text>
+                                                <Text style={{ ...TYPE.caption, color: colors.textMuted }}>Same WiFi required</Text>
+                                            </View>
+                                            <SearchableItem id="settings-enable-remote-log-viewer" title="Enable Remote Log Viewer" description="Starts an HTTP server on this device when the bot runs. Open the URL shown below in a browser on your computer to view logs in real-time.">
+                                                <Switch
+                                                    checked={debug.enableRemoteLogViewer}
+                                                    onCheckedChange={(checked) => updateDebug({ enableRemoteLogViewer: checked })}
+                                                />
+                                            </SearchableItem>
+                                        </View>
+                                        {debug.enableRemoteLogViewer && (
+                                            <>
+                                                <Pressable
+                                                    onPress={handleCopyRlvUrl}
+                                                    android_ripple={{ color: colors.ripple, foreground: true }}
+                                                    style={{ padding: SPACING.sm, backgroundColor: colors.surfaceRaised, borderRadius: RADII.md, flexDirection: "row", alignItems: "center", gap: SPACING.sm }}
+                                                >
+                                                    <Text style={{ ...TYPE.monoLabel, color: colors.brand, flex: 1 }}>{rlvUrl}</Text>
+                                                    <Ionicons name="copy-outline" size={14} color={colors.textMuted} />
+                                                </Pressable>
+                                                <Text style={{ ...TYPE.caption, color: colors.textMuted }}>Port {debug.remoteLogViewerPort} · Active</Text>
+                                                <CustomSlider
+                                                    searchId="settings-remote-log-viewer-port"
+                                                    searchCondition={debug.enableRemoteLogViewer}
+                                                    parentId="settings-enable-remote-log-viewer"
+                                                    value={debug.remoteLogViewerPort}
+                                                    placeholder={defaultSettings.debug.remoteLogViewerPort}
+                                                    onValueChange={(value) => updateDebug({ remoteLogViewerPort: value })}
+                                                    onSlidingComplete={(value) => updateDebug({ remoteLogViewerPort: value })}
+                                                    min={1024}
+                                                    max={65535}
+                                                    step={1}
+                                                    showValue
+                                                    showLabels
+                                                    label="Server Port"
+                                                    description="Port number for the log stream server. Change only if the default conflicts with another service."
+                                                />
+                                                {deviceIp === "10.0.2.15" && (
+                                                    <Text style={{ ...TYPE.caption, color: colors.warningText }}>
+                                                        Emulator detected - direct connection to {deviceIp} will fail. Use ADB port forwarding instead.
+                                                    </Text>
+                                                )}
+                                            </>
+                                        )}
                                     </View>
-                                </View>
-                            </Section>
+                                </GlassSurface>
+                            </View>
 
                             <Separator style={{ marginVertical: 16 }} />
 
