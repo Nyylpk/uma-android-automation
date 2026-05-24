@@ -1,226 +1,151 @@
-import React, { useState, useEffect, useRef } from "react"
-import { View, Text, Pressable, LayoutChangeEvent, ViewStyle, ScrollView } from "react-native"
+import React, { useEffect, useRef, useState, useMemo } from "react"
+import { View, Text, Pressable, StyleSheet, ViewStyle } from "react-native"
 import DragList, { DragListRenderItemInfo } from "react-native-draglist"
-import { Checkbox } from "../ui/checkbox"
-import { Label } from "../ui/label"
-import { Text as UIText } from "../ui/text"
+import Ionicons from "@react-native-vector-icons/ionicons"
 import { useTheme } from "../../context/ThemeContext"
-import { Grip } from "lucide-react-native"
+import { ModalCheckRow } from "../ui/modal-list"
+import { TYPE } from "../../lib/type"
+import { SPACING } from "../../lib/spacing"
+import { RADII } from "../../lib/radii"
 
+/** A single priority list item. */
 interface PriorityItem {
-    /** The unique identifier for this item. */
+    /** Stable identifier used by the drag list. */
     id: string
-    /** The display label for this item. */
+    /** Visible label. */
     label: string
-    /** Optional description text displayed below the label. */
-    description?: string | null
+    /** Optional secondary line. */
+    description?: string
 }
 
+/** Props for `DraggablePriorityList`. */
 interface DraggablePriorityListProps {
-    /** The full list of available priority items. */
+    /** All available items. */
     items: PriorityItem[]
-    /** The IDs of currently selected items, in priority order. */
+    /** Subset of `items.id` representing selected items in priority order (index 0 = highest). */
     selectedItems: string[]
-    /** Callback fired when items are selected or deselected. */
-    onSelectionChange: (selectedItems: string[]) => void
-    /** Callback fired when the order of selected items changes via drag. */
-    onOrderChange: (orderedItems: string[]) => void
-    /** Optional NativeWind class name. */
-    className?: string
-    /** Optional custom style for the container. */
+    /** Called when the user toggles a row's selection. */
+    onSelectionChange: (next: string[]) => void
+    /** Called when the user reorders selected items via drag. */
+    onOrderChange: (next: string[]) => void
+    /** Optional outer style. */
     style?: ViewStyle
 }
 
 /**
- * A drag-and-drop list that allows users to select items and reorder them by priority.
- * Selected items display a numbered badge and a drag handle for reordering.
- * Uses `react-native-draglist` for gesture-based drag interactions.
- * @param items The full list of available priority items.
- * @param selectedItems The IDs of currently selected items, in priority order.
- * @param onSelectionChange Callback fired when items are selected or deselected.
- * @param onOrderChange Callback fired when the order of selected items changes via drag.
- * @param className Optional NativeWind class name.
- * @param style Optional custom style for the container.
+ * A drag-to-reorder list paired with checkbox toggles. Selected items render on top with a numeric badge and grip handle. Unselected items render below
+ * a dashed separator with a plain checkbox. Consumed inside `SheetModal` - the parent owns scroll so this component does not wrap its rows in a ScrollView.
+ * @param items All items.
+ * @param selectedItems Selected items in priority order.
+ * @param onSelectionChange Selection toggle callback.
+ * @param onOrderChange Reorder callback.
+ * @param style Optional outer style override.
+ * @returns A view containing the priority list, separator, unselected rows, and empty-state caption.
  */
-const DraggablePriorityList: React.FC<DraggablePriorityListProps> = ({ items, selectedItems, onSelectionChange, onOrderChange, className = "", style }) => {
-    const { colors, isDark } = useTheme()
+const DraggablePriorityList = ({ items, selectedItems, onSelectionChange, onOrderChange, style }: DraggablePriorityListProps) => {
+    const { colors } = useTheme()
+    const [orderedSelected, setOrderedSelected] = useState<string[]>(selectedItems)
+    const dragOrderRef = useRef<string[]>(selectedItems)
 
-    const [orderedItems, setOrderedItems] = useState<string[]>(items.map((item) => item.id))
-    const dragOrderRef = useRef<string[]>([]) // Track drag order separately.
-    const dragListRef = useRef<any>(null)
-
-    const [contentHeight, setContentHeight] = useState(0)
-    const [containerHeight, setContainerHeight] = useState(0)
-
-    /**
-     * Callback fired when the container layout changes.
-     * @param event The layout event.
-     */
-    const handleContainerLayout = (event: LayoutChangeEvent) => {
-        setContainerHeight(event.nativeEvent.layout.height)
-    }
-
-    /**
-     * Callback fired when the content size changes.
-     * @param width The width of the content.
-     * @param height The height of the content.
-     */
-    const handleContentSizeChange = (width: number, height: number) => {
-        setContentHeight(height)
-    }
-
-    // Sync orderedItems with selectedItems when selection changes.
     useEffect(() => {
-        if (selectedItems.length === 0) {
-            setOrderedItems(items.map((item) => item.id))
-            dragOrderRef.current = [] // Clear the drag order.
-            return
-        }
-
-        // Get deselected items that should remain visible.
-        const deselectedItems = items.map((item) => item.id).filter((id) => !selectedItems.includes(id))
-
-        // Use the selectedItems order as-is, then append deselected items.
-        const finalOrdered = [...selectedItems, ...deselectedItems]
-        setOrderedItems(finalOrdered)
-
-        // Update drag order ref with the selected items in their order.
+        setOrderedSelected(selectedItems)
         dragOrderRef.current = selectedItems
-    }, [selectedItems, items])
+    }, [selectedItems])
 
-    /**
-     * Callback fired when the order of items changes.
-     * @param fromIndex The index of the item being moved.
-     * @param toIndex The index where the item is moved to.
-     */
-    const handleReordered = async (fromIndex: number, toIndex: number) => {
-        const copy = [...orderedItems]
-        const [removed] = copy.splice(fromIndex, 1)
-        copy.splice(toIndex, 0, removed)
+    const styles = useMemo(
+        () =>
+            StyleSheet.create({
+                tip: { ...TYPE.monoLabel, color: colors.textMuted, fontSize: 10, letterSpacing: 1.2, paddingHorizontal: 4, paddingBottom: SPACING.sm },
+                empty: { ...TYPE.monoLabel, color: colors.textMuted, fontSize: 10, letterSpacing: 1.2, textAlign: "center", paddingTop: SPACING.md },
+                selectedRow: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: SPACING.sm,
+                    paddingHorizontal: SPACING.sm,
+                    paddingVertical: SPACING.sm,
+                    borderRadius: RADII.md,
+                    borderWidth: 1,
+                    borderColor: colors.brandBorder,
+                    backgroundColor: colors.brandSubtle,
+                    overflow: "hidden",
+                    marginBottom: SPACING.xs + 2,
+                },
+                badge: {
+                    width: 22,
+                    height: 22,
+                    borderRadius: 999,
+                    backgroundColor: colors.brand,
+                    alignItems: "center",
+                    justifyContent: "center",
+                },
+                badgeText: { ...TYPE.monoValue, color: colors.onBrand, fontSize: 11, fontWeight: "700" as const },
+                selectedLabel: { ...TYPE.body, color: colors.text, flex: 1 },
+                grip: { opacity: 0.7 },
+                separator: { borderTopWidth: 1, borderStyle: "dashed", borderColor: colors.borderHair, marginVertical: SPACING.sm },
+                unselectedList: { gap: SPACING.xs + 2 },
+            }),
+        [colors]
+    )
 
-        setOrderedItems(copy)
-
-        // Update the drag order ref with only the selected items in their new order.
-        const selectedInNewOrder = copy.filter((id) => selectedItems.includes(id))
-        dragOrderRef.current = selectedInNewOrder
-
-        onOrderChange(selectedInNewOrder)
-    }
-
-    /**
-     * Toggles the selection state of an item.
-     * @param itemId The ID of the item to toggle.
-     */
-    const toggleItem = (itemId: string) => {
-        const newSelection = selectedItems.includes(itemId) ? selectedItems.filter((id) => id !== itemId) : [...selectedItems, itemId]
-
-        onSelectionChange(newSelection)
-    }
-
-    /**
-     * Scrolls the list to the top.
-     */
-    const scrollToTop = () => {
-        if (dragListRef.current && dragListRef.current.scrollToIndex) {
-            dragListRef.current.scrollToIndex({ index: 0, animated: true })
-        }
-    }
-
-    /**
-     * Scrolls the list to the bottom.
-     */
-    const scrollToBottom = () => {
-        if (dragListRef.current && dragListRef.current.scrollToIndex) {
-            const lastIndex = orderedItems.length - 1
-            dragListRef.current.scrollToIndex({ index: lastIndex, animated: true })
-        }
-    }
-
-    /**
-     * Renders a single item in the list.
-     * @param info The render item information.
-     * @returns The rendered item.
-     */
-    const renderItem = (info: DragListRenderItemInfo<PriorityItem>) => {
+    const renderSelectedItem = (info: DragListRenderItemInfo<PriorityItem>) => {
         const { item, onDragStart, onDragEnd } = info
-        const isSelected = selectedItems.includes(item.id)
-        const priorityNumber = isSelected ? orderedItems.indexOf(item.id) + 1 : null
-
+        const priorityNumber = orderedSelected.indexOf(item.id) + 1
         return (
-            <View key={item.id} style={{ marginVertical: 1 }} className={`mb-2 ${className}`}>
-                <Pressable
-                    style={{ justifyContent: "space-between", backgroundColor: colors.surfaceRaised }}
-                    android_ripple={{ color: colors.ripple, foreground: true }}
-                    className="flex flex-row items-center gap-2 border border-border rounded-lg p-2"
-                >
-                    <View style={{ flex: 1, flexDirection: "row", gap: 10 }}>
-                        {/* Priority Number */}
-                        {isSelected && (
-                            <View className="w-6 h-6 bg-primary rounded-full items-center justify-center">
-                                <Text style={{ color: isDark ? "white" : "black" }}>{priorityNumber}</Text>
-                            </View>
-                        )}
-
-                        {/* Checkbox for selection */}
-                        <Checkbox id={`priority-${item.id}`} checked={isSelected} onCheckedChange={() => toggleItem(item.id)} className="dark:border-gray-400" />
-
-                        <View className="flex-1 gap-1">
-                            <Label style={{ color: colors.text }} className="text-sm" onPress={() => toggleItem(item.id)}>
-                                {item.label}
-                            </Label>
-                            {item.description && <UIText className="text-muted-foreground text-xs">{item.description}</UIText>}
-                        </View>
-                    </View>
-
-                    {/* Drag Handle */}
-                    {isSelected && (
-                        <View>
-                            <Grip size={18} color={colors.brand} onPressIn={isSelected ? onDragStart : undefined} onPressOut={isSelected ? onDragEnd : undefined} />
-                        </View>
-                    )}
+            <Pressable
+                style={styles.selectedRow}
+                onPress={() => onSelectionChange(selectedItems.filter((id) => id !== item.id))}
+                android_ripple={{ color: colors.ripple, foreground: true }}
+                accessibilityRole="button"
+                accessibilityLabel={`${item.label} priority ${priorityNumber}`}
+            >
+                <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{priorityNumber}</Text>
+                </View>
+                <Text style={styles.selectedLabel}>{item.label}</Text>
+                <Pressable onPressIn={onDragStart} onPressOut={onDragEnd} style={styles.grip} accessibilityLabel="Drag to reorder">
+                    <Ionicons name="reorder-three" size={20} color={colors.brand} />
                 </Pressable>
-            </View>
+            </Pressable>
         )
     }
 
+    const handleReordered = (fromIndex: number, toIndex: number) => {
+        const copy = [...orderedSelected]
+        const [removed] = copy.splice(fromIndex, 1)
+        copy.splice(toIndex, 0, removed)
+        setOrderedSelected(copy)
+        dragOrderRef.current = copy
+        onOrderChange(copy)
+    }
+
+    const selectedData = orderedSelected.map((id) => items.find((it) => it.id === id)).filter((x): x is PriorityItem => !!x)
+    const unselected = items.filter((it) => !selectedItems.includes(it.id))
+
     return (
         <View style={style}>
-            <Text style={{ fontSize: 12, color: colors.textMuted, paddingBottom: 10 }}>Drag items to reorder. Top to bottom = highest to lowest priority.</Text>
+            <Text style={styles.tip}>DRAG TO REORDER - TOP = HIGHEST</Text>
 
-            {/* Always show the DragList, regardless of selection state */}
-            <ScrollView scrollEnabled={true}>
+            {selectedData.length > 0 ? (
                 <DragList
-                    scrollEnabled={false}
-                    ref={dragListRef}
-                    data={orderedItems.map((id) => items.find((item) => item.id === id)!).filter(Boolean)}
+                    data={selectedData}
                     keyExtractor={(item) => item.id}
                     onReordered={handleReordered}
-                    renderItem={renderItem}
-                    style={{ height: 200 }}
-                    onLayout={handleContainerLayout}
-                    onContentSizeChange={handleContentSizeChange}
-                    showsVerticalScrollIndicator={false}
+                    renderItem={renderSelectedItem}
+                    scrollEnabled={false}
                 />
+            ) : null}
 
-                {/* Scroll helper buttons for very long lists */}
-                {contentHeight > containerHeight && (
-                    <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 10 }}>
-                        <Pressable style={{ borderColor: colors.brand }} className="px-3 py-1 border rounded" onPress={scrollToTop} android_ripple={{ color: colors.ripple, foreground: true }}>
-                            <Text style={{ color: colors.text }} className="text-xs">
-                                ↑ Scroll Up
-                            </Text>
-                        </Pressable>
-                        <Pressable style={{ borderColor: colors.brand }} className="px-3 py-1 border rounded" onPress={scrollToBottom} android_ripple={{ color: colors.ripple, foreground: true }}>
-                            <Text style={{ color: colors.text }} className="text-xs">
-                                ↓ Scroll Down
-                            </Text>
-                        </Pressable>
-                    </View>
-                )}
-            </ScrollView>
+            {selectedData.length > 0 && unselected.length > 0 ? <View style={styles.separator} /> : null}
 
-            {/* Show message below the list when no items are selected */}
-            {selectedItems.length === 0 && <Text style={{ fontSize: 12, color: colors.textMuted, paddingTop: 10 }}>No stats selected. Select stats to set priority order.</Text>}
+            {unselected.length > 0 ? (
+                <View style={styles.unselectedList}>
+                    {unselected.map((item) => (
+                        <ModalCheckRow key={item.id} label={item.label} checked={false} dim onPress={() => onSelectionChange([...selectedItems, item.id])} />
+                    ))}
+                </View>
+            ) : null}
+
+            {selectedItems.length === 0 ? <Text style={styles.empty}>NO ITEMS SELECTED - SELECT TO SET ORDER</Text> : null}
         </View>
     )
 }
