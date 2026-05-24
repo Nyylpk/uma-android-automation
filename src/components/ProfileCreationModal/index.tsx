@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, Pressable, TextInput } from "react-native"
 import Ionicons from "@react-native-vector-icons/ionicons"
 import { SheetModal } from "../ui/sheet-modal"
 import { useTheme } from "../../context/ThemeContext"
-import CustomButton from "../CustomButton"
 import { useProfileManager } from "../../hooks/useProfileManager"
 import { Settings } from "../../context/BotStateContext"
 import { TYPE } from "../../lib/type"
@@ -88,7 +87,19 @@ const ProfileCreationModal: React.FC<ProfileCreationModalProps> = ({ visible, on
                 statDistance: { flex: 1.4, ...TYPE.body, color: colors.text },
                 statCell: { flex: 1, ...TYPE.monoValue, color: colors.brand, textAlign: "right" as const },
                 footerRow: { flexDirection: "row", gap: SPACING.sm },
-                footerBtn: { flex: 1 },
+                footerBtn: {
+                    flex: 1,
+                    paddingVertical: SPACING.sm,
+                    borderRadius: RADII.md,
+                    borderWidth: 1,
+                    borderColor: colors.borderHair,
+                    alignItems: "center",
+                    overflow: "hidden",
+                },
+                footerBtnPrimary: { borderColor: colors.brand, backgroundColor: colors.brand },
+                footerBtnDisabled: { opacity: 0.5 },
+                footerBtnText: { ...TYPE.body, color: colors.text, fontWeight: "600" as const },
+                footerBtnTextPrimary: { color: colors.onBrand },
             }),
         [colors]
     )
@@ -109,6 +120,13 @@ const ProfileCreationModal: React.FC<ProfileCreationModalProps> = ({ visible, on
             { key: "PREFERRED DIST", value: currentTrainingSettings.preferredDistanceOverride || "Auto" },
             { key: "MUST REST", value: yesNo(currentTrainingSettings.mustRestBeforeSummer) },
             { key: "TRAIN WIT FINALE", value: yesNo(currentTrainingSettings.trainWitDuringFinale) },
+            { key: "PRIORITIZE SKILL", value: yesNo(currentTrainingSettings.enablePrioritizeSkillHints) },
+            { key: "WEIGHT BY LEVEL", value: yesNo(currentTrainingSettings.enableTrainingLevelWeighting) },
+            { key: "DISABLE TARGETS", value: yesNo(currentTrainingSettings.disableStatTargets) },
+            { key: "ANALYSIS CHECK", value: yesNo(currentTrainingSettings.enableTrainingAnalysisValidation) },
+            { key: "YOLO DETECTION", value: yesNo(currentTrainingSettings.enableYoloStatDetection) },
+            { key: "CLASSIC MILESTONE", value: `${currentTrainingSettings.classicMilestonePercent}%`, mono: true },
+            { key: "SENIOR MILESTONE", value: `${currentTrainingSettings.seniorMilestonePercent}%`, mono: true },
             { key: "RISKY TRAINING", value: yesNo(currentTrainingSettings.enableRiskyTraining) },
         ]
         if (currentTrainingSettings.enableRiskyTraining) {
@@ -186,14 +204,27 @@ const ProfileCreationModal: React.FC<ProfileCreationModalProps> = ({ visible, on
         </View>
     )
 
+    const canCreate = !isCreating && !!profileName.trim()
     const footer = (
         <View style={styles.footerRow}>
-            <CustomButton onPress={handleClose} variant="outline" disabled={isCreating} style={styles.footerBtn}>
-                Cancel
-            </CustomButton>
-            <CustomButton onPress={handleCreate} variant="primary" disabled={isCreating || !profileName.trim()} style={styles.footerBtn}>
-                Create
-            </CustomButton>
+            <Pressable
+                onPress={handleClose}
+                disabled={isCreating}
+                style={[styles.footerBtn, isCreating && styles.footerBtnDisabled]}
+                android_ripple={{ color: colors.ripple, foreground: true }}
+                accessibilityRole="button"
+            >
+                <Text style={styles.footerBtnText}>Cancel</Text>
+            </Pressable>
+            <Pressable
+                onPress={handleCreate}
+                disabled={!canCreate}
+                style={[styles.footerBtn, styles.footerBtnPrimary, !canCreate && styles.footerBtnDisabled]}
+                android_ripple={{ color: colors.ripple, foreground: true }}
+                accessibilityRole="button"
+            >
+                <Text style={[styles.footerBtnText, styles.footerBtnTextPrimary]}>Create</Text>
+            </Pressable>
         </View>
     )
 
