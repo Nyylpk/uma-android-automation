@@ -31,6 +31,8 @@ interface ProfileManagerModalProps {
     onNoChangesDetected?: (profileName: string) => void
     /** Optional callback fired when an error occurs. */
     onError?: (message: string) => void
+    /** Name of the profile shown as currently selected in the parent selector. Used to render the ACTIVE pill. */
+    activeProfileName?: string
 }
 
 /**
@@ -55,9 +57,11 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
     onProfileUpdated,
     onNoChangesDetected,
     onError,
+    activeProfileName,
 }) => {
     const { colors } = useTheme()
     const { profiles, currentProfileName, updateProfile, deleteProfile, loadProfiles, compareWithProfile } = useProfileManager(onError)
+    const activeName = activeProfileName ?? currentProfileName ?? null
     const [profileName, setProfileName] = useState("")
     const [editingProfileId, setEditingProfileId] = useState<number | null>(null)
     const [deleteProfileId, setDeleteProfileId] = useState<number | null>(null)
@@ -364,7 +368,7 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
                     <View style={styles.cardList}>
                         {profiles.map((profile) => {
                             const isEditing = editingProfileId === profile.id
-                            const isActive = !!currentProfileName && profile.name === currentProfileName
+                            const isActive = !!activeName && profile.name === activeName
                             return (
                                 <View key={profile.id} style={[styles.card, isActive && styles.cardActive]}>
                                     {isEditing ? (

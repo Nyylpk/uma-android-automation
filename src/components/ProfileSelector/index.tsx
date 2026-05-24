@@ -227,6 +227,7 @@ const ProfileSelector: React.FC<ProfileSelectorProps> = ({ currentTrainingSettin
                 currentTrainingSettings={currentTrainingSettings}
                 currentTrainingStatTargetSettings={currentTrainingStatTargetSettings}
                 onOverwriteSettings={onOverwriteSettings}
+                activeProfileName={selectedProfileName}
                 onProfileDeleted={async (deletedProfileName) => {
                     // Reload profiles first to get the latest state after deletion.
                     await loadProfiles()
