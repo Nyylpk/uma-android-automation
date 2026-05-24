@@ -1,21 +1,20 @@
 import { useMemo, useContext, useEffect, useState, useRef, useCallback } from "react"
 import { SearchPageProvider } from "../../context/SearchPageContext"
 import { BotMetaContext, GeneralMiscContext } from "../../context/BotStateContext"
-import { InteractionManager, ScrollView, StyleSheet, Text, View } from "react-native"
+import { InteractionManager, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import { Snackbar } from "react-native-paper"
 import { useNavigation } from "@react-navigation/native"
 import { Ionicons } from "@react-native-vector-icons/ionicons"
 import ThemeToggle from "../../components/ThemeToggle"
 import { useTheme } from "../../context/ThemeContext"
 import CustomSelect from "../../components/CustomSelect"
-import CustomCheckbox from "../../components/CustomCheckbox"
 import CustomSlider from "../../components/CustomSlider"
 import CustomButton from "../../components/CustomButton"
 import PageHeader from "../../components/PageHeader"
 import { Row } from "../../components/ui/row"
 import { Section } from "../../components/ui/section"
+import { SectionLabel } from "../../components/ui/section-label"
 import { Switch } from "../../components/ui/switch"
-import { Separator } from "../../components/ui/separator"
 import WarningContainer from "../../components/WarningContainer"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../../components/ui/alert-dialog"
 import SearchableItem from "../../components/SearchableItem"
@@ -24,6 +23,7 @@ import { useSettingsFileManager } from "../../hooks/useSettingsFileManager"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
 import { TYPE } from "../../lib/type"
 import { SPACING } from "../../lib/spacing"
+import { RADII } from "../../lib/radii"
 
 /**
  * The main Settings page of the application.
@@ -52,6 +52,27 @@ const Settings = () => {
                     margin: 10,
                     backgroundColor: colors.bg,
                 },
+                managementGrid: {
+                    flexDirection: "row",
+                    gap: SPACING.sm,
+                    marginTop: SPACING.sm,
+                },
+                managementTile: {
+                    flex: 1,
+                    backgroundColor: colors.surfaceRaised,
+                    borderWidth: 1,
+                    borderColor: colors.borderHair,
+                    borderRadius: RADII.lg,
+                    paddingVertical: SPACING.md,
+                    paddingHorizontal: SPACING.sm,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    overflow: "hidden",
+                },
+                managementTileLabel: { ...TYPE.body, color: colors.text, fontWeight: "600" as const },
+                managementTileCaption: { ...TYPE.caption, color: colors.textMuted, fontSize: 10 },
+                managementTileDanger: { borderColor: colors.destructive },
             }),
         [colors]
     )
@@ -189,10 +210,8 @@ const Settings = () => {
 
     const renderMiscSettings = () => {
         return (
-            <View style={{ marginTop: 16 }}>
-                <Separator style={{ marginVertical: 16 }} />
-
-                <Section label="RUN BEHAVIOR">
+            <View style={{ marginTop: SPACING.lg }}>
+                <Section label="MISC">
                     <SearchableItem id="settings-stop-before-finals" title="Stop before Finals" description="Pause to buy skills before the final races">
                         <Row
                             title="Stop before Finals"
@@ -222,6 +241,14 @@ const Settings = () => {
                             title="Enable Settings Display in Message Log"
                             description="Shows current bot configuration settings at the top of the message log."
                             right={<Switch checked={misc.enableSettingsDisplay} onCheckedChange={(checked) => updateMisc({ enableSettingsDisplay: checked })} />}
+                        />
+                    </SearchableItem>
+
+                    <SearchableItem id="settings-enable-message-id-display" title="Enable Message ID Display" description="Shows message IDs in the message log to help with debugging.">
+                        <Row
+                            title="Enable Message ID Display"
+                            description="Shows message IDs in the message log to help with debugging."
+                            right={<Switch checked={misc.enableMessageIdDisplay} onCheckedChange={(checked) => updateMisc({ enableMessageIdDisplay: checked })} />}
                         />
                     </SearchableItem>
                 </Section>
@@ -277,39 +304,6 @@ const Settings = () => {
                         </CustomButton>
                     </SearchableItem>
                 )}
-
-                <CustomCheckbox
-                    searchId="settings-crane-game-attempt"
-                    checked={general.enableCraneGameAttempt}
-                    onCheckedChange={(checked) => {
-                        updateGeneral({ enableCraneGameAttempt: checked })
-                    }}
-                    label="Enable Crane Game Attempt"
-                    description="When enabled, the bot will attempt to complete the crane game. By default, the bot will stop when it is detected."
-                    className="mt-4"
-                />
-
-                <CustomCheckbox
-                    searchId="settings-enable-settings-display"
-                    checked={misc.enableSettingsDisplay}
-                    onCheckedChange={(checked) => {
-                        updateMisc({ enableSettingsDisplay: checked })
-                    }}
-                    label="Enable Settings Display in Message Log"
-                    description="Shows current bot configuration settings at the top of the message log."
-                    className="mt-4"
-                />
-
-                <CustomCheckbox
-                    searchId="settings-enable-message-id-display"
-                    checked={misc.enableMessageIdDisplay}
-                    onCheckedChange={(checked) => {
-                        updateMisc({ enableMessageIdDisplay: checked })
-                    }}
-                    label="Enable Message ID Display"
-                    description="Shows message IDs in the message log to help with debugging."
-                    className="mt-4"
-                />
 
                 <CustomSlider
                     searchId="settings-wait-delay"
@@ -371,36 +365,35 @@ const Settings = () => {
                     description="Sets the size of the floating overlay button in density-independent pixels (dp). Higher values make the button easier to tap."
                 />
 
-                <Separator style={{ marginVertical: 16 }} />
-
+                <View style={{ marginTop: SPACING.lg }}>
+                    <SectionLabel label="DATA MANAGEMENT" />
+                </View>
                 <SearchableItem id="settings-management-title" title="Settings Management" description="Import and export settings from JSON file or access the app's data directory.">
-                    <Text style={[TYPE.h2, { color: colors.text }]}>Settings Management</Text>
-                    <Text style={[TYPE.caption, { color: colors.textMuted, marginTop: 2, marginBottom: SPACING.md }]}>
-                        Import and export settings from JSON file or access the app's data directory.
-                    </Text>
+                    <View style={styles.managementGrid}>
+                        <Pressable style={styles.managementTile} android_ripple={{ color: colors.ripple, foreground: true }} onPress={handleImportSettings}>
+                            <Ionicons name="download-outline" size={24} color={colors.brand} />
+                            <Text style={styles.managementTileLabel}>Import</Text>
+                            <Text style={styles.managementTileCaption}>Load from JSON</Text>
+                        </Pressable>
+                        <Pressable style={styles.managementTile} android_ripple={{ color: colors.ripple, foreground: true }} onPress={handleExportSettings}>
+                            <Ionicons name="share-outline" size={24} color={colors.brand} />
+                            <Text style={styles.managementTileLabel}>Export</Text>
+                            <Text style={styles.managementTileCaption}>Save to JSON</Text>
+                        </Pressable>
+                        <Pressable style={styles.managementTile} android_ripple={{ color: colors.ripple, foreground: true }} onPress={openDataDirectory}>
+                            <Ionicons name="folder-outline" size={24} color={colors.brand} />
+                            <Text style={styles.managementTileLabel}>Data</Text>
+                            <Text style={styles.managementTileCaption}>Open folder</Text>
+                        </Pressable>
+                        <Pressable style={[styles.managementTile, styles.managementTileDanger]} android_ripple={{ color: colors.ripple, foreground: true }} onPress={() => setShowResetDialog(true)}>
+                            <Ionicons name="refresh-outline" size={24} color={colors.destructive} />
+                            <Text style={[styles.managementTileLabel, { color: colors.destructive }]}>Reset</Text>
+                            <Text style={styles.managementTileCaption}>Restore defaults</Text>
+                        </Pressable>
+                    </View>
                 </SearchableItem>
 
-                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <CustomButton onPress={handleImportSettings} variant="default" style={{ width: 150 }}>
-                        📥 Import Settings
-                    </CustomButton>
-
-                    <CustomButton onPress={handleExportSettings} variant="default" style={{ width: 150 }}>
-                        📤 Export Settings
-                    </CustomButton>
-                </View>
-
-                <View style={{ flexDirection: "row", marginTop: 16, justifyContent: "space-between" }}>
-                    <CustomButton onPress={openDataDirectory} variant="default" style={{ width: 150 }} fontSize={12}>
-                        📁 Open Data Directory
-                    </CustomButton>
-
-                    <CustomButton onPress={() => setShowResetDialog(true)} variant="destructive" style={{ width: 150 }}>
-                        🔄 Reset Settings
-                    </CustomButton>
-                </View>
-
-                <WarningContainer style={{ marginBottom: 12 }}>
+                <WarningContainer style={{ marginTop: SPACING.md, marginBottom: 12 }}>
                     <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
                         <Text style={{ fontWeight: "bold", color: colors.warningText }}>⚠️ File Explorer Note:</Text>
                         <Text style={{ fontSize: 14, color: colors.warningText, lineHeight: 20 }}>
