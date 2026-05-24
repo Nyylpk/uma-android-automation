@@ -1,14 +1,18 @@
-import React, { useMemo, useState, useEffect, useCallback, useRef } from "react"
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native"
+import React, { useMemo, useState, useEffect, useCallback } from "react"
+import { View, Text, TextInput, Pressable, StyleSheet } from "react-native"
 import { useTheme } from "../../context/ThemeContext"
 import CustomButton from "../CustomButton"
 import { GlassModal } from "../ui/glass-modal"
-import { Input } from "../ui/input"
+import { SheetModal } from "../ui/sheet-modal"
 import { useProfileManager } from "../../hooks/useProfileManager"
 import { Settings } from "../../context/BotStateContext"
-import { X, Edit2, Trash2, Save, Check } from "lucide-react-native"
+import Ionicons from "@react-native-vector-icons/ionicons"
 import ProfileComparison from "../ProfileComparison"
+import { TYPE } from "../../lib/type"
+import { SPACING } from "../../lib/spacing"
+import { RADII } from "../../lib/radii"
 
+/** Props for ProfileManagerModal. */
 interface ProfileManagerModalProps {
     /** Whether the modal is currently visible. */
     visible: boolean
@@ -31,10 +35,7 @@ interface ProfileManagerModalProps {
 }
 
 /**
- * A modal dialog for managing user profiles, supporting viewing, renaming, deleting,
- * and overwriting profiles with the current settings.
- * Shows a ProfileComparison preview before overwriting to highlight differences.
- * Implements manual touch-to-scroll for reliable scrolling within the modal.
+ * A bottom-sheet modal for managing saved profiles. Supports inline rename, delete with confirmation, and overwrite-with-comparison.
  * @param visible Whether the modal is visible.
  * @param onClose Callback to close the modal.
  * @param currentTrainingSettings Current training settings for comparison.
@@ -66,147 +67,89 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
     const [overwriteProfileId, setOverwriteProfileId] = useState<number | null>(null)
     const [comparisonData, setComparisonData] = useState<Record<string, { current: any; profile: any }> | null>(null)
 
-    /**
-     * These refs and handlers implement a manual touch-to-scroll mechanism (replicating
-     * the proven pattern in MultiSelector.tsx).
-     */
-    const scrollViewRef = useRef<ScrollView | null>(null)
-    const lastTouchY = useRef(0)
-    const currentScrollY = useRef(0)
-    const isScrolling = useRef(false)
-
-    /**
-     * Handles the start of a touch event to initialize scrolling.
-     * @param event The native touch event.
-     */
-    const handleTouchStart = (event: any) => {
-        const touch = event.nativeEvent.touches[0]
-        lastTouchY.current = touch.pageY
-        isScrolling.current = false
-    }
-
-    /**
-     * Handles the movement of a touch event to manually scroll the ScrollView.
-     * @param event The native touch event.
-     */
-    const handleTouchMove = (event: any) => {
-        if (!scrollViewRef.current) return
-
-        const touch = event.nativeEvent.touches[0]
-        const currentY = touch.pageY
-        const deltaY = lastTouchY.current - currentY
-
-        // Only scroll if there is significant movement.
-        if (Math.abs(deltaY) > 1) {
-            isScrolling.current = true
-            // Use a balanced scroll factor for smooth but responsive movement.
-            const scrollFactor = 2.0
-            const newScrollY = Math.max(0, currentScrollY.current + deltaY * scrollFactor)
-            currentScrollY.current = newScrollY
-
-            scrollViewRef.current.scrollTo({
-                y: newScrollY,
-                animated: false,
-            })
-            lastTouchY.current = currentY
-        }
-    }
-
-    /**
-     * Handles the end of a touch event.
-     */
-    const handleTouchEnd = () => {
-        isScrolling.current = false
-    }
-
     const styles = useMemo(
         () =>
             StyleSheet.create({
-                /**
-                 * The main content area of the modal.
-                 * Using maxHeight: "80%" ensures it stays on screen on all devices.
-                 * flexShrink: 1 allows it to grow with content but stay within screen limits.
-                 */
-                modalContent: {
+                titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+                titleBlock: { gap: 2 },
+                title: { ...TYPE.monoLabel, color: colors.text, fontSize: 13, letterSpacing: 1.5 },
+                count: { ...TYPE.monoLabel, color: colors.textMuted, fontSize: 10 },
+                closeChip: {
+                    width: 36,
+                    height: 36,
+                    borderRadius: 8,
+                    overflow: "hidden",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.surfaceRaised,
+                    borderWidth: 1,
+                    borderColor: colors.borderHair,
+                },
+                cardList: { gap: SPACING.sm },
+                card: {
+                    padding: SPACING.md,
+                    borderRadius: RADII.lg,
+                    borderWidth: 1,
+                    borderColor: colors.borderHair,
+                    backgroundColor: colors.surfaceRaised,
+                    gap: SPACING.sm,
+                },
+                cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+                cardName: { ...TYPE.body, color: colors.text, fontWeight: "600" as const, flex: 1 },
+                actionsRow: { flexDirection: "row", gap: SPACING.xs },
+                action: {
+                    flex: 1,
+                    paddingVertical: SPACING.sm,
+                    borderRadius: RADII.md,
+                    borderWidth: 1,
+                    borderColor: colors.borderHair,
+                    alignItems: "center",
+                    overflow: "hidden",
+                },
+                actionPrimary: { borderColor: colors.brand, backgroundColor: colors.brand },
+                actionDanger: { borderColor: colors.destructive },
+                actionText: { ...TYPE.caption, color: colors.text, fontWeight: "600" as const },
+                actionTextPrimary: { color: colors.onBrand },
+                actionTextDanger: { color: colors.destructive },
+                renameRow: { flexDirection: "row", gap: SPACING.xs, alignItems: "center" },
+                renameInput: {
+                    flex: 1,
+                    backgroundColor: colors.surface,
+                    borderWidth: 1,
+                    borderColor: colors.brandBorder,
+                    borderRadius: RADII.md,
+                    paddingHorizontal: SPACING.sm,
+                    paddingVertical: SPACING.xs,
+                    color: colors.text,
+                    fontSize: 14,
+                },
+                renameChip: {
+                    paddingHorizontal: SPACING.sm,
+                    paddingVertical: SPACING.xs,
+                    borderRadius: RADII.md,
+                    borderWidth: 1,
+                    overflow: "hidden",
+                },
+                renameSave: { borderColor: colors.brand, backgroundColor: colors.brand },
+                renameCancel: { borderColor: colors.borderHair },
+                renameChipText: { ...TYPE.caption, fontWeight: "600" as const },
+                footerBtn: { width: "100%" },
+                emptyState: { padding: SPACING.lg, alignItems: "center" },
+                emptyText: { ...TYPE.body, color: colors.textMuted },
+                deleteModalContent: {
                     backgroundColor: colors.surface,
                     borderRadius: 12,
                     padding: 20,
-                    width: "90%",
-                    maxHeight: "80%",
-                    overflow: "hidden",
-                    flexShrink: 1,
                 },
-                header: {
+                deleteHeader: {
                     flexDirection: "row",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    marginBottom: 20,
+                    marginBottom: 16,
                 },
-                title: {
-                    fontSize: 20,
-                    fontWeight: "bold",
-                    color: colors.text,
-                },
-                closeButton: {
-                    padding: 4,
-                },
-                profileList: {
-                    marginTop: 0,
-                },
-                /**
-                 * The main ScrollView for the modal content.
-                 * Using flexShrink: 1 allows it to occupy the remaining space
-                 * and trigger scrolling when content exceeds modalContent maxHeight.
-                 *
-                 * NOTE: Manual touch handlers are implemented in the component logic to ensure scrolling reliability.
-                 */
-                mainScroll: {
-                    flexShrink: 1,
-                },
-                mainScrollContent: {
-                    flexGrow: 1,
-                    paddingBottom: 20, // Extra padding to ensure bottom content is reachable.
-                },
-                profileItem: {
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: 12,
-                    marginBottom: 8,
-                    backgroundColor: colors.surfaceRaised,
-                    borderRadius: 8,
-                },
-                profileName: {
-                    fontSize: 16,
-                    color: colors.text,
-                    flex: 1,
-                },
-                profileNameInput: {
-                    flex: 1,
-                    marginRight: 8,
-                },
-                profileActions: {
-                    flexDirection: "row",
-                    gap: 8,
-                },
-                actionButton: {
-                    padding: 8,
-                },
-                buttonRow: {
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    gap: 8,
-                    marginTop: 16,
-                },
-                emptyState: {
-                    padding: 20,
-                    alignItems: "center",
-                },
-                emptyText: {
-                    fontSize: 14,
-                    color: colors.text,
-                    opacity: 0.6,
-                },
+                deleteTitle: { fontSize: 18, fontWeight: "bold" as const, color: colors.text },
+                deleteBody: { color: colors.text, marginBottom: 20 },
+                deleteButtons: { flexDirection: "row", gap: SPACING.sm, justifyContent: "space-between" },
             }),
         [colors]
     )
@@ -223,7 +166,7 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
     }, [visible, loadProfiles])
 
     /**
-     * Handles the editing of a profile.
+     * Starts inline rename for the given profile.
      * @param profileId The ID of the profile to edit.
      */
     const handleEditProfile = useCallback(
@@ -237,10 +180,7 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
         [profiles]
     )
 
-    /**
-     * Handles the updating of a profile.
-     * @param profileId The ID of the profile to update.
-     */
+    /** Commits the pending rename to storage. */
     const handleUpdateProfile = useCallback(async () => {
         if (!profileName.trim() || !editingProfileId) {
             return
@@ -251,7 +191,6 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
             await updateProfile(editingProfileId, { name: newName })
             setProfileName("")
             setEditingProfileId(null)
-            // Notify parent that a profile was updated.
             onProfileUpdated?.()
         } catch (error) {
             const errorMessage = `Failed to update profile: ${error instanceof Error ? error.message : String(error)}`
@@ -260,7 +199,7 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
     }, [profileName, editingProfileId, profiles, updateProfile, onProfileUpdated, onError])
 
     /**
-     * Handles the deletion of a profile.
+     * Opens the delete confirmation dialog for the given profile.
      * @param profileId The ID of the profile to delete.
      */
     const handleDeleteClick = useCallback((profileId: number) => {
@@ -268,25 +207,19 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
         setShowDeleteDialog(true)
     }, [])
 
-    /**
-     * Handles the confirmation of a profile deletion.
-     * @param profileId The ID of the profile to delete.
-     */
+    /** Confirms and executes the pending profile deletion. */
     const handleDeleteConfirm = useCallback(async () => {
         if (!deleteProfileId) {
             return
         }
 
         try {
-            // Get the name of the profile to delete.
             const profileToDelete = profiles.find((p) => p.id === deleteProfileId)
             const deletedProfileName = profileToDelete?.name || ""
             await deleteProfile(deleteProfileId)
-            // Reload profiles to ensure the modal shows the updated list immediately.
             await loadProfiles()
             setShowDeleteDialog(false)
             setDeleteProfileId(null)
-            // Notify parent that a profile was deleted.
             if (deletedProfileName) {
                 onProfileDeleted?.(deletedProfileName)
             }
@@ -298,35 +231,29 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
         }
     }, [deleteProfileId, profiles, deleteProfile, loadProfiles, onProfileDeleted, onError])
 
-    /**
-     * Handles the cancellation of a profile deletion.
-     */
+    /** Cancels the pending profile deletion. */
     const handleDeleteCancel = useCallback(() => {
         setShowDeleteDialog(false)
         setDeleteProfileId(null)
     }, [])
 
-    /**
-     * Handles the cancellation of a profile edit.
-     */
+    /** Cancels the active inline rename. */
     const handleCancelEdit = useCallback(() => {
         setProfileName("")
         setEditingProfileId(null)
     }, [])
 
     /**
-     * Handles the saving of a profile.
-     * @param profileId The ID of the profile to save.
+     * Initiates a save/overwrite flow for the given profile. Shows a comparison preview if differences exist.
+     * @param profileId The ID of the profile to overwrite.
      */
     const handleSaveClick = useCallback(
         (profileId: number) => {
-            // Get the profile to save.
             const profile = profiles.find((p) => p.id === profileId)
             if (!profile || !onOverwriteSettings) {
                 return
             }
 
-            // Compare current settings with the profile's settings.
             const currentSettings: Partial<Settings> = {
                 training: currentTrainingSettings,
                 trainingStatTarget: currentTrainingStatTargetSettings,
@@ -334,12 +261,10 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
             const comparison = compareWithProfile(profile, currentSettings, ["training", "trainingStatTarget"])
 
             if (Object.keys(comparison).length > 0) {
-                // Show comparison preview before overwriting.
                 setOverwriteProfileId(profileId)
                 setComparisonData(comparison)
                 setShowComparison(true)
             } else {
-                // There were no differences so we notify the parent to show a snackbar.
                 onNoChangesDetected?.(profile.name)
             }
         },
@@ -347,13 +272,12 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
     )
 
     /**
-     * Handles the confirmation of a profile overwrite.
+     * Confirms and applies the pending profile overwrite.
      * @param profileId The ID of the profile to overwrite.
      */
     const handleConfirmOverwrite = useCallback(
         async (profileId: number) => {
             try {
-                // Update the profile with the current settings (overwrite the profile).
                 const currentSettings: Partial<Settings> = {
                     training: currentTrainingSettings,
                     trainingStatTarget: currentTrainingStatTargetSettings,
@@ -372,138 +296,128 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
         [currentTrainingSettings, currentTrainingStatTargetSettings, updateProfile, onProfileUpdated, onClose, onError]
     )
 
-    /**
-     * Handles the cancellation of a profile overwrite.
-     */
+    /** Cancels the pending profile overwrite and hides the comparison view. */
     const handleCancelOverwrite = useCallback(() => {
         setShowComparison(false)
         setOverwriteProfileId(null)
         setComparisonData(null)
     }, [])
 
+    const header = (
+        <View style={styles.titleRow}>
+            <View style={styles.titleBlock}>
+                <Text style={styles.title}>PROFILES</Text>
+                <Text style={styles.count}>{`${profiles.length} SAVED`}</Text>
+            </View>
+            <Pressable style={styles.closeChip} onPress={onClose} android_ripple={{ color: colors.ripple, foreground: true }} accessibilityLabel="Close">
+                <Ionicons name="close" size={18} color={colors.text} />
+            </Pressable>
+        </View>
+    )
+
+    const footer = (
+        <CustomButton onPress={onClose} variant="outline" style={styles.footerBtn}>
+            Close
+        </CustomButton>
+    )
+
     return (
         <>
-            <GlassModal visible={visible && !showDeleteDialog} onRequestClose={onClose} contentStyle={styles.modalContent}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>Manage Profiles</Text>
-                    <Pressable style={styles.closeButton} onPress={onClose} android_ripple={{ color: colors.ripple, foreground: true }}>
-                        <X size={24} color={colors.text} />
-                    </Pressable>
-                </View>
-
-                {/*
-                 * We use manual touch handlers to manage scrolling because the standard
-                 * native ScrollView events are swallowed by the RNModal or
-                 * its containing overlays in this project's environment.
-                 */}
-                <ScrollView
-                    style={styles.mainScroll}
-                    contentContainerStyle={styles.mainScrollContent}
-                    showsVerticalScrollIndicator={true}
-                    nestedScrollEnabled={true}
-                    onTouchStart={handleTouchStart}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
-                    ref={scrollViewRef}
-                    onScroll={(event) => {
-                        const offsetY = event.nativeEvent.contentOffset.y
-                        currentScrollY.current = offsetY
-                    }}
-                >
-                    <View style={styles.profileList}>
-                        {profiles.length === 0 ? (
-                            <View style={styles.emptyState}>
-                                <Text style={styles.emptyText}>No profiles yet.</Text>
-                            </View>
-                        ) : (
-                            <>
-                                {/* Map through the profiles and display them. */}
-                                {profiles.map((profile) => {
-                                    const isEditing = editingProfileId === profile.id
-                                    return (
-                                        <View key={profile.id} style={styles.profileItem}>
-                                            {isEditing ? (
-                                                <Input
-                                                    placeholder="Profile name"
-                                                    value={profileName}
-                                                    onChangeText={setProfileName}
-                                                    onSubmitEditing={handleUpdateProfile}
-                                                    style={[styles.profileNameInput, { color: colors.text, backgroundColor: colors.bg }]}
-                                                    autoFocus
-                                                />
-                                            ) : (
-                                                <Text style={styles.profileName}>{profile.name}</Text>
-                                            )}
-                                            <View style={styles.profileActions}>
-                                                {isEditing ? (
-                                                    <>
-                                                        {/* Save button */}
-                                                        <Pressable style={styles.actionButton} onPress={handleUpdateProfile} android_ripple={{ color: colors.ripple, foreground: true }}>
-                                                            <Check size={18} color={colors.brand} />
-                                                        </Pressable>
-                                                        {/* Cancel button */}
-                                                        <Pressable style={styles.actionButton} onPress={handleCancelEdit} android_ripple={{ color: colors.ripple, foreground: true }}>
-                                                            <X size={18} color={colors.text} />
-                                                        </Pressable>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        {/* Edit button */}
-                                                        <Pressable
-                                                            style={styles.actionButton}
-                                                            onPress={() => handleEditProfile(profile.id)}
-                                                            android_ripple={{ color: colors.ripple, foreground: true }}
-                                                        >
-                                                            <Edit2 size={18} color={colors.brand} />
-                                                        </Pressable>
-                                                        {/* Delete button */}
-                                                        <Pressable
-                                                            style={styles.actionButton}
-                                                            onPress={() => handleDeleteClick(profile.id)}
-                                                            android_ripple={{ color: colors.ripple, foreground: true }}
-                                                        >
-                                                            <Trash2 size={18} color={colors.destructive} />
-                                                        </Pressable>
-                                                    </>
-                                                )}
-                                                {/* Save button */}
-                                                {!isEditing && onOverwriteSettings && (
-                                                    <Pressable style={styles.actionButton} onPress={() => handleSaveClick(profile.id)} android_ripple={{ color: colors.ripple, foreground: true }}>
-                                                        <Save size={18} color={colors.brand} />
-                                                    </Pressable>
-                                                )}
-                                            </View>
-                                        </View>
-                                    )
-                                })}
-                            </>
-                        )}
+            <SheetModal visible={visible} onRequestClose={onClose} header={header} footer={footer}>
+                {profiles.length === 0 ? (
+                    <View style={styles.emptyState}>
+                        <Text style={styles.emptyText}>No profiles yet.</Text>
                     </View>
+                ) : (
+                    <View style={styles.cardList}>
+                        {profiles.map((profile) => {
+                            const isEditing = editingProfileId === profile.id
+                            return (
+                                <View key={profile.id} style={styles.card}>
+                                    {isEditing ? (
+                                        <View style={styles.renameRow}>
+                                            <TextInput
+                                                style={styles.renameInput}
+                                                value={profileName}
+                                                onChangeText={setProfileName}
+                                                onSubmitEditing={handleUpdateProfile}
+                                                autoFocus
+                                                autoCapitalize="words"
+                                                autoCorrect={false}
+                                            />
+                                            <Pressable
+                                                style={[styles.renameChip, styles.renameSave]}
+                                                onPress={handleUpdateProfile}
+                                                android_ripple={{ color: colors.ripple, foreground: true }}
+                                            >
+                                                <Text style={[styles.renameChipText, { color: colors.onBrand }]}>Save</Text>
+                                            </Pressable>
+                                            <Pressable
+                                                style={[styles.renameChip, styles.renameCancel]}
+                                                onPress={handleCancelEdit}
+                                                android_ripple={{ color: colors.ripple, foreground: true }}
+                                            >
+                                                <Text style={[styles.renameChipText, { color: colors.text }]}>Cancel</Text>
+                                            </Pressable>
+                                        </View>
+                                    ) : (
+                                        <>
+                                            <View style={styles.cardTop}>
+                                                <Text style={styles.cardName}>{profile.name}</Text>
+                                            </View>
+                                            <View style={styles.actionsRow}>
+                                                <Pressable
+                                                    style={styles.action}
+                                                    onPress={() => handleEditProfile(profile.id)}
+                                                    android_ripple={{ color: colors.ripple, foreground: true }}
+                                                >
+                                                    <Text style={styles.actionText}>Rename</Text>
+                                                </Pressable>
+                                                {onOverwriteSettings ? (
+                                                    <Pressable
+                                                        style={[styles.action, styles.actionPrimary]}
+                                                        onPress={() => handleSaveClick(profile.id)}
+                                                        android_ripple={{ color: colors.ripple, foreground: true }}
+                                                    >
+                                                        <Text style={[styles.actionText, styles.actionTextPrimary]}>Save</Text>
+                                                    </Pressable>
+                                                ) : null}
+                                                <Pressable
+                                                    style={[styles.action, styles.actionDanger]}
+                                                    onPress={() => handleDeleteClick(profile.id)}
+                                                    android_ripple={{ color: colors.ripple, foreground: true }}
+                                                >
+                                                    <Text style={[styles.actionText, styles.actionTextDanger]}>Delete</Text>
+                                                </Pressable>
+                                            </View>
+                                        </>
+                                    )}
+                                </View>
+                            )
+                        })}
+                    </View>
+                )}
 
-                    {/* Comparison modal */}
-                    {showComparison && comparisonData && overwriteProfileId && (
-                        <ProfileComparison
-                            comparison={comparisonData}
-                            onConfirm={() => handleConfirmOverwrite(overwriteProfileId)}
-                            onCancel={handleCancelOverwrite}
-                            actionType="overwrite"
-                            category="training"
-                        />
-                    )}
-                </ScrollView>
-            </GlassModal>
+                {showComparison && comparisonData && overwriteProfileId && (
+                    <ProfileComparison
+                        comparison={comparisonData}
+                        onConfirm={() => handleConfirmOverwrite(overwriteProfileId)}
+                        onCancel={handleCancelOverwrite}
+                        actionType="overwrite"
+                        category="training"
+                    />
+                )}
+            </SheetModal>
 
-            {/* Delete dialog */}
-            <GlassModal visible={showDeleteDialog} onRequestClose={handleDeleteCancel} contentStyle={[styles.modalContent, { maxWidth: "85%" }]} dismissOnBackdropPress={false}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>Delete Profile</Text>
-                    {/* Close button */}
-                    <Pressable style={styles.closeButton} onPress={handleDeleteCancel} android_ripple={{ color: colors.ripple, foreground: true }}>
-                        <X size={24} color={colors.text} />
+            <GlassModal visible={showDeleteDialog} onRequestClose={handleDeleteCancel} contentStyle={styles.deleteModalContent} dismissOnBackdropPress={false}>
+                <View style={styles.deleteHeader}>
+                    <Text style={styles.deleteTitle}>Delete Profile</Text>
+                    <Pressable style={styles.closeChip} onPress={handleDeleteCancel} android_ripple={{ color: colors.ripple, foreground: true }} accessibilityLabel="Close">
+                        <Ionicons name="close" size={18} color={colors.text} />
                     </Pressable>
                 </View>
-                <Text style={{ color: colors.text, marginBottom: 20 }}>Are you sure you want to delete this profile? This action cannot be undone.</Text>
-                <View style={styles.buttonRow}>
+                <Text style={styles.deleteBody}>Are you sure you want to delete this profile? This action cannot be undone.</Text>
+                <View style={styles.deleteButtons}>
                     <CustomButton onPress={handleDeleteCancel} variant="outline">
                         Cancel
                     </CustomButton>
