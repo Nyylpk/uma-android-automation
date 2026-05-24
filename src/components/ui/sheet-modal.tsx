@@ -54,10 +54,10 @@ const SheetModalImpl = ({ visible, onRequestClose, header, children, footer, hei
                     backgroundColor: colors.surface,
                     overflow: "hidden",
                 },
-                header: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.md, borderBottomWidth: 1, borderBottomColor: colors.borderHair },
+                header: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.md },
                 body: { flex: 1 },
                 bodyContent: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.md },
-                footer: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.md, borderTopWidth: 1, borderTopColor: colors.borderHair },
+                footer: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.md },
             }),
         [colors, cardHeight]
     )
