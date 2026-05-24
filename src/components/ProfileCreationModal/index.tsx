@@ -1,18 +1,19 @@
 import React, { useState, useMemo, useCallback } from "react"
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native"
-import { GlassModal } from "../ui/glass-modal"
+import { View, Text, StyleSheet, Pressable, TextInput } from "react-native"
+import Ionicons from "@react-native-vector-icons/ionicons"
+import { SheetModal } from "../ui/sheet-modal"
 import { useTheme } from "../../context/ThemeContext"
 import CustomButton from "../CustomButton"
-import { Input } from "../ui/input"
-import { X } from "lucide-react-native"
 import { useProfileManager } from "../../hooks/useProfileManager"
 import { Settings } from "../../context/BotStateContext"
+import { TYPE } from "../../lib/type"
+import { SPACING } from "../../lib/spacing"
+import { RADII } from "../../lib/radii"
 
-// Table headers for the stat targets table.
-const TABLE_HEADERS = ["", "SPD", "STA", "POW", "GUTS", "WIT"]
-// Distance types for the stat targets table.
-const DISTANCE_TYPES = ["Sprint", "Mile", "Med", "Long"]
+/** Per-distance labels shown in the snapshot stat table. */
+const DISTANCE_TYPES = ["Sprint", "Mile", "Med", "Long"] as const
 
+/** Props for `ProfileCreationModal`. */
 interface ProfileCreationModalProps {
     /** Whether the modal is currently visible. */
     visible: boolean
@@ -29,15 +30,15 @@ interface ProfileCreationModalProps {
 }
 
 /**
- * A modal dialog for creating new training profiles.
- * Displays a name input, a preview of the current training settings,
- * and a stat targets table organized by distance type.
+ * A modal dialog for creating new training profiles. Renders a name input above a flat snapshot of every training setting, plus a stat targets
+ * grid organized by distance. Uses the shared `SheetModal` shell so the body scrolls reliably and the Cancel/Create footer stays locked.
  * @param visible Whether the modal is visible.
  * @param onClose Callback to close the modal.
  * @param currentTrainingSettings The current training settings to save.
  * @param currentTrainingStatTargetSettings The current stat target settings to save.
  * @param onProfileCreated Optional callback fired after successful creation.
  * @param onError Optional callback for error handling.
+ * @returns A `SheetModal` containing a profile name input, settings snapshot, and Cancel/Create actions.
  */
 const ProfileCreationModal: React.FC<ProfileCreationModalProps> = ({ visible, onClose, currentTrainingSettings, currentTrainingStatTargetSettings, onProfileCreated, onError }) => {
     const { colors } = useTheme()
@@ -48,123 +49,75 @@ const ProfileCreationModal: React.FC<ProfileCreationModalProps> = ({ visible, on
     const styles = useMemo(
         () =>
             StyleSheet.create({
-                modalContent: {
-                    backgroundColor: colors.surface,
-                    borderRadius: 12,
-                    padding: 20,
-                    width: "90%",
-                    maxHeight: "80%",
-                },
-                header: {
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: 20,
-                },
-                title: {
-                    fontSize: 20,
-                    fontWeight: "bold",
-                    color: colors.text,
-                },
-                closeButton: {
-                    padding: 4,
-                },
-                input: {
-                    marginBottom: 16,
-                },
-                settingsPreview: {
-                    marginTop: 16,
-                    marginBottom: 16,
-                    padding: 12,
-                    backgroundColor: colors.surfaceRaised,
+                titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+                title: { ...TYPE.monoLabel, color: colors.text, fontSize: 13, letterSpacing: 1.5 },
+                closeChip: {
+                    width: 36,
+                    height: 36,
                     borderRadius: 8,
-                    height: 200,
-                },
-                previewTitle: {
-                    fontSize: 14,
-                    fontWeight: "600",
-                    color: colors.text,
-                    marginBottom: 8,
-                },
-                previewText: {
-                    fontSize: 12,
-                    color: colors.text,
-                    opacity: 0.7,
-                },
-                tableContainer: {
-                    marginTop: 12,
-                },
-                tableTitle: {
-                    fontSize: 12,
-                    fontWeight: "600",
-                    color: colors.text,
-                    marginBottom: 8,
-                },
-                table: {
-                    borderWidth: 1,
-                    borderColor: colors.borderHair,
-                    borderRadius: 4,
                     overflow: "hidden",
-                    backgroundColor: colors.surfaceRaised,
-                },
-                tableRow: {
-                    flexDirection: "row",
-                    borderBottomWidth: 1,
-                    borderBottomColor: colors.borderHair,
-                },
-                tableCell: {
-                    flex: 1,
-                    padding: 8,
-                    borderRightWidth: 1,
-                    borderRightColor: colors.borderHair,
                     alignItems: "center",
                     justifyContent: "center",
                     backgroundColor: colors.surfaceRaised,
+                    borderWidth: 1,
+                    borderColor: colors.borderHair,
                 },
-                tableHeaderText: {
-                    fontSize: 9,
-                    fontWeight: "600",
+                label: { ...TYPE.monoLabel, color: colors.textMuted, marginBottom: SPACING.xs, marginTop: SPACING.sm },
+                input: {
+                    backgroundColor: colors.surfaceRaised,
+                    borderWidth: 1,
+                    borderColor: colors.borderHair,
+                    borderRadius: RADII.md,
+                    paddingHorizontal: SPACING.md,
+                    paddingVertical: SPACING.sm,
                     color: colors.text,
+                    fontSize: 14,
+                    marginBottom: SPACING.md,
                 },
-                tableCellText: {
-                    fontSize: 9,
-                    color: colors.text,
-                    opacity: 0.8,
-                },
-                buttonRow: {
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    gap: 8,
-                    marginTop: 16,
-                },
+                rule: { height: 1, backgroundColor: colors.borderHair, marginVertical: SPACING.md },
+                kvRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", paddingVertical: 4 },
+                kvKey: { ...TYPE.monoLabel, color: colors.textMuted },
+                kvVal: { ...TYPE.body, color: colors.text, textAlign: "right" as const, flexShrink: 1, marginLeft: SPACING.md },
+                kvValMono: { ...TYPE.monoValue, color: colors.brand, textAlign: "right" as const, marginLeft: SPACING.md },
+                statHeader: { ...TYPE.monoLabel, color: colors.textMuted, marginBottom: SPACING.xs },
+                statGrid: { gap: 4 },
+                statHeaderRow: { flexDirection: "row", paddingBottom: 4, borderBottomWidth: 1, borderBottomColor: colors.borderHair },
+                statHeaderCell: { flex: 1, ...TYPE.monoLabel, color: colors.textMuted, textAlign: "right" as const },
+                statHeaderCellLeft: { flex: 1.4, ...TYPE.monoLabel, color: colors.textMuted, textAlign: "left" as const },
+                statRow: { flexDirection: "row", paddingVertical: 3 },
+                statDistance: { flex: 1.4, ...TYPE.body, color: colors.text },
+                statCell: { flex: 1, ...TYPE.monoValue, color: colors.brand, textAlign: "right" as const },
+                footerRow: { flexDirection: "row", gap: SPACING.sm },
+                footerBtn: { flex: 1 },
             }),
         [colors]
     )
 
-    // Format the training settings into a preview string.
-    const settingsPreview = useMemo(() => {
-        const settings: string[] = []
-        settings.push(`Blacklist: ${currentTrainingSettings.trainingBlacklist.length > 0 ? currentTrainingSettings.trainingBlacklist.join(", ") : "None"}`)
-        settings.push(`Prioritization: ${currentTrainingSettings.statPrioritization.length > 0 ? currentTrainingSettings.statPrioritization.join(", ") : "None"}`)
-        settings.push(`Event Choice Priority: ${currentTrainingSettings.eventChoiceStatPriority.length > 0 ? currentTrainingSettings.eventChoiceStatPriority.join(", ") : "None"}`)
-        settings.push(`Summer Training Priority: ${currentTrainingSettings.summerTrainingStatPriority.length > 0 ? currentTrainingSettings.summerTrainingStatPriority.join(", ") : "None"}`)
-        settings.push(`Max Failure Chance: ${currentTrainingSettings.maximumFailureChance}%`)
-        settings.push(`Disable on Maxed: ${currentTrainingSettings.disableTrainingOnMaxedStat ? "Yes" : "No"}`)
-        settings.push(`Focus on Sparks: ${currentTrainingSettings.focusOnSparkStatTarget ? "Yes" : "No"}`)
-        settings.push(`Rainbow Bonus: ${currentTrainingSettings.enableRainbowTrainingBonus ? "Yes" : "No"}`)
-        settings.push(`Prioritize Near-Max Friendship: ${currentTrainingSettings.enablePrioritizeNearMaxFriendship ? "Yes" : "No"}`)
-        settings.push(`Preferred Distance: ${currentTrainingSettings.preferredDistanceOverride}`)
-        settings.push(`Must Rest Before Summer: ${currentTrainingSettings.mustRestBeforeSummer ? "Yes" : "No"}`)
-        settings.push(`Train Wit During Finale: ${currentTrainingSettings.trainWitDuringFinale ? "Yes" : "No"}`)
-        settings.push(`Risky Training: ${currentTrainingSettings.enableRiskyTraining ? "Yes" : "No"}`)
+    const snapshotRows = useMemo<Array<{ key: string; value: string; mono?: boolean }>>(() => {
+        const yesNo = (b: boolean) => (b ? "On" : "Off")
+        const joinOrNone = (arr: string[]) => (arr.length > 0 ? arr.join(", ") : "None")
+        const rows: Array<{ key: string; value: string; mono?: boolean }> = [
+            { key: "BLACKLIST", value: joinOrNone(currentTrainingSettings.trainingBlacklist) },
+            { key: "PRIORITY", value: joinOrNone(currentTrainingSettings.statPrioritization) },
+            { key: "EVENT PRIORITY", value: joinOrNone(currentTrainingSettings.eventChoiceStatPriority) },
+            { key: "SUMMER PRIORITY", value: joinOrNone(currentTrainingSettings.summerTrainingStatPriority) },
+            { key: "MAX FAILURE", value: `${currentTrainingSettings.maximumFailureChance}%`, mono: true },
+            { key: "DISABLE ON MAXED", value: yesNo(currentTrainingSettings.disableTrainingOnMaxedStat) },
+            { key: "FOCUS ON SPARKS", value: joinOrNone(currentTrainingSettings.focusOnSparkStatTarget) },
+            { key: "RAINBOW BONUS", value: yesNo(currentTrainingSettings.enableRainbowTrainingBonus) },
+            { key: "NEAR-MAX FRIEND", value: yesNo(currentTrainingSettings.enablePrioritizeNearMaxFriendship) },
+            { key: "PREFERRED DIST", value: currentTrainingSettings.preferredDistanceOverride || "Auto" },
+            { key: "MUST REST", value: yesNo(currentTrainingSettings.mustRestBeforeSummer) },
+            { key: "TRAIN WIT FINALE", value: yesNo(currentTrainingSettings.trainWitDuringFinale) },
+            { key: "RISKY TRAINING", value: yesNo(currentTrainingSettings.enableRiskyTraining) },
+        ]
         if (currentTrainingSettings.enableRiskyTraining) {
-            settings.push(`  Min Stat Gain: ${currentTrainingSettings.riskyTrainingMinStatGain}`)
-            settings.push(`  Max Failure: ${currentTrainingSettings.riskyTrainingMaxFailureChance}%`)
+            rows.push({ key: "RISKY MIN GAIN", value: String(currentTrainingSettings.riskyTrainingMinStatGain), mono: true })
+            rows.push({ key: "RISKY MAX FAIL", value: `${currentTrainingSettings.riskyTrainingMaxFailureChance}%`, mono: true })
         }
-        return settings.join("\n")
+        return rows
     }, [currentTrainingSettings])
 
-    // Get stat target values for a given distance type.
     const getStatTargets = useCallback(
         (distance: (typeof DISTANCE_TYPES)[number]) => {
             const distanceMap: Record<(typeof DISTANCE_TYPES)[number], string> = {
@@ -186,7 +139,6 @@ const ProfileCreationModal: React.FC<ProfileCreationModalProps> = ({ visible, on
         [currentTrainingStatTargetSettings]
     )
 
-    // Build table data for stat targets by distance.
     const tableData = useMemo(() => {
         return DISTANCE_TYPES.map((distance) => ({
             distance,
@@ -195,23 +147,19 @@ const ProfileCreationModal: React.FC<ProfileCreationModalProps> = ({ visible, on
     }, [getStatTargets])
 
     /**
-     * Handles the creation of a new profile.
+     * Handles the creation of a new profile by calling the profile manager hook, then resetting state and closing on success.
      */
     const handleCreate = useCallback(async () => {
         if (!profileName.trim()) {
             return
         }
-
         try {
-            // Set loading state.
             setIsCreating(true)
             const createdProfileName = profileName.trim()
-            // Create the new profile.
             await createProfile(createdProfileName, {
                 training: currentTrainingSettings,
                 trainingStatTarget: currentTrainingStatTargetSettings,
             })
-            // Reset the profile name and close the modal. The callback is called to notify the parent component that the profile was created.
             setProfileName("")
             onProfileCreated?.(createdProfileName)
             onClose()
@@ -223,82 +171,75 @@ const ProfileCreationModal: React.FC<ProfileCreationModalProps> = ({ visible, on
         }
     }, [profileName, createProfile, currentTrainingSettings, currentTrainingStatTargetSettings, onProfileCreated, onClose, onError])
 
-    /**
-     * Handles the closing of the modal by resetting the profile name and calling the `onClose` callback.
-     */
+    /** Reset the profile name and close the modal. */
     const handleClose = useCallback(() => {
         setProfileName("")
         onClose()
     }, [onClose])
 
+    const header = (
+        <View style={styles.titleRow}>
+            <Text style={styles.title}>CREATE PROFILE</Text>
+            <Pressable style={styles.closeChip} onPress={handleClose} android_ripple={{ color: colors.ripple, foreground: true }} accessibilityLabel="Close">
+                <Ionicons name="close" size={18} color={colors.text} />
+            </Pressable>
+        </View>
+    )
+
+    const footer = (
+        <View style={styles.footerRow}>
+            <CustomButton onPress={handleClose} variant="outline" disabled={isCreating} style={styles.footerBtn}>
+                Cancel
+            </CustomButton>
+            <CustomButton onPress={handleCreate} variant="primary" disabled={isCreating || !profileName.trim()} style={styles.footerBtn}>
+                Create
+            </CustomButton>
+        </View>
+    )
+
     return (
-        <GlassModal visible={visible} onRequestClose={handleClose} contentStyle={styles.modalContent}>
-            {/* Header */}
-            <View style={styles.header}>
-                <Text style={styles.title}>Create New Profile</Text>
-                <Pressable style={styles.closeButton} onPress={handleClose} android_ripple={{ color: colors.ripple, foreground: true }}>
-                    <X size={24} color={colors.text} />
-                </Pressable>
-            </View>
-
-            {/* Profile name input */}
-            <View style={styles.input}>
-                <Input placeholder="Profile name" value={profileName} onChangeText={setProfileName} style={{ color: colors.text, backgroundColor: colors.surfaceRaised }} />
-            </View>
-
-            {/* Training settings preview */}
-            <View style={styles.settingsPreview}>
-                <Text style={styles.previewTitle}>Current Training Settings (will be saved):</Text>
-                <ScrollView nestedScrollEnabled={true}>
-                    <Text style={styles.previewText}>{settingsPreview}</Text>
-                    <View style={styles.tableContainer}>
-                        <Text style={styles.tableTitle}>Stat Targets by Distance:</Text>
-                        <View style={styles.table}>
-                            {/* Header Row */}
-                            <View style={styles.tableRow}>
-                                {TABLE_HEADERS.map((header, index) => (
-                                    <View key={index} style={[styles.tableCell, { borderRightWidth: index < TABLE_HEADERS.length - 1 ? 1 : 0 }]}>
-                                        <Text style={styles.tableHeaderText}>{header}</Text>
-                                    </View>
-                                ))}
-                            </View>
-                            {/* Data Rows for each distance type and stat */}
-                            {tableData.map((row, rowIndex) => (
-                                <View key={rowIndex} style={styles.tableRow}>
-                                    <View style={[styles.tableCell, { borderRightWidth: 1 }]}>
-                                        <Text style={styles.tableCellText}>{row.distance}</Text>
-                                    </View>
-                                    <View style={[styles.tableCell, { borderRightWidth: 1 }]}>
-                                        <Text style={styles.tableCellText}>{row.speed}</Text>
-                                    </View>
-                                    <View style={[styles.tableCell, { borderRightWidth: 1 }]}>
-                                        <Text style={styles.tableCellText}>{row.stamina}</Text>
-                                    </View>
-                                    <View style={[styles.tableCell, { borderRightWidth: 1 }]}>
-                                        <Text style={styles.tableCellText}>{row.power}</Text>
-                                    </View>
-                                    <View style={[styles.tableCell, { borderRightWidth: 1 }]}>
-                                        <Text style={styles.tableCellText}>{row.guts}</Text>
-                                    </View>
-                                    <View style={[styles.tableCell, { borderRightWidth: 0 }]}>
-                                        <Text style={styles.tableCellText}>{row.wit}</Text>
-                                    </View>
-                                </View>
-                            ))}
-                        </View>
+        <SheetModal visible={visible} onRequestClose={handleClose} header={header} footer={footer}>
+            <Text style={styles.label}>NAME</Text>
+            <TextInput
+                style={styles.input}
+                placeholder="Profile name"
+                placeholderTextColor={colors.textMuted}
+                value={profileName}
+                onChangeText={setProfileName}
+                editable={!isCreating}
+                autoCapitalize="words"
+                autoCorrect={false}
+            />
+            <Text style={styles.label}>SNAPSHOT - ALL SETTINGS</Text>
+            {snapshotRows.map((row, idx) => (
+                <View key={`${row.key}-${idx}`} style={styles.kvRow}>
+                    <Text style={styles.kvKey}>{row.key}</Text>
+                    <Text style={row.mono ? styles.kvValMono : styles.kvVal}>{row.value}</Text>
+                </View>
+            ))}
+            <View style={styles.rule} />
+            <Text style={styles.statHeader}>STAT TARGETS</Text>
+            <View style={styles.statGrid}>
+                <View style={styles.statHeaderRow}>
+                    <Text style={styles.statHeaderCellLeft}></Text>
+                    <Text style={styles.statHeaderCell}>SPD</Text>
+                    <Text style={styles.statHeaderCell}>STA</Text>
+                    <Text style={styles.statHeaderCell}>PWR</Text>
+                    <Text style={styles.statHeaderCell}>GUT</Text>
+                    <Text style={styles.statHeaderCell}>WIT</Text>
+                </View>
+                {tableData.map((row, idx) => (
+                    <View key={`${row.distance}-${idx}`} style={styles.statRow}>
+                        <Text style={styles.statDistance}>{row.distance}</Text>
+                        <Text style={styles.statCell}>{row.speed}</Text>
+                        <Text style={styles.statCell}>{row.stamina}</Text>
+                        <Text style={styles.statCell}>{row.power}</Text>
+                        <Text style={styles.statCell}>{row.guts}</Text>
+                        <Text style={styles.statCell}>{row.wit}</Text>
                     </View>
-                </ScrollView>
+                ))}
             </View>
-
-            <View style={styles.buttonRow}>
-                <CustomButton onPress={handleClose} variant="outline" disabled={isCreating}>
-                    Cancel
-                </CustomButton>
-                <CustomButton onPress={handleCreate} variant={isCreating || !profileName.trim() ? "destructive" : "default"} disabled={isCreating || !profileName.trim()}>
-                    Create Profile
-                </CustomButton>
-            </View>
-        </GlassModal>
+        </SheetModal>
     )
 }
 
