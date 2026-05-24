@@ -1,6 +1,7 @@
 import { useMemo, useContext, useRef, useCallback, useState } from "react"
 import { View, Text, TextInput, ScrollView, StyleSheet, Pressable } from "react-native"
 import { useNavigation } from "@react-navigation/native"
+import Ionicons from "@react-native-vector-icons/ionicons"
 import { Cpu, ChevronRight } from "lucide-react-native"
 import { useTheme } from "../../context/ThemeContext"
 import { RacingContext, defaultSettings, Settings } from "../../context/BotStateContext"
@@ -8,7 +9,6 @@ import { SearchPageProvider } from "../../context/SearchPageContext"
 import CustomCheckbox from "../../components/CustomCheckbox"
 import CustomSelect from "../../components/CustomSelect"
 import CustomSlider from "../../components/CustomSlider"
-import CustomButton from "../../components/CustomButton"
 import PageHeader from "../../components/PageHeader"
 import WarningContainer from "../../components/WarningContainer"
 import SearchableItem from "../../components/SearchableItem"
@@ -18,7 +18,8 @@ import { Section } from "../../components/ui/section"
 import { SectionLabel } from "../../components/ui/section-label"
 import { Switch } from "../../components/ui/switch"
 import { GlassSurface } from "../../components/ui/glass-surface"
-import { GlassModal } from "../../components/ui/glass-modal"
+import { SheetModal } from "../../components/ui/sheet-modal"
+import { ModalRadioRow } from "../../components/ui/modal-list"
 import { TYPE } from "../../lib/type"
 import { SPACING } from "../../lib/spacing"
 import { RADII } from "../../lib/radii"
@@ -125,31 +126,20 @@ const RacingSettings = () => {
                     opacity: 0.7,
                     marginTop: 4,
                 },
-                pickerModal: {
-                    padding: SPACING.lg,
-                    minWidth: 260,
+                modalHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+                modalTitleMono: { ...TYPE.monoLabel, color: colors.text, fontSize: 13, letterSpacing: 1.5 },
+                modalCloseChip: {
+                    width: 36,
+                    height: 36,
+                    borderRadius: 8,
+                    overflow: "hidden",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.surfaceRaised,
+                    borderWidth: 1,
+                    borderColor: colors.borderHair,
                 },
-                pickerTitle: {
-                    ...TYPE.h2,
-                    color: colors.text,
-                    marginBottom: SPACING.md,
-                },
-                pickerOption: {
-                    paddingVertical: SPACING.md,
-                    paddingHorizontal: SPACING.md,
-                    borderRadius: RADII.md,
-                },
-                pickerOptionSelected: {
-                    backgroundColor: colors.brandSubtle,
-                },
-                pickerOptionText: {
-                    ...TYPE.body,
-                    color: colors.text,
-                },
-                pickerOptionTextSelected: {
-                    color: colors.brand,
-                    fontWeight: "600",
-                },
+                modalBodyList: { gap: SPACING.xs + 2 },
             }),
         [colors]
     )
@@ -182,20 +172,15 @@ const RacingSettings = () => {
      * @returns A list of pressable option rows.
      */
     const renderStrategyOptions = (current: string, onSelect: (value: RaceStrategy) => void) => (
-        <View>
-            {RACE_STRATEGY_OPTIONS.map((option) => {
-                const selected = option === current
-                return (
-                    <Pressable
-                        key={option}
-                        onPress={() => onSelect(option)}
-                        android_ripple={{ color: colors.ripple, foreground: true }}
-                        style={[styles.pickerOption, selected && styles.pickerOptionSelected]}
-                    >
-                        <Text style={[styles.pickerOptionText, selected && styles.pickerOptionTextSelected]}>{option}</Text>
-                    </Pressable>
-                )
-            })}
+        <View style={styles.modalBodyList}>
+            {RACE_STRATEGY_OPTIONS.map((option) => (
+                <ModalRadioRow
+                    key={option}
+                    label={option}
+                    selected={option === current}
+                    onPress={() => onSelect(option)}
+                />
+            ))}
         </View>
     )
 
@@ -532,31 +517,53 @@ const RacingSettings = () => {
                 {/* //////////////////////////////////////////////////////////////////////////////////////////////////
                     //////////////////////////////////////////////////////////////////////////////////////////////////
                     Strategy picker modals */}
-                <GlassModal visible={juniorPickerOpen} onRequestClose={() => setJuniorPickerOpen(false)} contentStyle={styles.pickerModal}>
-                    <Text style={styles.pickerTitle}>Junior Year Strategy</Text>
+                <SheetModal
+                    visible={juniorPickerOpen}
+                    onRequestClose={() => setJuniorPickerOpen(false)}
+                    header={
+                        <View style={styles.modalHeaderRow}>
+                            <Text style={styles.modalTitleMono}>JUNIOR YEAR STRATEGY</Text>
+                            <Pressable
+                                style={styles.modalCloseChip}
+                                onPress={() => setJuniorPickerOpen(false)}
+                                android_ripple={{ color: colors.ripple, foreground: true }}
+                                accessibilityLabel="Close"
+                            >
+                                <Ionicons name="close" size={18} color={colors.text} />
+                            </Pressable>
+                        </View>
+                    }
+                    footer={null}
+                >
                     {renderStrategyOptions(juniorYearRaceStrategy, (value) => {
                         updateRacingSetting("juniorYearRaceStrategy", value)
                         setJuniorPickerOpen(false)
                     })}
-                    <View style={{ marginTop: SPACING.md, alignItems: "flex-end" }}>
-                        <CustomButton onPress={() => setJuniorPickerOpen(false)} variant="outline" size="sm">
-                            Cancel
-                        </CustomButton>
-                    </View>
-                </GlassModal>
+                </SheetModal>
 
-                <GlassModal visible={originalPickerOpen} onRequestClose={() => setOriginalPickerOpen(false)} contentStyle={styles.pickerModal}>
-                    <Text style={styles.pickerTitle}>Original Strategy</Text>
+                <SheetModal
+                    visible={originalPickerOpen}
+                    onRequestClose={() => setOriginalPickerOpen(false)}
+                    header={
+                        <View style={styles.modalHeaderRow}>
+                            <Text style={styles.modalTitleMono}>ORIGINAL STRATEGY</Text>
+                            <Pressable
+                                style={styles.modalCloseChip}
+                                onPress={() => setOriginalPickerOpen(false)}
+                                android_ripple={{ color: colors.ripple, foreground: true }}
+                                accessibilityLabel="Close"
+                            >
+                                <Ionicons name="close" size={18} color={colors.text} />
+                            </Pressable>
+                        </View>
+                    }
+                    footer={null}
+                >
                     {renderStrategyOptions(originalRaceStrategy, (value) => {
                         updateRacingSetting("originalRaceStrategy", value)
                         setOriginalPickerOpen(false)
                     })}
-                    <View style={{ marginTop: SPACING.md, alignItems: "flex-end" }}>
-                        <CustomButton onPress={() => setOriginalPickerOpen(false)} variant="outline" size="sm">
-                            Cancel
-                        </CustomButton>
-                    </View>
-                </GlassModal>
+                </SheetModal>
             </SearchPageProvider>
         </View>
     )
