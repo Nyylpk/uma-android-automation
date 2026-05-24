@@ -16,6 +16,8 @@ export interface SectionProps {
     collapsible?: boolean
     /** Initial open state when `collapsible`. Default: true (open). */
     defaultOpen?: boolean
+    /** When true, skip the outer card (background, border, radius) and the default bottom margin. Used when nesting inside another `Section`. */
+    bare?: boolean
     /** Outer container style override. */
     style?: StyleProp<ViewStyle>
 }
@@ -27,7 +29,7 @@ export interface SectionProps {
  * @param props See `SectionProps`.
  * @returns Label + card with children stacked vertically.
  */
-export const Section = ({ label, children, collapsible = false, defaultOpen = true, style }: SectionProps) => {
+export const Section = ({ label, children, collapsible = false, defaultOpen = true, bare = false, style }: SectionProps) => {
     const { colors } = useTheme()
     const [open, setOpen] = useState(defaultOpen)
     const items = useMemo(() => Children.toArray(children).filter(Boolean), [children])
@@ -37,17 +39,21 @@ export const Section = ({ label, children, collapsible = false, defaultOpen = tr
         setOpen((v) => !v)
     }
 
-    const chevron = collapsible ? (
-        <Pressable onPress={toggle} hitSlop={8}>
-            <Ionicons name={open ? "chevron-up" : "chevron-down"} size={16} color={colors.textMuted} />
-        </Pressable>
-    ) : null
+    const chevronIcon = collapsible ? <Ionicons name={open ? "chevron-up" : "chevron-down"} size={16} color={colors.textMuted} /> : null
+
+    const cardStyle = bare ? undefined : { backgroundColor: colors.surface, borderRadius: RADII.lg, borderWidth: 1, borderColor: colors.borderHair, overflow: "hidden" as const }
 
     return (
-        <View style={[{ marginBottom: SPACING.lg }, style]}>
-            <SectionLabel label={label} right={chevron} />
+        <View style={[{ marginBottom: bare ? 0 : SPACING.lg }, style]}>
+            {collapsible ? (
+                <Pressable onPress={toggle} android_ripple={{ color: colors.ripple, foreground: false }} hitSlop={6}>
+                    <SectionLabel label={label} right={chevronIcon} />
+                </Pressable>
+            ) : (
+                <SectionLabel label={label} />
+            )}
             {open ? (
-                <View style={{ backgroundColor: colors.surface, borderRadius: RADII.lg, borderWidth: 1, borderColor: colors.borderHair, overflow: "hidden" }}>
+                <View style={cardStyle}>
                     {items.map((child, idx) => (
                         <View key={idx}>
                             {child}
