@@ -69,7 +69,7 @@ const SheetModalImpl = ({ visible, onRequestClose, header, children, footer, hei
                     <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
                         {children}
                     </ScrollView>
-                    <View style={styles.footer}>{footer}</View>
+                    {footer != null ? <View style={styles.footer}>{footer}</View> : null}
                 </Pressable>
             </Pressable>
         </Modal>
