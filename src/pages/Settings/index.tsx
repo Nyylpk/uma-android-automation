@@ -197,6 +197,12 @@ const Settings = () => {
 
                 <Section label="TOOLS">
                     <Row
+                        title="Ask the Docs"
+                        description="On-device docs chat powered by the LLM engine."
+                        right={chevron}
+                        onPress={() => navigation.navigate("Chat" as never)}
+                    />
+                    <Row
                         title="Event Log Visualizer (Beta)"
                         description="Import logs and view a day-by-day timeline of actions."
                         right={chevron}
