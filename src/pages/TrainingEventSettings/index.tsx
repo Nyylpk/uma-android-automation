@@ -1,6 +1,8 @@
 import { useContext, useState, useMemo, useCallback, useRef } from "react"
-import { View, Text, ScrollView, StyleSheet, Pressable, TextInput, Dimensions } from "react-native"
-import { GlassModal } from "../../components/ui/glass-modal"
+import { View, Text, ScrollView, StyleSheet, Pressable, TextInput } from "react-native"
+import { SheetModal } from "../../components/ui/sheet-modal"
+import { ModalRadioRow } from "../../components/ui/modal-list"
+import { useModalShellStyles } from "../../components/ui/modal-shell-styles"
 import { GlassSurface } from "../../components/ui/glass-surface"
 import { FlashList } from "@shopify/flash-list"
 import { useTheme } from "../../context/ThemeContext"
@@ -8,7 +10,6 @@ import { TrainingEventContext, defaultSettings } from "../../context/BotStateCon
 import { SearchPageProvider } from "../../context/SearchPageContext"
 import CustomCheckbox from "../../components/CustomCheckbox"
 import CustomSelect from "../../components/CustomSelect"
-import CustomButton from "../../components/CustomButton"
 import SearchableItem from "../../components/SearchableItem"
 import { Row } from "../../components/ui/row"
 import { Section } from "../../components/ui/section"
@@ -58,6 +59,7 @@ const excludedEventNames = new Set([
 const TrainingEventSettings = () => {
     usePerformanceLogging("TrainingEventSettings")
     const { colors } = useTheme()
+    const modalShellStyles = useModalShellStyles()
     const { trainingEvent, updateTrainingEvent } = useContext(TrainingEventContext)
     const scrollViewRef = useRef<ScrollView>(null)
 
@@ -399,24 +401,20 @@ const TrainingEventSettings = () => {
     const renderEventItem = useCallback(({ item: event }: { item: { key: string; characterOrSupport: string; eventName: string; options: string[]; type: "character" | "support" | "scenario" } }) => {
         return (
             <Pressable
-                style={styles.eventItem}
+                style={styles.eventRow}
                 android_ripple={{ color: colors.ripple, foreground: true }}
+                accessibilityRole="button"
                 onPress={() => {
-                    // Store the event and close search modal, then open option selection modal.
                     setSelectedEventForOption(event)
                     setEventOverrideModalVisible(false)
                     setOptionSelectionModalVisible(true)
                 }}
             >
-                <View style={styles.eventItemHeader}>
-                    <View style={{ flex: 1 }}>
-                        <Text style={styles.eventItemCharacterName}>{event.characterOrSupport}</Text>
-                        <Text style={styles.eventItemEventName}>{event.eventName}</Text>
-                    </View>
-                </View>
+                <Text style={styles.eventTag}>{event.characterOrSupport.toUpperCase()}</Text>
+                <Text style={styles.eventName}>{event.eventName}</Text>
             </Pressable>
         )
-    }, [])
+    }, [colors])
 
     /**
      * Extract a unique key for an event item in the list.
@@ -481,116 +479,37 @@ const TrainingEventSettings = () => {
                     fontSize: 14,
                     color: colors.text,
                 },
-                modalContent: {
-                    backgroundColor: colors.surface,
-                    borderRadius: 16,
-                    padding: 20,
-                    width: Dimensions.get("window").width * 0.9,
-                    maxHeight: Dimensions.get("window").height * 0.8,
-                    flexDirection: "column",
-                    justifyContent: "flex-start",
-                },
-                modalHeader: {
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: 20,
-                },
-                modalTitle: {
-                    fontSize: 20,
-                    fontWeight: "bold",
-                    color: colors.text,
-                },
-                closeButton: {
-                    padding: 8,
-                },
-                searchContainer: {
+                searchRow: {
                     flexDirection: "row",
                     alignItems: "center",
+                    gap: SPACING.sm,
+                    paddingHorizontal: SPACING.sm,
+                    paddingVertical: SPACING.xs + 2,
+                    borderRadius: RADII.md,
+                    borderWidth: 1,
+                    borderColor: colors.brandBorder,
                     backgroundColor: colors.surface,
+                    marginBottom: SPACING.sm,
+                },
+                searchInput: { flex: 1, ...TYPE.body, color: colors.text, padding: 0 },
+                searchClear: { padding: 4 },
+                eventRow: {
+                    paddingHorizontal: SPACING.sm,
+                    paddingVertical: SPACING.sm,
+                    borderRadius: RADII.md,
                     borderWidth: 1,
                     borderColor: colors.borderHair,
-                    borderRadius: 8,
-                    paddingHorizontal: 12,
-                    marginBottom: 20,
+                    backgroundColor: colors.surfaceRaised,
+                    marginBottom: SPACING.xs + 2,
+                    overflow: "hidden",
+                    gap: 2,
                 },
-                searchInput: {
-                    flex: 1,
-                    paddingVertical: 12,
-                    color: colors.text,
-                    fontSize: 12,
-                    backgroundColor: "transparent",
-                },
-                clearSearchButton: {
-                    padding: 8,
-                    marginLeft: 8,
-                },
-                eventList: {
-                    height: 400,
-                    minHeight: 400,
-                },
-                eventItem: {
-                    paddingVertical: 12,
-                    paddingHorizontal: 12,
-                    borderRadius: 8,
-                    borderWidth: 1,
-                    marginBottom: 10,
-                    backgroundColor: colors.surface,
-                    borderColor: colors.borderHair,
-                },
-                eventItemHeader: {
-                    flexDirection: "row",
-                    alignItems: "flex-start",
-                    justifyContent: "space-between",
-                },
-                eventItemCharacterName: {
-                    fontSize: 12,
-                    color: colors.textMuted,
-                    marginBottom: 4,
-                },
-                eventItemEventName: {
-                    fontSize: 16,
-                    fontWeight: "600",
-                    color: colors.text,
-                    flex: 1,
-                },
-                optionSelectContainer: {
-                    marginTop: 12,
-                    paddingTop: 12,
-                    borderTopWidth: 1,
-                    borderTopColor: colors.borderHair,
-                },
-                optionSelectLabel: {
-                    fontSize: 14,
-                    color: colors.text,
-                    marginBottom: 8,
-                    fontWeight: "600",
-                },
-                optionButton: {
-                    paddingVertical: 10,
-                    paddingHorizontal: 12,
-                    borderRadius: 6,
-                    marginBottom: 8,
-                    borderWidth: 1,
-                    borderColor: colors.borderHair,
-                },
-                optionButtonSelected: {
-                    backgroundColor: colors.brand,
-                    borderColor: colors.brand,
-                },
-                optionButtonText: {
-                    fontSize: 14,
-                    color: colors.text,
-                },
-                optionButtonTextSelected: {
-                    color: colors.onBrand,
-                },
-                noResults: {
-                    textAlign: "center",
-                    color: colors.text,
-                    opacity: 0.6,
-                    padding: 20,
-                },
+                eventTag: { ...TYPE.monoLabel, color: colors.textMuted, fontSize: 9, letterSpacing: 1.5 },
+                eventName: { ...TYPE.body, color: colors.text },
+                noResults: { ...TYPE.body, color: colors.textMuted, textAlign: "center", paddingVertical: SPACING.lg },
+                optionHeaderBlock: { gap: 2, marginBottom: SPACING.sm },
+                optionHeaderTag: { ...TYPE.monoLabel, color: colors.textMuted, fontSize: 9, letterSpacing: 1.5 },
+                optionHeaderName: { ...TYPE.body, color: colors.text, fontWeight: "600" as const },
                 categoryHeader: {
                     flexDirection: "row",
                     alignItems: "center",
@@ -1001,16 +920,26 @@ const TrainingEventSettings = () => {
             </SearchPageProvider>
 
             {/* Event Override Selection Modal */}
-            <GlassModal visible={eventOverrideModalVisible} onRequestClose={() => setEventOverrideModalVisible(false)} contentStyle={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Select Event Override</Text>
-                    <Pressable style={styles.closeButton} onPress={() => setEventOverrideModalVisible(false)} android_ripple={{ color: colors.ripple, foreground: true }}>
-                        <X size={24} color={colors.text} />
-                    </Pressable>
-                </View>
-
-                <View style={styles.searchContainer}>
-                    <Search size={20} color={colors.text} />
+            <SheetModal
+                visible={eventOverrideModalVisible}
+                onRequestClose={() => setEventOverrideModalVisible(false)}
+                header={
+                    <View style={modalShellStyles.modalHeaderRow}>
+                        <Text style={modalShellStyles.modalTitleMono}>EVENT OVERRIDE</Text>
+                        <Pressable
+                            style={modalShellStyles.modalCloseChip}
+                            onPress={() => setEventOverrideModalVisible(false)}
+                            android_ripple={{ color: colors.ripple, foreground: true }}
+                            accessibilityLabel="Close"
+                        >
+                            <X size={18} color={colors.text} />
+                        </Pressable>
+                    </View>
+                }
+                footer={null}
+            >
+                <View style={styles.searchRow}>
+                    <Search size={16} color={colors.textMuted} />
                     <TextInput
                         style={styles.searchInput}
                         placeholder="Search by character/support or event name..."
@@ -1018,99 +947,86 @@ const TrainingEventSettings = () => {
                         value={eventOverrideSearchQuery}
                         onChangeText={setEventOverrideSearchQuery}
                     />
-                    {eventOverrideSearchQuery.length > 0 && (
-                        <Pressable style={styles.clearSearchButton} onPress={() => setEventOverrideSearchQuery("")} android_ripple={{ color: colors.ripple, foreground: true }}>
-                            <X size={16} color={colors.text} />
+                    {eventOverrideSearchQuery.length > 0 ? (
+                        <Pressable
+                            style={styles.searchClear}
+                            onPress={() => setEventOverrideSearchQuery("")}
+                            android_ripple={{ color: colors.ripple, foreground: true }}
+                            accessibilityLabel="Clear search"
+                        >
+                            <X size={14} color={colors.textMuted} />
                         </Pressable>
-                    )}
+                    ) : null}
                 </View>
 
-                <View style={styles.eventList}>
-                    <FlashList
-                        data={filteredEvents}
-                        renderItem={renderEventItem}
-                        keyExtractor={keyExtractor}
-                        ListEmptyComponent={
-                            <View style={{ padding: 20 }}>
-                                <Text style={styles.noResults}>
-                                    {allEvents.length === 0
-                                        ? "No events available. Please select characters and/or support cards in the sections below to see their events."
-                                        : filteredEvents.length === 0 && (Object.keys(characterEventOverrides || {}).length > 0 || Object.keys(supportEventOverrides || {}).length > 0)
-                                          ? "All available events have been overridden. Remove an override to add it again."
-                                          : "No events match your search. Try a different search term."}
-                                </Text>
-                            </View>
-                        }
-                    />
-                </View>
-            </GlassModal>
+                <FlashList
+                    data={filteredEvents}
+                    renderItem={renderEventItem}
+                    keyExtractor={keyExtractor}
+                    ListEmptyComponent={
+                        <Text style={styles.noResults}>
+                            {allEvents.length === 0
+                                ? "No events available. Please select characters and/or support cards in the sections below to see their events."
+                                : filteredEvents.length === 0 && (Object.keys(characterEventOverrides || {}).length > 0 || Object.keys(supportEventOverrides || {}).length > 0)
+                                  ? "All available events have been overridden. Remove an override to add it again."
+                                  : "No events match your search. Try a different search term."}
+                        </Text>
+                    }
+                />
+            </SheetModal>
 
             {/* Option Selection Modal */}
-            <GlassModal
+            <SheetModal
                 visible={optionSelectionModalVisible}
                 onRequestClose={() => {
                     setOptionSelectionModalVisible(false)
                     setEventOverrideModalVisible(true)
                 }}
-                contentStyle={styles.modalContent}
+                header={
+                    <View style={modalShellStyles.modalHeaderRow}>
+                        <Text style={modalShellStyles.modalTitleMono}>SELECT OPTION</Text>
+                        <Pressable
+                            style={modalShellStyles.modalCloseChip}
+                            onPress={() => {
+                                setOptionSelectionModalVisible(false)
+                                setEventOverrideModalVisible(true)
+                            }}
+                            android_ripple={{ color: colors.ripple, foreground: true }}
+                            accessibilityLabel="Close"
+                        >
+                            <X size={18} color={colors.text} />
+                        </Pressable>
+                    </View>
+                }
+                footer={null}
             >
-                <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Select Option</Text>
-                    <Pressable
-                        style={styles.closeButton}
-                        android_ripple={{ color: colors.ripple, foreground: true }}
-                        onPress={() => {
-                            setOptionSelectionModalVisible(false)
-                            setEventOverrideModalVisible(true)
-                        }}
-                    >
-                        <X size={24} color={colors.text} />
-                    </Pressable>
-                </View>
-
-                {selectedEventForOption && (
+                {selectedEventForOption ? (
                     <>
-                        <View style={{ marginBottom: 20 }}>
-                            <Text style={styles.overrideCharacterName}>{selectedEventForOption.characterOrSupport}</Text>
-                            <Text style={styles.overrideEventName}>{selectedEventForOption.eventName}</Text>
+                        <View style={styles.optionHeaderBlock}>
+                            <Text style={styles.optionHeaderTag}>{selectedEventForOption.characterOrSupport.toUpperCase()}</Text>
+                            <Text style={styles.optionHeaderName}>{selectedEventForOption.eventName}</Text>
                         </View>
 
-                        <View style={styles.optionSelectContainer}>
-                            <Text style={styles.optionSelectLabel}>Select Option:</Text>
+                        <View style={modalShellStyles.modalBodyList}>
                             {selectedEventForOption.options.map((option: string, index: number) => {
                                 const characterOverrides = characterEventOverrides || {}
                                 const supportOverrides = supportEventOverrides || {}
                                 const currentOverride = selectedEventForOption.type === "character" ? characterOverrides[selectedEventForOption.key] : supportOverrides[selectedEventForOption.key]
                                 const isOptionSelected = currentOverride === index
                                 return (
-                                    <Pressable
+                                    <ModalRadioRow
                                         key={index}
-                                        style={[styles.optionButton, isOptionSelected && styles.optionButtonSelected]}
-                                        android_ripple={{ color: colors.ripple, foreground: true }}
+                                        tag={`OPTION ${index + 1}`}
+                                        label={option}
+                                        selected={isOptionSelected}
                                         onPress={() => updateEventOverride(selectedEventForOption.key, index)}
-                                    >
-                                        <Text style={[styles.optionButtonText, isOptionSelected && styles.optionButtonTextSelected]}>
-                                            Option {index + 1}: {option}
-                                        </Text>
-                                    </Pressable>
+                                    />
                                 )
                             })}
                         </View>
-
-                        <View style={{ marginTop: 20 }}>
-                            <CustomButton
-                                onPress={() => {
-                                    setOptionSelectionModalVisible(false)
-                                    setEventOverrideModalVisible(true)
-                                }}
-                                variant="default"
-                            >
-                                Cancel
-                            </CustomButton>
-                        </View>
                     </>
-                )}
-            </GlassModal>
+                ) : null}
+            </SheetModal>
         </View>
     )
 }
