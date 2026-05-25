@@ -119,7 +119,7 @@ const CustomSlider: React.FC<CustomSliderProps> = ({
         () =>
             StyleSheet.create({
                 container: {
-                    marginVertical: SPACING.sm,
+                    marginVertical: SPACING.xs,
                 },
                 label: {
                     ...TYPE.h2,
