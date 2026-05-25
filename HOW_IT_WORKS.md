@@ -1,6 +1,6 @@
 # How It Works
 
-*Last updated: 2026-05-07*
+*Last updated: 2026-05-25*
 
 A comprehensive guide to the inner workings of the app. This document explains what the bot does at each step of a campaign, how it makes decisions, and how each scenario differs.
 
@@ -19,6 +19,7 @@ A comprehensive guide to the inner workings of the app. This document explains w
 - [11. Scenario: Trackblazer](#11-scenario-trackblazer)
 - [12. Smart Race Solver](#12-smart-race-solver)
 - [13. Ask the Docs Chatbot](#13-ask-the-docs-chatbot)
+- [14. Decision Tracer](#14-decision-tracer)
 
 ---
 
@@ -327,6 +328,10 @@ $$\text{Score} = \bigl(\text{StatEfficiency} \times w_{\text{stat}} + \text{Rela
 
 Rainbow training is heavily favored because it improves overall stat ratio balance. Applied only from Classic Year onward.
 
+**Anticipatory Rainbow Multiplier (`enablePrioritizeNearMaxFriendship`, default on):** From Classic Year onward, when a training has **no real rainbows** but does have green/blue friendship bars sitting near the rainbow threshold, the bot applies a smaller anticipatory bonus to reward the "almost-rainbow" turn. Each qualifying bar contributes `fillPercent / 100` to a sum, then the multiplier is `1.0 + min(0.6, 0.2 * sum)` — capped at **1.6x** so anticipation can never out-rank an actual rainbow training (which sits at 1.5x / 2.0x). Only green/blue bars above 10% fill count. The intent is to lean toward trainings that are one bond tick away from becoming real rainbows without overruling a stat that already is one.
+
+**Training Level Weighting (`enableTrainingLevelWeighting`, default on):** When enabled, each option's main-stat score is amplified by a multiplier derived from the **OCR-detected training facility level** (1–5). Only the user's **top three priority stats** receive any boost, and only training levels ≥ 2 matter. At Lvl 5 the multipliers are roughly rank 1 = 1.75x, rank 2 = 1.25x, rank 3 = 1.10x. The fade keeps the boost concentrated on the trainee's top priority while still rewarding investment in their secondary. Training levels are OCR'd from each facility tab, anchored against the Energy label location which is cached on first use.
+
 > [!IMPORTANT]
 > **Stat Cap Awareness:** If a stat is at or above the effective cap (absolute cap - 100 buffer), training for that stat scores **0** and is skipped. The one exception is a **one-time rainbow allowance** — a stat can be trained past the buffer if it's a rainbow training and that stat hasn't used this allowance yet.
 
@@ -370,6 +375,12 @@ The bot supports configurable per-year stat targets (End of Junior / End of Clas
 </details>
 
 <details>
+<summary><strong>Disable Per-Distance Stat Targets</strong></summary>
+
+When `disableStatTargets` is enabled, the per-distance stat targets that normally drive the Stat Efficiency component are ignored — every stat is treated as if its target equals the scenario stat cap. This keeps every stat's ratio multiplier in the "encourage training" band rather than letting it taper off once the per-distance target is reached, which is useful for runs where the user wants to push every stat as high as possible regardless of the trainee's distance preference.
+</details>
+
+<details>
 <summary><strong>Training Failure Fallbacks</strong></summary>
 
 When every training option is filtered out by the failure-chance or stat-cap rules, the bot follows a configurable fallback chain (e.g. rest, recover mood, or force Wit) instead of stalling on the turn. The fallback decision also respects negative statuses — for instance, with active negative conditions the forced fallback is Wit rather than Speed to avoid stat reductions from conditions like Slow Metabolism.
@@ -396,8 +407,11 @@ This lets the user, for example, push Speed during the year but lean into Stamin
 | Max Failure Chance | 20% | Trainings above this are filtered out |
 | Disable on Maxed Stat | true | Skip training for stats at/above buffer |
 | Rainbow Training Bonus | false | 2.0x multiplier for rainbow trainings |
+| Prioritize Near-Max Friendship | true | Anticipatory rainbow multiplier (up to 1.6x) in Year 2+ for green/blue bars near the rainbow threshold |
 | Train Wit During Finale | false | Wit training instead of resting during finale |
 | Risky Training | false | Accept higher failure for larger gains |
+| Training Level Weighting | true | Amplify top-3 priority stats by OCR-detected facility level (1-5) |
+| Disable Per-Distance Stat Targets | false | Treat every stat's target as the scenario stat cap |
 
 ---
 
@@ -424,7 +438,7 @@ The bot determines if extra races should be run via `checkEligibilityToStartExtr
 - **In-Game Race Agenda:** Follows the agenda set within the game itself.
 - **Fan Farming:** Enters races based on a configurable interval (`daysToRunExtraRaces`).
 - **Smart Racing / Look-Ahead:** Checks upcoming turns for higher-quality races and may defer racing to a better opportunity.
-- **Smart Race Solver:** From Classic year onward, the optional [Smart Race Solver](#12-smart-race-solver) can take over extra-race scheduling — see Section 12. When it's enabled with `enableFarmingFans` on and `enableForceRacing` off, the solver decides which turns are race turns and which races are picked, and the legacy fan-farming and look-ahead heuristics step aside.
+- **Smart Race Solver:** From Classic year onward, the optional [Smart Race Solver](#12-smart-race-solver) can take over extra-race scheduling — see Section 12. When it's enabled with `enableFarmingFans` on and `enableForceRacing` off, the solver decides which turns are race turns and which races are picked, and the legacy fan-farming and look-ahead heuristics step aside. When the solver picks `Train` for a turn, the **legacy extra-race fallback is suppressed entirely** — the bot will not enter a race that the solver did not plan, even if the older fan-farming heuristic would have triggered.
 
 > [!IMPORTANT]
 > **Trackblazer** bypasses smart racing logic entirely and races as aggressively as possible, only stopping for summer, finals, or when the consecutive race limit is reached.
@@ -443,7 +457,7 @@ When the bot decides to race:
 
 Once a race is selected:
 
-1. **Strategy Selection:** The bot selects a running strategy (Front Runner, Stalker, Betweener, or Chaser) based on the trainee's aptitudes. If **per-distance strategies** are enabled in Racing Settings, the bot resolves the strategy separately per distance bucket (Sprint, Mile, Medium, Long) against the currently detected `lastRaceDistance`, overriding the global strategy for that race.
+1. **Strategy Selection:** The bot selects a running strategy (Front Runner, Stalker, Betweener, or Chaser) based on the trainee's aptitudes. If **per-distance strategies** are enabled in Racing Settings, the bot resolves the strategy separately per distance bucket (Sprint, Mile, Medium, Long) against the currently detected `lastRaceDistance`, overriding the global strategy for that race. For **mandatory races** (which skip the normal race-list selection flow), the bot reads the race distance directly off the Race Prep screen so per-distance strategies still apply on Debut, goal, and Finale turns.
 2. **Skip or Manual:** If the "skip" button is available, the bot skips the race animation. Otherwise, it watches and fast-forwards.
 3. **Retries:** If a race is lost and retries are enabled, the bot can retry the race (free retry available once per campaign if enabled).
 4. **Complete Career on Failure:** If a mandatory race is lost and this setting is enabled, the bot continues the campaign anyway rather than stopping.
@@ -607,7 +621,7 @@ flowchart TD
     Summer -->|Yes| TRAIN["→ TRAIN\n(Summer training)"]
     Summer -->|No| Finale{"Finale turns\n73-75?"}
     Finale -->|Yes| TRAIN2["→ TRAIN\n(Finale training)"]
-    Finale -->|No| EnergyGuard{"Energy ≤ 10% AND\n3+ consecutive races\nAND no Charm?"}
+    Finale -->|No| EnergyGuard{"Energy ≤ 10% AND\n3+ consecutive races?"}
     EnergyGuard -->|Yes| REST["→ REST\n(avoid -30 stat penalty)"]
     EnergyGuard -->|No| Irregular{"Irregular Training\nenabled + not checked?"}
     Irregular -->|Yes| EvalTraining["Open training screen\nAnalyze all 5 trainings"]
@@ -724,7 +738,7 @@ Below is every item in the Trackblazer shop, organized by category. For each ite
 
 **The greedy energy algorithm (`isBestEnergyItemToUse()`):**
 1. Collect all available energy items (from inventory + items not yet scanned in this pass).
-2. **Reserve** one unit of the lowest-tier energy item in `energyItemConservationOrder` (Vita 20 → Vita 40 → Vita 65) so an emergency race recovery always has something to draw on.
+2. **Reserve** `trackblazerEnergyItemReserve` copies (default 1) of the lowest-tier energy item in `energyItemConservationOrder` (Vita 20 → Vita 40 → Vita 65) so an emergency race recovery always has something to draw on.
 3. Sort the remaining gains descending (65 → 40 → 20).
 4. Greedily pick items whose cumulative gain stays within a **soft overshoot cap of 110%** — a small overshoot is allowed so that a larger combined gain (e.g. Vita 65 + Vita 40 = 105) is preferred over a strictly-under-100 combination (e.g. 65 + 20 = 85).
 5. **Multiple items can be used in a single turn** — every item in the picked set will be consumed when encountered during the scan. If the current item is in the picked set → use it. Otherwise → skip it.
@@ -780,6 +794,8 @@ Royal Kale Juice is handled separately from Vita items because of its mood penal
 
 **Side effects:** After use, the trainee's mood is decremented by 1 level (e.g., Great → Good). The bot tracks this internally.
 
+**Cupcake auto-pairing:** When Royal Kale Juice is queued during the inventory pass, the bot sets a `bKaleJuiceQueuedThisPass` flag and **re-runs the cupcake gate later in the same pass** with a fresh bitmap capture (`recheck = true`). The cupcake's normal "disabled in dialog" short-circuit and the "mood already high enough" guard are bypassed when this flag is set, so a Berry Sweet Cupcake or Plain Cupcake will be used in the same item dialog open to immediately offset the -1 mood penalty from Kale Juice. The flag is cleared once the cupcake fires (or once the pass ends), so it doesn't leak to subsequent turns.
+
 </details>
 
 <details>
@@ -808,8 +824,9 @@ Royal Kale Juice is handled separately from Vita items because of its mood penal
 | **Plain Cupcake** | 30 coins | Motivation +1 |
 
 **When used:** Only when **all** of these conditions are true:
-1. Mood is Normal or below (≤ Normal)
-2. Energy is below 70% (if energy is high enough, the bot prefers to train without mood recovery)
+1. Mood is Normal or below (≤ Normal), OR a Royal Kale Juice was queued earlier in the same pass (`bKaleJuiceQueuedThisPass`)
+2. Energy is below 70% (if energy is high enough, the bot prefers to train without mood recovery), OR the Kale-Juice offset path is active
+3. Cupcake stock exceeds `trackblazerCupcakeReserve` (default 1) — the bot will not burn the last reserved copy unless it is the cupcake that is being paired with a same-pass Kale Juice to offset its mood penalty
 
 The first cupcake encountered during the scan is used. Berry Sweet Cupcake raises mood to Good; Plain Cupcake raises it to Normal (from the decremented state).
 
@@ -1041,23 +1058,38 @@ The bot checks for this interaction before evaluating any energy item. It consid
 
 > **Important:** These items are **not** used during the normal training item pass. They have their own dedicated usage flow that triggers on the **Race Prep screen** before a race begins. This includes mandatory races (Finale turns 73–75) and scheduled races via the `onScheduledRacePrepScreen()` hook.
 
+> [!NOTE]
+> **Turn 65 conservation gate.** All Hammer and Glow Stick conservation thresholds described below **only kick in from turn 65 onward** — the turn right after Senior Year Summer training, which is the last window the in-game shop can refresh before the Finales. Before turn 65 the bot uses these items freely on every qualifying race, since hoarding them through the Classic year offers no benefit if the trainee can simply restock during Senior summer. The cutoff turn is hard-coded as `raceItemConservationStartDay = 65` and is surfaced in the Scenario Overrides banner alongside the threshold values themselves.
+
+The conservation rules below also use a set of **user-tunable thresholds** exposed under Scenario Overrides → *Trackblazer Item Conservation*:
+
+| Setting | Default | Meaning |
+|---------|---------|---------|
+| `trackblazerEnergyItemReserve` | 1 | Copies of the lowest-tier Vita item to keep in reserve for emergency race recovery |
+| `trackblazerCupcakeReserve` | 1 | Copies of the cheapest cupcake to keep in reserve for the Kale-Juice mood offset |
+| `trackblazerMasterHammerFinaleReserve` | 2 | Copies of Master Cleat Hammer required during Finale turns 73-74 before using one; the leftover is saved for turn 75 |
+| `trackblazerArtisanHammerMinStockForG3` | 3 | Minimum Artisan Hammer stock required (from turn 65 on) before spending one on a G3 race |
+| `trackblazerArtisanHammerMinStockForG2` | 2 | Minimum Artisan Hammer stock required (from turn 65 on) before spending one on a G2 race |
+| `trackblazerGlowStickFinalReserve` | 1 | Copies of Glow Sticks to reserve heading into the Finales (consumed on turn 75 only) |
+| `trackblazerGlowStickMinFans` | 20000 | Minimum fan reward of a G1 race for a Glow Stick to be spent on it |
+
 **Master Cleat Hammer — when used:**
 - The upcoming race is **G1 grade**.
 - The item is available in inventory.
-- **Finale conservation:** During turns 73 and 74 (Qualifier and Semi-Final), the bot only uses this item if it has **2 or more copies**, saving the last one for turn 75 (Finals). On turn 75, all remaining copies are used freely.
+- **Finale conservation (from turn 65 on):** During turns 73 and 74 (Qualifier and Semi-Final), the bot only uses this item if it has at least `trackblazerMasterHammerFinaleReserve` (default 2) copies, saving the last one for turn 75 (Finals). On turn 75, all remaining copies are used freely.
 
 **Artisan Cleat Hammer — when used:**
 - The upcoming race is **G2 or G3 grade**.
 - OR the race is G1 but no Master Cleat Hammer is available (fallback).
 - The item is available in inventory.
-- **Finale conservation:** Same 2-copy rule as Master Cleat Hammer during turns 73–74.
+- **Conservation (from turn 65 on):** For G3 races, requires stock ≥ `trackblazerArtisanHammerMinStockForG3` (default 3); for G2 races, requires stock ≥ `trackblazerArtisanHammerMinStockForG2` (default 2). The "2-copy" Finale rule for turns 73-74 still applies on top of these.
 
 **Glow Sticks — when used:**
 - The upcoming race is **G1 grade**.
-- The race awards **≥ 20,000 fans**.
+- The race awards at least `trackblazerGlowStickMinFans` fans (default 20,000).
 - The item is available in inventory.
 - **Top-tier G1 exception (pre-Finale):** For G1 races awarding **≥ 30,000 fans** before turn 73, the bot will spend the **last** Glow Stick even when only 1 copy remains in inventory. The shop refreshes when the Finales begin, so there is another chance to buy more before turn 75.
-- **Finale conservation:** During turns 73 and 74, the bot only uses Glow Sticks if it has **2 or more copies**, reserving the last one for turn 75 (Finals). On turn 75, all remaining copies are used freely.
+- **Finale conservation (from turn 65 on):** During turns 73 and 74, the bot only uses Glow Sticks when stock exceeds `trackblazerGlowStickFinalReserve` (default 1), reserving the last one(s) for turn 75 (Finals). On turn 75, all remaining copies are used freely.
 
 **When NONE of these are used:**
 - The race is OP or Pre-OP grade (no items for low-grade races).
@@ -1087,7 +1119,7 @@ Trackblazer tracks how many races the trainee has performed consecutively:
 
 Irregular Training is an optional feature that evaluates whether a high-value training opportunity is worth skipping a race for:
 
-1. **When checked:** On non-mandatory, non-scheduled race days during Classic and Senior years. **Skipped entirely** when energy is ≤ 10% with 3+ consecutive races and no Good-Luck Charm available — the bot rests instead to avoid the -30 stat penalty (see [11.1 flowchart](#111-overview-and-flow-differences)).
+1. **When checked:** On non-mandatory, non-scheduled race days during Classic and Senior years. **Skipped entirely** when energy is ≤ 10% with 3+ consecutive races — the bot rests instead to avoid the -30 stat penalty (see [11.1 flowchart](#111-overview-and-flow-differences)). A Good-Luck Charm in inventory does **not** override this guard, because the Charm can only fire after `analyzeTrainings()` produces a selection with measured failure chance ≥ 20% — it cannot protect a turn whose analysis is the thing at risk. The irregular evaluation itself is also skipped at `energy <= 0` for the same reason.
 2. **Process:**
    - The bot opens the training screen and runs a full analysis of all 5 training options.
    - If a Good-Luck Charm is available, failure chance is ignored during evaluation.
@@ -1134,6 +1166,12 @@ The solver is **opt-in** via the `enableSmartRaceSolver` setting on the Racing S
 - `enableFarmingFans` is on (the bot is allowed to enter extra races at all),
 - `enableForceRacing` is off (the user hasn't asked the bot to race every turn unconditionally),
 - and the campaign is past Junior year (the solver plans from Classic onward; Junior racing follows the existing maiden-race / mandatory-race path).
+
+> [!NOTE]
+> **Junior-year Pre-OP override.** Trackblazer normally rejects Pre-OP races outright during Junior year (their fan rewards are too low to justify the consecutive-race penalty). When the Smart Race Solver explicitly plans a Pre-OP race for a specific Junior turn, the Junior-year grade filter is **overridden** for that turn so the solver's plan can execute. Pre-OP races picked outside of the solver are still filtered out.
+
+> [!NOTE]
+> **Manual race locks are honored at runtime.** The Settings UI lets the user pin a specific race or `TRAIN_LOCK_SENTINEL` to a calendar cell. Earlier builds applied these locks to the preview render but not to the live solve loop — the bot would happily race a different race on the locked turn. The peek path now consults the locked schedule directly, so any cell the user pinned is respected during the actual run.
 
 When all three hold, [Racing.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/Racing.kt) calls `SmartRaceSolverIntegration.peekRaceKeyForTurn()` to ask "is there a race planned for the current turn, and if so, which one?" The answer steers both extra-racing eligibility and the race-list scan inside Trackblazer's `findSuitableRace()`.
 
@@ -1352,3 +1390,42 @@ The LLM Settings page surfaces a small **Device Fitness** row driven by [src/lib
 - **Recommended preset** picked by walking `PRESET_RAM_REQUIREMENTS_BYTES` against available RAM and surfacing the largest preset that fits.
 
 The `i8mm` and Hexagon / OpenCL llama.rn variants are intentionally trimmed from the APK to keep the install size down, so the tier label is informational only — the runtime always picks one of the three shipped variants.
+
+---
+
+## 14. Decision Tracer
+
+The Decision Tracer is a structured **per-turn log block** that answers "why did the bot do X this turn?" without forcing the user to grep across dozens of interleaved `MessageLog` lines. It sits alongside the existing chronological log — the original `MessageLog.i/v/w/e` lines are untouched — and emits a single consolidated **Decision Report** block at the end of every main-screen turn.
+
+### 14.1 Architecture
+
+A single [DecisionTracer.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/DecisionTracer.kt) instance lives on `Campaign` (`Campaign.decisionTracer`). Each main-screen turn:
+
+1. **`startTurn(...)`** snapshots trainee state (energy, mood, negative statuses, inventory by category, scenario extras like `consecutiveRaceCount`) and a `SettingsSnapshot` of decision-relevant settings.
+2. The decision tree calls `record...` methods as it walks — `recordActionChoice`, `recordRejectedAlternative`, `recordItemUsage`, `recordTrainingSelection`, `recordNote`, etc. — appending events in order.
+3. **`emit()`** flushes the formatted block once via `MessageLog.i` and clears the buffer for the next turn.
+
+`Campaign` exposes an overrideable `gatherDecisionSettings()` hook so each scenario contributes its own settings snapshot. Trackblazer, URA Finale, and Unity Cup all override this; the base campaign also instruments its `decideNextAction()` priority waterfall and `Racing.kt` instruments race eligibility and result handling.
+
+### 14.2 What ends up in a Decision Report
+
+Each block is bracketed by a header like `============== Turn 25 (CLASSIC EARLY JANUARY) Decision Report ==============` and contains:
+
+- **State snapshot** — energy, mood, active negative statuses, decision-relevant inventory grouped by category (Megaphones, Hammers, Energy, Cupcakes, Stat items, Race items, etc.), and any scenario extras (e.g. Trackblazer's `consecutiveRaceCount`).
+- **Settings snapshot** — the live values of every setting that gated a decision this turn, including the new Trackblazer item conservation thresholds.
+- **Action choice** — which `MainScreenAction` (RACE / TRAIN / REST / RECOVER_MOOD / NONE) the bot picked, with a one-line reason.
+- **Rejected alternatives** — actions that were considered but lost, each with a short rejection reason (e.g. `REST: pre-summer prep already satisfied`).
+- **Training selection** — the picked training, its score, and a runner-up list with scores and rejection reasons.
+- **Item usage** — which items were used or deliberately skipped, with the gate that fired.
+
+### 14.3 Coverage
+
+| Layer | Instrumented decisions |
+|-------|------------------------|
+| `Campaign.decideNextAction()` | The full priority waterfall (mandatory race, force racing, maiden, pre-summer prep, fan/trophy requirement, injury, mood recovery, extra-race eligibility, default train) |
+| `Racing.kt` | Race eligibility checks, race-list scan results, result detection |
+| Trackblazer | Irregular Training evaluation, item usage pass, consecutive-race guard, race fallback |
+| URA Finale & Unity Cup | Scenario-specific override branches |
+
+> [!TIP]
+> The Decision Report block is greppable — looking for `Decision Report` finds every turn at once, and looking for a specific action like `→ TRAIN` or a specific rejection like `RACE: ` narrows it to the turns where that decision was on the table.
