@@ -409,9 +409,9 @@ const DrawerContent: React.FC<DrawerContentComponentProps> = (props) => {
 
         return (
             <View key={item.route}>
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <View style={[{ flexDirection: "row", alignItems: "center", borderRadius: 10, overflow: "hidden" }, isActive && styles.menuItemActive]}>
                     <Pressable
-                        style={[styles.menuItem, isActive && styles.menuItemActive, { flex: 1 }]}
+                        style={[styles.menuItem, { flex: 1 }]}
                         android_ripple={{ color: colors.ripple, foreground: true }}
                         onPress={() => handleNavigation(item.route)}
                     >
