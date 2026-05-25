@@ -1,5 +1,5 @@
 import { useMemo, useContext, useState, useEffect, useRef, useCallback, ReactNode } from "react"
-import { InteractionManager, View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from "react-native"
+import { Dimensions, InteractionManager, View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from "react-native"
 import { Divider } from "react-native-paper"
 import { previewSchedule, SchedulePreview, ScheduleEntry, SolverConfigSnapshot } from "../../lib/solver/preview"
 import {
@@ -994,8 +994,14 @@ const SmartRaceSolverSettings = () => {
                             {cellInner}
                         </Pressable>
                     </PopoverTrigger>
-                    <PopoverContent side="top" align="center" className="w-80 p-3">
-                        {renderPopoverBody(turn, entry)}
+                    <PopoverContent
+                        side="top"
+                        align="center"
+                        insets={{ top: 60, bottom: 60, left: 12, right: 12 }}
+                        className="p-3"
+                        style={{ width: Math.min(320, Dimensions.get("window").width - 24), maxHeight: Math.min(360, Dimensions.get("window").height - 200) }}
+                    >
+                        <ScrollView showsVerticalScrollIndicator={false}>{renderPopoverBody(turn, entry)}</ScrollView>
                     </PopoverContent>
                 </Popover>
                 <Text style={styles.calendarDateLabel}>
@@ -1290,7 +1296,7 @@ const SmartRaceSolverSettings = () => {
                                             completion use Forced Epithets instead.
                                         </Text>
                                         {restrictionNotice && (
-                                            <InfoCallout title={restrictionNotice} style={{ backgroundColor: colors.surfaceRaised, marginTop: SPACING.sm, marginBottom: SPACING.sm }}>
+                                            <InfoCallout title={restrictionNotice} style={{ backgroundColor: colors.surfaceRaised, marginBottom: SPACING.sm }}>
                                                 <Text style={[TYPE.body, { color: colors.text }]}>
                                                     The epithet list below is filtered to only those compatible with the current scenario and character preset. Change either to widen the list.
                                                 </Text>
@@ -1299,7 +1305,7 @@ const SmartRaceSolverSettings = () => {
                                         <InfoCallout
                                             title="Epithets with no structured matcher in the code"
                                             icon={<View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.destructive }} />}
-                                            style={{ backgroundColor: colors.surfaceRaised, marginTop: SPACING.sm, marginBottom: SPACING.sm }}
+                                            style={{ backgroundColor: colors.surfaceRaised, marginBottom: SPACING.md }}
                                         >
                                             <Text style={[TYPE.body, { color: colors.text }]}>
                                                 Their in-game conditions is too difficult or impossible to model as a per-race rule. The solver won't pick races to advance them. Adding one to Forced makes the schedule infeasible, so leave it out of Forced even if you plan to earn it manually in-game.
