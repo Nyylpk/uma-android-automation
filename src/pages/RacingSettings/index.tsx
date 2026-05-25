@@ -6,7 +6,6 @@ import { Cpu, ChevronRight } from "lucide-react-native"
 import { useTheme } from "../../context/ThemeContext"
 import { RacingContext, defaultSettings, Settings } from "../../context/BotStateContext"
 import { SearchPageProvider } from "../../context/SearchPageContext"
-import CustomCheckbox from "../../components/CustomCheckbox"
 import CustomSelect from "../../components/CustomSelect"
 import CustomSlider from "../../components/CustomSlider"
 import PageHeader from "../../components/PageHeader"
@@ -187,8 +186,8 @@ const RacingSettings = () => {
                     <View className="m-1">
                         {/* //////////////////////////////////////////////////////////////////////////////////////////////////
                             //////////////////////////////////////////////////////////////////////////////////////////////////
-                            Fan Farming */}
-                        <Section label="Fan Farming">
+                            Race Behavior */}
+                        <Section label="Race Behavior">
                             <SearchableItem id="enable-farming-fans" title="Enable Farming Fans" description="When enabled, the bot will start running extra races to gain fans.">
                                 <Row
                                     title="Enable Farming Fans"
@@ -196,7 +195,7 @@ const RacingSettings = () => {
                                     right={<Switch checked={enableFarmingFans} onCheckedChange={(checked) => updateRacingSetting("enableFarmingFans", checked)} />}
                                 />
                             </SearchableItem>
-                            <View style={{ paddingHorizontal: SPACING.md, paddingVertical: SPACING.md }}>
+                            <View style={{ paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm }}>
                                 <CustomSlider
                                     searchId="days-to-run-extra-races"
                                     value={daysToRunExtraRaces}
@@ -211,12 +210,6 @@ const RacingSettings = () => {
                                     description="Extra races are eligible only on days where current day % value == 0. For example, 5 means days 5, 10, 15, etc. Has no effect when Smart Race Solver is enabled."
                                 />
                             </View>
-                        </Section>
-
-                        {/* //////////////////////////////////////////////////////////////////////////////////////////////////
-                            //////////////////////////////////////////////////////////////////////////////////////////////////
-                            Race Behavior */}
-                        <Section label="Race Behavior">
                             <SearchableItem
                                 id="ignore-consecutive-race-warning"
                                 title="Ignore Consecutive Race Warning"
@@ -281,6 +274,18 @@ const RacingSettings = () => {
                                     right={<Switch checked={enableStopOnMandatoryRaces} onCheckedChange={(checked) => updateRacingSetting("enableStopOnMandatoryRaces", checked)} />}
                                 />
                             </SearchableItem>
+                            <SearchableItem
+                                id="enable-force-racing"
+                                title="Force Racing"
+                                description="When enabled, the bot will skip all training, rest, and mood recovery activities and focus exclusively on racing every day."
+                            >
+                                <Row
+                                    title="Force Racing"
+                                    description="When enabled, the bot will skip all training, rest, and mood recovery activities and focus exclusively on racing every day."
+                                    right={<Switch checked={enableForceRacing} onCheckedChange={(checked) => updateRacingSetting("enableForceRacing", checked)} />}
+                                />
+                            </SearchableItem>
+                            {enableForceRacing && <WarningContainer>Warning: Enabling this will override all other racing settings and they will be ignored.</WarningContainer>}
                         </Section>
 
                         {/* //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -372,29 +377,17 @@ const RacingSettings = () => {
                             )}
                         </Section>
 
-                        {/* //////////////////////////////////////////////////////////////////////////////////////////////////
-                            //////////////////////////////////////////////////////////////////////////////////////////////////
-                            Force Racing + In-Game Race Agenda (legacy controls preserved) */}
-                        <View style={styles.section}>
-                            <CustomCheckbox
-                                searchId="enable-force-racing"
-                                checked={enableForceRacing}
-                                onCheckedChange={(checked) => updateRacingSetting("enableForceRacing", checked)}
-                                label="Force Racing"
-                                description="When enabled, the bot will skip all training, rest, and mood recovery activities and focus exclusively on racing every day."
-                                className="my-2"
-                            />
-                            {enableForceRacing && <WarningContainer>Warning: Enabling this will override all other racing settings and they will be ignored.</WarningContainer>}
-                        </View>
-
-                        <CustomCheckbox
-                            searchId="enable-user-in-game-race-agenda"
-                            checked={enableUserInGameRaceAgenda}
-                            onCheckedChange={(checked) => updateRacingSetting("enableUserInGameRaceAgenda", checked)}
-                            label="Enable User In-Game Race Agenda"
+                        <SearchableItem
+                            id="enable-user-in-game-race-agenda"
+                            title="Enable User In-Game Race Agenda"
                             description="When enabled, the bot will load your selected in-game race agenda instead of using the racing plan settings. Note that this will disable the farming fans and racing plan settings."
-                            style={{ marginBottom: 16 }}
-                        />
+                        >
+                            <Row
+                                title="Enable User In-Game Race Agenda"
+                                description="When enabled, the bot will load your selected in-game race agenda instead of using the racing plan settings. Note that this will disable the farming fans and racing plan settings."
+                                right={<Switch checked={enableUserInGameRaceAgenda} onCheckedChange={(checked) => updateRacingSetting("enableUserInGameRaceAgenda", checked)} />}
+                            />
+                        </SearchableItem>
 
                         <CustomSelect
                             searchId="user-in-game-race-agenda"
@@ -441,27 +434,33 @@ const RacingSettings = () => {
                             />
                         </SearchableItem>
 
-                        <CustomCheckbox
-                            searchId="limit-races-to-in-game-agenda"
-                            searchCondition={enableUserInGameRaceAgenda}
-                            parentId="enable-user-in-game-race-agenda"
-                            checked={limitRacesToInGameAgenda}
-                            onCheckedChange={(checked) => updateRacingSetting("limitRacesToInGameAgenda", checked)}
-                            label="Limit Extra Races to Agenda"
+                        <SearchableItem
+                            id="limit-races-to-in-game-agenda"
+                            title="Limit Extra Races to Agenda"
                             description="When enabled, the bot will override the racing behavior of any scenario such that it will not run any extra races except for the ones scheduled by the selected user's in-game racing agenda."
-                            style={{ marginBottom: 16 }}
-                        />
-
-                        <CustomCheckbox
-                            searchId="skip-summer-training-for-agenda"
-                            searchCondition={enableUserInGameRaceAgenda}
+                            condition={enableUserInGameRaceAgenda}
                             parentId="enable-user-in-game-race-agenda"
-                            checked={skipSummerTrainingForAgenda}
-                            onCheckedChange={(checked) => updateRacingSetting("skipSummerTrainingForAgenda", checked)}
-                            label="Skip Summer Training for Agenda"
+                        >
+                            <Row
+                                title="Limit Extra Races to Agenda"
+                                description="When enabled, the bot will override the racing behavior of any scenario such that it will not run any extra races except for the ones scheduled by the selected user's in-game racing agenda."
+                                right={<Switch checked={limitRacesToInGameAgenda} onCheckedChange={(checked) => updateRacingSetting("limitRacesToInGameAgenda", checked)} />}
+                            />
+                        </SearchableItem>
+
+                        <SearchableItem
+                            id="skip-summer-training-for-agenda"
+                            title="Skip Summer Training for Agenda"
                             description="When enabled, the bot will perform scheduled races from the in-game racing agenda during Summer instead of prioritizing Summer training. Note that this requires 'Enable User In-Game Race Agenda' to be enabled."
-                            style={{ marginBottom: 16 }}
-                        />
+                            condition={enableUserInGameRaceAgenda}
+                            parentId="enable-user-in-game-race-agenda"
+                        >
+                            <Row
+                                title="Skip Summer Training for Agenda"
+                                description="When enabled, the bot will perform scheduled races from the in-game racing agenda during Summer instead of prioritizing Summer training. Note that this requires 'Enable User In-Game Race Agenda' to be enabled."
+                                right={<Switch checked={skipSummerTrainingForAgenda} onCheckedChange={(checked) => updateRacingSetting("skipSummerTrainingForAgenda", checked)} />}
+                            />
+                        </SearchableItem>
 
                         {/* //////////////////////////////////////////////////////////////////////////////////////////////////
                             //////////////////////////////////////////////////////////////////////////////////////////////////
