@@ -20,6 +20,8 @@ export interface SheetModalProps {
     heightFraction?: number
     /** Set false to disable tap-outside-to-dismiss. Default true. */
     dismissOnBackdropPress?: boolean
+    /** When false, the body is wrapped in a `flex: 1` `View` instead of a `ScrollView`. Use for bodies that manage their own scroll (e.g. `FlashList`). Default true. */
+    scrollableBody?: boolean
 }
 
 /**
@@ -36,7 +38,7 @@ export interface SheetModalProps {
  * @param dismissOnBackdropPress Set false to disable tap-outside-to-dismiss. Default true.
  * @returns A full-screen `Modal` with a centered card whose layout is header / scrollable body / footer.
  */
-const SheetModalImpl = ({ visible, onRequestClose, header, children, footer, heightFraction = 0.82, dismissOnBackdropPress = true }: SheetModalProps) => {
+const SheetModalImpl = ({ visible, onRequestClose, header, children, footer, heightFraction = 0.82, dismissOnBackdropPress = true, scrollableBody = true }: SheetModalProps) => {
     const { colors } = useTheme()
     const clamped = Math.max(0.4, Math.min(0.95, heightFraction))
     const cardHeight = Math.round(Dimensions.get("window").height * clamped)
@@ -68,9 +70,13 @@ const SheetModalImpl = ({ visible, onRequestClose, header, children, footer, hei
                 <Pressable style={styles.backdrop} onPress={dismissOnBackdropPress ? onRequestClose : undefined} />
                 <View style={styles.card}>
                     <View style={styles.header}>{header}</View>
-                    <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
-                        {children}
-                    </ScrollView>
+                    {scrollableBody ? (
+                        <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+                            {children}
+                        </ScrollView>
+                    ) : (
+                        <View style={[styles.body, styles.bodyContent]}>{children}</View>
+                    )}
                     {footer != null ? <View style={styles.footer}>{footer}</View> : null}
                 </View>
             </View>

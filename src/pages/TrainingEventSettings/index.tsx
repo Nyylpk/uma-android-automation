@@ -988,6 +988,7 @@ const TrainingEventSettings = () => {
             <SheetModal
                 visible={eventOverrideModalVisible}
                 onRequestClose={() => setEventOverrideModalVisible(false)}
+                scrollableBody={false}
                 header={
                     <View style={modalShellStyles.modalHeaderRow}>
                         <Text style={modalShellStyles.modalTitleMono}>EVENT OVERRIDE</Text>
@@ -1024,20 +1025,22 @@ const TrainingEventSettings = () => {
                     ) : null}
                 </View>
 
-                <FlashList
-                    data={filteredEvents}
-                    renderItem={renderEventItem}
-                    keyExtractor={keyExtractor}
-                    ListEmptyComponent={
-                        <Text style={styles.noResults}>
-                            {allEvents.length === 0
-                                ? "No events available. Please select characters and/or support cards in the sections below to see their events."
-                                : filteredEvents.length === 0 && (Object.keys(characterEventOverrides || {}).length > 0 || Object.keys(supportEventOverrides || {}).length > 0 || Object.keys(scenarioEventOverrides || {}).length > 0)
-                                  ? "All available events have been overridden. Remove an override to add it again."
-                                  : "No events match your search. Try a different search term."}
-                        </Text>
-                    }
-                />
+                <View style={{ flex: 1 }}>
+                    <FlashList
+                        data={filteredEvents}
+                        renderItem={renderEventItem}
+                        keyExtractor={keyExtractor}
+                        ListEmptyComponent={
+                            <Text style={styles.noResults}>
+                                {allEvents.length === 0
+                                    ? "No events available. Please select characters and/or support cards in the sections below to see their events."
+                                    : filteredEvents.length === 0 && (Object.keys(characterEventOverrides || {}).length > 0 || Object.keys(supportEventOverrides || {}).length > 0 || Object.keys(scenarioEventOverrides || {}).length > 0)
+                                      ? "All available events have been overridden. Remove an override to add it again."
+                                      : "No events match your search. Try a different search term."}
+                            </Text>
+                        }
+                    />
+                </View>
             </SheetModal>
 
             {/* Option Selection Modal */}
