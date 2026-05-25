@@ -127,6 +127,9 @@ const RacingSettings = () => {
                     opacity: 0.7,
                     marginTop: 4,
                 },
+                perDistanceGroupLabel: { ...TYPE.monoLabel, color: colors.textMuted, paddingHorizontal: SPACING.lg, paddingTop: SPACING.md, paddingBottom: SPACING.xs },
+                perDistanceBody: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.md, gap: SPACING.sm },
+                perDistanceItem: { flexDirection: "row" as const, alignItems: "center" as const, gap: SPACING.md },
             }),
         [colors]
     )
@@ -328,52 +331,59 @@ const RacingSettings = () => {
                                     </SearchableItem>
                                 </>
                             ) : (
-                                <View style={{ padding: SPACING.md }}>
-                                    <Text style={styles.inputDescription}>
-                                        Set a different race strategy for each track distance. If Auto is selected, the bot will auto-select the best strategy. If Default is selected, the bot will not
-                                        change whatever strategy is currently in effect.
-                                    </Text>
-                                    <View style={styles.inputContainer}>
-                                        <Text style={styles.inputLabel}>Junior Year Per-Distance Strategy</Text>
-                                        {(["Short", "Mile", "Medium", "Long"] as const).map((distance) => (
-                                            <View key={`junior-${distance}`} style={{ marginBottom: 8 }}>
-                                                <Text style={[styles.inputDescription, { marginBottom: 4 }]}>{distance}</Text>
-                                                <CustomSelect
-                                                    searchId={`junior-strategy-${distance.toLowerCase()}`}
-                                                    searchTitle={`Junior Year ${distance} Distance Strategy`}
-                                                    searchDescription={`The race strategy to use for ${distance.toLowerCase()} distance races during Junior Year.`}
-                                                    options={RACE_STRATEGY_OPTIONS.map((value) => ({ value, label: value }))}
-                                                    value={juniorYearPerDistanceStrategies?.[distance] ?? "Default"}
-                                                    onValueChange={(value) => {
-                                                        const updated = { ...juniorYearPerDistanceStrategies, [distance]: value }
-                                                        updateRacingSetting("juniorYearPerDistanceStrategies", updated)
-                                                    }}
-                                                    placeholder="Select strategy"
-                                                />
-                                            </View>
-                                        ))}
+                                <>
+                                    <View style={{ paddingHorizontal: SPACING.lg, paddingTop: SPACING.md, paddingBottom: SPACING.sm }}>
+                                        <Text style={[TYPE.caption, { color: colors.textMuted }]}>
+                                            Set a different race strategy for each track distance. Auto picks the best strategy. Default leaves the in-game strategy alone.
+                                        </Text>
                                     </View>
-                                    <View style={styles.inputContainer}>
-                                        <Text style={styles.inputLabel}>Original Per-Distance Strategy</Text>
-                                        {(["Short", "Mile", "Medium", "Long"] as const).map((distance) => (
-                                            <View key={`original-${distance}`} style={{ marginBottom: 8 }}>
-                                                <Text style={[styles.inputDescription, { marginBottom: 4 }]}>{distance}</Text>
-                                                <CustomSelect
-                                                    searchId={`original-strategy-${distance.toLowerCase()}`}
-                                                    searchTitle={`Original ${distance} Distance Strategy`}
-                                                    searchDescription={`The race strategy to use for ${distance.toLowerCase()} distance races in Year 2 and beyond.`}
-                                                    options={RACE_STRATEGY_OPTIONS.map((value) => ({ value, label: value }))}
-                                                    value={originalPerDistanceStrategies?.[distance] ?? "Default"}
-                                                    onValueChange={(value) => {
-                                                        const updated = { ...originalPerDistanceStrategies, [distance]: value }
-                                                        updateRacingSetting("originalPerDistanceStrategies", updated)
-                                                    }}
-                                                    placeholder="Select strategy"
-                                                />
-                                            </View>
-                                        ))}
+                                    <View>
+                                        <Text style={styles.perDistanceGroupLabel}>JUNIOR YEAR</Text>
+                                        <View style={styles.perDistanceBody}>
+                                            {(["Short", "Mile", "Medium", "Long"] as const).map((distance) => (
+                                                <View key={`junior-${distance}`} style={styles.perDistanceItem}>
+                                                    <Text style={[TYPE.body, { color: colors.text, flex: 1 }]}>{distance}</Text>
+                                                    <CustomSelect
+                                                        searchId={`junior-strategy-${distance.toLowerCase()}`}
+                                                        searchTitle={`Junior Year ${distance} Distance Strategy`}
+                                                        searchDescription={`The race strategy to use for ${distance.toLowerCase()} distance races during Junior Year.`}
+                                                        width={140}
+                                                        options={RACE_STRATEGY_OPTIONS.map((value) => ({ value, label: value }))}
+                                                        value={juniorYearPerDistanceStrategies?.[distance] ?? "Default"}
+                                                        onValueChange={(value) => {
+                                                            const updated = { ...juniorYearPerDistanceStrategies, [distance]: value }
+                                                            updateRacingSetting("juniorYearPerDistanceStrategies", updated)
+                                                        }}
+                                                        placeholder="Default"
+                                                    />
+                                                </View>
+                                            ))}
+                                        </View>
                                     </View>
-                                </View>
+                                    <View>
+                                        <Text style={styles.perDistanceGroupLabel}>CLASSIC AND SENIOR YEAR</Text>
+                                        <View style={styles.perDistanceBody}>
+                                            {(["Short", "Mile", "Medium", "Long"] as const).map((distance) => (
+                                                <View key={`original-${distance}`} style={styles.perDistanceItem}>
+                                                    <Text style={[TYPE.body, { color: colors.text, flex: 1 }]}>{distance}</Text>
+                                                    <CustomSelect
+                                                        searchId={`original-strategy-${distance.toLowerCase()}`}
+                                                        searchTitle={`Original ${distance} Distance Strategy`}
+                                                        searchDescription={`The race strategy to use for ${distance.toLowerCase()} distance races in Year 2 and beyond.`}
+                                                        width={140}
+                                                        options={RACE_STRATEGY_OPTIONS.map((value) => ({ value, label: value }))}
+                                                        value={originalPerDistanceStrategies?.[distance] ?? "Default"}
+                                                        onValueChange={(value) => {
+                                                            const updated = { ...originalPerDistanceStrategies, [distance]: value }
+                                                            updateRacingSetting("originalPerDistanceStrategies", updated)
+                                                        }}
+                                                        placeholder="Default"
+                                                    />
+                                                </View>
+                                            ))}
+                                        </View>
+                                    </View>
+                                </>
                             )}
                         </Section>
 
