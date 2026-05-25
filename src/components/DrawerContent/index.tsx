@@ -411,7 +411,7 @@ const DrawerContent: React.FC<DrawerContentComponentProps> = (props) => {
             <View key={item.route}>
                 <View style={[{ flexDirection: "row", alignItems: "center", borderRadius: 10, overflow: "hidden" }, isActive && styles.menuItemActive]}>
                     <Pressable
-                        style={[styles.menuItem, { flex: 1 }]}
+                        style={[styles.menuItem, { flex: 1, paddingRight: hasChildren ? 44 + SPACING.sm + SPACING.md : undefined }]}
                         android_ripple={{ color: colors.ripple, foreground: true }}
                         onPress={() => handleNavigation(item.route)}
                     >
@@ -421,7 +421,12 @@ const DrawerContent: React.FC<DrawerContentComponentProps> = (props) => {
                         <Text style={[styles.menuItemText, isActive && styles.menuItemTextActive]}>{item.label}</Text>
                     </Pressable>
                     {hasChildren && (
-                        <Pressable onPress={() => toggleSection(item.route)} style={styles.chevronButton} hitSlop={12} android_ripple={{ color: colors.ripple, foreground: true }}>
+                        <Pressable
+                            onPress={() => toggleSection(item.route)}
+                            style={[styles.chevronButton, { position: "absolute", right: 0, top: "50%", marginTop: -22, marginLeft: 0 }]}
+                            hitSlop={12}
+                            android_ripple={{ color: colors.ripple, foreground: true }}
+                        >
                             <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={20} color={colors.textMuted} />
                         </Pressable>
                     )}
