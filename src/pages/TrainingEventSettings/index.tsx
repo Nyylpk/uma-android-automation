@@ -17,7 +17,7 @@ import { Switch } from "../../components/ui/switch"
 import { TYPE } from "../../lib/type"
 import { SPACING } from "../../lib/spacing"
 import { RADII } from "../../lib/radii"
-import { Plus, Search, X } from "lucide-react-native"
+import { ChevronDown, ChevronUp, Plus, Search, X } from "lucide-react-native"
 import PageHeader from "../../components/PageHeader"
 import CustomSlider from "../../components/CustomSlider"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
@@ -77,6 +77,15 @@ const TrainingEventSettings = () => {
 
     const [eventOverrideModalVisible, setEventOverrideModalVisible] = useState(false)
     const [eventOverrideSearchQuery, setEventOverrideSearchQuery] = useState("")
+    const [specialOverrideOpen, setSpecialOverrideOpen] = useState<{ holiday: boolean; raceResult: boolean; trainingFailure: boolean; misc: boolean }>({
+        holiday: false,
+        raceResult: false,
+        trainingFailure: false,
+        misc: false,
+    })
+    const toggleSpecialOverride = useCallback((key: "holiday" | "raceResult" | "trainingFailure" | "misc") => {
+        setSpecialOverrideOpen((prev) => ({ ...prev, [key]: !prev[key] }))
+    }, [])
     const [optionSelectionModalVisible, setOptionSelectionModalVisible] = useState(false)
     const [selectedEventForOption, setSelectedEventForOption] = useState<{
         key: string
@@ -531,6 +540,15 @@ const TrainingEventSettings = () => {
                     backgroundColor: colors.brandSubtle,
                     borderRadius: RADII.pill,
                 },
+                subSectionRow: {
+                    flexDirection: "row" as const,
+                    alignItems: "center" as const,
+                    paddingVertical: SPACING.md,
+                    paddingHorizontal: SPACING.lg,
+                    gap: SPACING.md,
+                },
+                subSectionRowTitle: { ...TYPE.body, color: colors.text, fontWeight: "500" as const, flex: 1 },
+                subSectionBody: { paddingHorizontal: SPACING.md, paddingTop: SPACING.sm, paddingBottom: SPACING.sm, gap: SPACING.sm },
                 ctaCard: {
                     borderRadius: RADII.lg,
                     overflow: "hidden",
@@ -720,199 +738,238 @@ const TrainingEventSettings = () => {
                             </View>
                         )}
 
-                        <SearchableItem
-                            id="special-event-overrides"
-                            title="Special Event Overrides"
-                            description="Override the bot's normal stat prioritization for specific training events. These settings bypass the standard weight calculation system."
-                        >
-                            <Text style={[TYPE.body, { color: colors.text, marginBottom: SPACING.xs }]}>Special Event Overrides</Text>
-                            <Text style={[TYPE.caption, { color: colors.textMuted, marginBottom: SPACING.md }]}>
-                                Override the bot's normal stat prioritization for specific training events. These settings bypass the standard weight calculation system.
-                            </Text>
-                        </SearchableItem>
+                        <Section label="Special Event Overrides">
+                            <SearchableItem
+                                id="special-event-overrides"
+                                title="Special Event Overrides"
+                                description="Override the bot's normal stat prioritization for specific training events. These settings bypass the standard weight calculation system."
+                            >
+                                <View style={{ paddingHorizontal: SPACING.md, paddingTop: SPACING.md, paddingBottom: SPACING.xs }}>
+                                    <Text style={[TYPE.caption, { color: colors.textMuted }]}>
+                                        Override the bot's normal stat prioritization for specific training events. These settings bypass the standard weight calculation system.
+                                    </Text>
+                                </View>
+                            </SearchableItem>
 
-                        <Section label="Holiday Events" collapsible defaultOpen={false}>
-                            <View style={{ padding: SPACING.md }}>
-                                <View style={styles.categoryHeader}>
-                                    <Text style={styles.categoryHeaderTitle}>Holiday Events</Text>
+                            {/* Holiday Events */}
+                            <View>
+                                <Pressable
+                                    onPress={() => toggleSpecialOverride("holiday")}
+                                    android_ripple={{ color: colors.ripple, foreground: true }}
+                                    style={styles.subSectionRow}
+                                    accessibilityRole="button"
+                                    accessibilityState={{ expanded: specialOverrideOpen.holiday }}
+                                >
+                                    <Text style={styles.subSectionRowTitle}>Holiday Events</Text>
                                     <Text style={styles.countPill}>{holidayCount}</Text>
-                                </View>
+                                    {specialOverrideOpen.holiday ? <ChevronUp size={16} color={colors.textMuted} /> : <ChevronDown size={16} color={colors.textMuted} />}
+                                </Pressable>
+                                {specialOverrideOpen.holiday && (
+                                    <View style={styles.subSectionBody}>
+                                        <View style={styles.section}>
+                                            <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>New Year's Resolutions (Classic Year)</Text>
+                                            <CustomSelect
+                                                options={newYearResolutionsOptions}
+                                                value={specialEventOverrides["New Year's Resolutions"]?.selectedOption || "Option 2: Energy +20"}
+                                                onValueChange={(value) => updateSpecialEventOverride("New Year's Resolutions", "selectedOption", value)}
+                                                placeholder="Select Option"
+                                                width="100%"
+                                            />
+                                        </View>
 
-                                <View style={styles.section}>
-                                    <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>New Year's Resolutions (Classic Year)</Text>
-                                    <CustomSelect
-                                        options={newYearResolutionsOptions}
-                                        value={specialEventOverrides["New Year's Resolutions"]?.selectedOption || "Option 2: Energy +20"}
-                                        onValueChange={(value) => updateSpecialEventOverride("New Year's Resolutions", "selectedOption", value)}
-                                        placeholder="Select Option"
-                                        width="100%"
-                                    />
-                                </View>
-
-                                <View style={styles.section}>
-                                    <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>New Year's Shrine Visit (Senior Year)</Text>
-                                    <CustomSelect
-                                        options={newYearShrineVisitOptions}
-                                        value={specialEventOverrides["New Year's Shrine Visit"]?.selectedOption || "Option 1: Energy +30"}
-                                        onValueChange={(value) => updateSpecialEventOverride("New Year's Shrine Visit", "selectedOption", value)}
-                                        placeholder="Select Option"
-                                        width="100%"
-                                    />
-                                </View>
+                                        <View style={styles.section}>
+                                            <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>New Year's Shrine Visit (Senior Year)</Text>
+                                            <CustomSelect
+                                                options={newYearShrineVisitOptions}
+                                                value={specialEventOverrides["New Year's Shrine Visit"]?.selectedOption || "Option 1: Energy +30"}
+                                                onValueChange={(value) => updateSpecialEventOverride("New Year's Shrine Visit", "selectedOption", value)}
+                                                placeholder="Select Option"
+                                                width="100%"
+                                            />
+                                        </View>
+                                    </View>
+                                )}
                             </View>
-                        </Section>
 
-                        <Section label="Race Result Events" collapsible defaultOpen={false}>
-                            <View style={{ padding: SPACING.md }}>
-                                <View style={styles.categoryHeader}>
-                                    <Text style={styles.categoryHeaderTitle}>Race Result Events</Text>
+                            {/* Race Result Events */}
+                            <View>
+                                <Pressable
+                                    onPress={() => toggleSpecialOverride("raceResult")}
+                                    android_ripple={{ color: colors.ripple, foreground: true }}
+                                    style={styles.subSectionRow}
+                                    accessibilityRole="button"
+                                    accessibilityState={{ expanded: specialOverrideOpen.raceResult }}
+                                >
+                                    <Text style={styles.subSectionRowTitle}>Race Result Events</Text>
                                     <Text style={styles.countPill}>{raceResultCount}</Text>
-                                </View>
+                                    {specialOverrideOpen.raceResult ? <ChevronUp size={16} color={colors.textMuted} /> : <ChevronDown size={16} color={colors.textMuted} />}
+                                </Pressable>
+                                {specialOverrideOpen.raceResult && (
+                                    <View style={styles.subSectionBody}>
+                                        <View style={styles.section}>
+                                            <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>Victory!</Text>
+                                            <CustomSelect
+                                                options={victoryOptions}
+                                                value={specialEventOverrides["Victory!"]?.selectedOption || "Option 2: Energy -5 and random stat gain"}
+                                                onValueChange={(value) => updateSpecialEventOverride("Victory!", "selectedOption", value)}
+                                                placeholder="Select Option"
+                                                width="100%"
+                                            />
+                                            <CustomCheckbox
+                                                style={{ marginTop: 12 }}
+                                                checked={specialEventOverrides["Victory!"]?.enableEnergyBasedSelection || false}
+                                                onCheckedChange={(checked) => updateSpecialEventOverride("Victory!", "enableEnergyBasedSelection", checked)}
+                                                label="Energy-aware swap"
+                                                description={energyAwareHint}
+                                            />
+                                        </View>
 
-                                <View style={styles.section}>
-                                    <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>Victory!</Text>
-                                    <CustomSelect
-                                        options={victoryOptions}
-                                        value={specialEventOverrides["Victory!"]?.selectedOption || "Option 2: Energy -5 and random stat gain"}
-                                        onValueChange={(value) => updateSpecialEventOverride("Victory!", "selectedOption", value)}
-                                        placeholder="Select Option"
-                                        width="100%"
-                                    />
-                                    <CustomCheckbox
-                                        style={{ marginTop: 12 }}
-                                        checked={specialEventOverrides["Victory!"]?.enableEnergyBasedSelection || false}
-                                        onCheckedChange={(checked) => updateSpecialEventOverride("Victory!", "enableEnergyBasedSelection", checked)}
-                                        label="Energy-aware swap"
-                                        description={energyAwareHint}
-                                    />
-                                </View>
+                                        <View style={styles.section}>
+                                            <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>Solid Showing</Text>
+                                            <CustomSelect
+                                                options={solidShowingOptions}
+                                                value={specialEventOverrides["Solid Showing"]?.selectedOption || "Option 2: Energy -5/-20 and random stat gain"}
+                                                onValueChange={(value) => updateSpecialEventOverride("Solid Showing", "selectedOption", value)}
+                                                placeholder="Select Option"
+                                                width="100%"
+                                            />
+                                            <CustomCheckbox
+                                                style={{ marginTop: 12 }}
+                                                checked={specialEventOverrides["Solid Showing"]?.enableEnergyBasedSelection || false}
+                                                onCheckedChange={(checked) => updateSpecialEventOverride("Solid Showing", "enableEnergyBasedSelection", checked)}
+                                                label="Energy-aware swap"
+                                                description={energyAwareHint}
+                                            />
+                                        </View>
 
-                                <View style={styles.section}>
-                                    <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>Solid Showing</Text>
-                                    <CustomSelect
-                                        options={solidShowingOptions}
-                                        value={specialEventOverrides["Solid Showing"]?.selectedOption || "Option 2: Energy -5/-20 and random stat gain"}
-                                        onValueChange={(value) => updateSpecialEventOverride("Solid Showing", "selectedOption", value)}
-                                        placeholder="Select Option"
-                                        width="100%"
-                                    />
-                                    <CustomCheckbox
-                                        style={{ marginTop: 12 }}
-                                        checked={specialEventOverrides["Solid Showing"]?.enableEnergyBasedSelection || false}
-                                        onCheckedChange={(checked) => updateSpecialEventOverride("Solid Showing", "enableEnergyBasedSelection", checked)}
-                                        label="Energy-aware swap"
-                                        description={energyAwareHint}
-                                    />
-                                </View>
-
-                                <View style={styles.section}>
-                                    <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>Defeat</Text>
-                                    <CustomSelect
-                                        options={defeatOptions}
-                                        value={specialEventOverrides["Defeat"]?.selectedOption || "Option 1: Energy -25 and random stat gain"}
-                                        onValueChange={(value) => updateSpecialEventOverride("Defeat", "selectedOption", value)}
-                                        placeholder="Select Option"
-                                        width="100%"
-                                    />
-                                    <CustomCheckbox
-                                        style={{ marginTop: 12 }}
-                                        checked={specialEventOverrides["Defeat"]?.enableEnergyBasedSelection || false}
-                                        onCheckedChange={(checked) => updateSpecialEventOverride("Defeat", "enableEnergyBasedSelection", checked)}
-                                        label="Energy-aware swap"
-                                        description={energyAwareHint}
-                                    />
-                                </View>
+                                        <View style={styles.section}>
+                                            <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>Defeat</Text>
+                                            <CustomSelect
+                                                options={defeatOptions}
+                                                value={specialEventOverrides["Defeat"]?.selectedOption || "Option 1: Energy -25 and random stat gain"}
+                                                onValueChange={(value) => updateSpecialEventOverride("Defeat", "selectedOption", value)}
+                                                placeholder="Select Option"
+                                                width="100%"
+                                            />
+                                            <CustomCheckbox
+                                                style={{ marginTop: 12 }}
+                                                checked={specialEventOverrides["Defeat"]?.enableEnergyBasedSelection || false}
+                                                onCheckedChange={(checked) => updateSpecialEventOverride("Defeat", "enableEnergyBasedSelection", checked)}
+                                                label="Energy-aware swap"
+                                                description={energyAwareHint}
+                                            />
+                                        </View>
+                                    </View>
+                                )}
                             </View>
-                        </Section>
 
-                        <Section label="Training Failure Events" collapsible defaultOpen={false}>
-                            <View style={{ padding: SPACING.md }}>
-                                <View style={styles.categoryHeader}>
-                                    <Text style={styles.categoryHeaderTitle}>Training Failure Events</Text>
+                            {/* Training Failure Events */}
+                            <View>
+                                <Pressable
+                                    onPress={() => toggleSpecialOverride("trainingFailure")}
+                                    android_ripple={{ color: colors.ripple, foreground: true }}
+                                    style={styles.subSectionRow}
+                                    accessibilityRole="button"
+                                    accessibilityState={{ expanded: specialOverrideOpen.trainingFailure }}
+                                >
+                                    <Text style={styles.subSectionRowTitle}>Training Failure Events</Text>
                                     <Text style={styles.countPill}>{trainingFailureCount}</Text>
-                                </View>
+                                    {specialOverrideOpen.trainingFailure ? <ChevronUp size={16} color={colors.textMuted} /> : <ChevronDown size={16} color={colors.textMuted} />}
+                                </Pressable>
+                                {specialOverrideOpen.trainingFailure && (
+                                    <View style={styles.subSectionBody}>
+                                        <View style={styles.section}>
+                                            <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>Get Well Soon!</Text>
+                                            <CustomSelect
+                                                options={getWellSoonOptions}
+                                                value={specialEventOverrides["Get Well Soon!"]?.selectedOption || "Option 2: (Random) Mood -1 / Stat decrease / Get Practice Poor negative status"}
+                                                onValueChange={(value) => updateSpecialEventOverride("Get Well Soon!", "selectedOption", value)}
+                                                placeholder="Select Option"
+                                                width="100%"
+                                            />
+                                        </View>
 
-                                <View style={styles.section}>
-                                    <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>Get Well Soon!</Text>
-                                    <CustomSelect
-                                        options={getWellSoonOptions}
-                                        value={specialEventOverrides["Get Well Soon!"]?.selectedOption || "Option 2: (Random) Mood -1 / Stat decrease / Get Practice Poor negative status"}
-                                        onValueChange={(value) => updateSpecialEventOverride("Get Well Soon!", "selectedOption", value)}
-                                        placeholder="Select Option"
-                                        width="100%"
-                                    />
-                                </View>
-
-                                <View style={styles.section}>
-                                    <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>Don't Overdo It!</Text>
-                                    <CustomSelect
-                                        options={dontOverdoItOptions}
-                                        value={specialEventOverrides["Don't Overdo It!"]?.selectedOption || "Option 2: (Random) Mood -3 / Stat decrease / Get Practice Poor negative status"}
-                                        onValueChange={(value) => updateSpecialEventOverride("Don't Overdo It!", "selectedOption", value)}
-                                        placeholder="Select Option"
-                                        width="100%"
-                                    />
-                                </View>
+                                        <View style={styles.section}>
+                                            <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>Don't Overdo It!</Text>
+                                            <CustomSelect
+                                                options={dontOverdoItOptions}
+                                                value={specialEventOverrides["Don't Overdo It!"]?.selectedOption || "Option 2: (Random) Mood -3 / Stat decrease / Get Practice Poor negative status"}
+                                                onValueChange={(value) => updateSpecialEventOverride("Don't Overdo It!", "selectedOption", value)}
+                                                placeholder="Select Option"
+                                                width="100%"
+                                            />
+                                        </View>
+                                    </View>
+                                )}
                             </View>
-                        </Section>
 
-                        <Section label="Miscellaneous Events" collapsible defaultOpen={false}>
-                            <View style={{ padding: SPACING.md }}>
-                                <View style={styles.categoryHeader}>
-                                    <Text style={styles.categoryHeaderTitle}>Miscellaneous Events</Text>
+                            {/* Miscellaneous Events */}
+                            <View>
+                                <Pressable
+                                    onPress={() => toggleSpecialOverride("misc")}
+                                    android_ripple={{ color: colors.ripple, foreground: true }}
+                                    style={styles.subSectionRow}
+                                    accessibilityRole="button"
+                                    accessibilityState={{ expanded: specialOverrideOpen.misc }}
+                                >
+                                    <Text style={styles.subSectionRowTitle}>Miscellaneous Events</Text>
                                     <Text style={styles.countPill}>{miscCount}</Text>
-                                </View>
+                                    {specialOverrideOpen.misc ? <ChevronUp size={16} color={colors.textMuted} /> : <ChevronDown size={16} color={colors.textMuted} />}
+                                </Pressable>
+                                {specialOverrideOpen.misc && (
+                                    <View style={styles.subSectionBody}>
+                                        <View style={styles.section}>
+                                            <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>Extra Training</Text>
+                                            <CustomSelect
+                                                options={extraTrainingOptions}
+                                                value={specialEventOverrides["Extra Training"]?.selectedOption || "Option 2: Energy +5"}
+                                                onValueChange={(value) => updateSpecialEventOverride("Extra Training", "selectedOption", value)}
+                                                placeholder="Select Option"
+                                                width="100%"
+                                            />
+                                        </View>
 
-                                <View style={styles.section}>
-                                    <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>Extra Training</Text>
-                                    <CustomSelect
-                                        options={extraTrainingOptions}
-                                        value={specialEventOverrides["Extra Training"]?.selectedOption || "Option 2: Energy +5"}
-                                        onValueChange={(value) => updateSpecialEventOverride("Extra Training", "selectedOption", value)}
-                                        placeholder="Select Option"
-                                        width="100%"
-                                    />
-                                </View>
+                                        <View style={styles.section}>
+                                            <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 8 }}>Acupuncture (Just an Acupuncturist, No Worries! ☆)</Text>
+                                            <Text style={{ fontSize: 14, color: colors.textMuted, marginBottom: 12 }}>
+                                                Select your preferred option for the Acupuncture event. Note: Options 1-4 have a 70%/55%/30%/15% chance to fail, while Option 5 will always succeed.
+                                            </Text>
+                                            <CustomSelect
+                                                options={acupunctureOptions}
+                                                value={specialEventOverrides["Acupuncture (Just an Acupuncturist, No Worries! ☆)"]?.selectedOption || "Option 5: Energy +10"}
+                                                onValueChange={(value) => updateSpecialEventOverride("Acupuncture (Just an Acupuncturist, No Worries! ☆)", "selectedOption", value)}
+                                                placeholder="Select Option"
+                                                width="100%"
+                                            />
+                                        </View>
 
-                                <View style={styles.section}>
-                                    <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 8 }}>Acupuncture (Just an Acupuncturist, No Worries! ☆)</Text>
-                                    <Text style={{ fontSize: 14, color: colors.textMuted, marginBottom: 12 }}>
-                                        Select your preferred option for the Acupuncture event. Note: Options 1-4 have a 70%/55%/30%/15% chance to fail, while Option 5 will always succeed.
-                                    </Text>
-                                    <CustomSelect
-                                        options={acupunctureOptions}
-                                        value={specialEventOverrides["Acupuncture (Just an Acupuncturist, No Worries! ☆)"]?.selectedOption || "Option 5: Energy +10"}
-                                        onValueChange={(value) => updateSpecialEventOverride("Acupuncture (Just an Acupuncturist, No Worries! ☆)", "selectedOption", value)}
-                                        placeholder="Select Option"
-                                        width="100%"
-                                    />
-                                </View>
+                                        <View style={styles.section}>
+                                            <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>Etsuko's Exhaustive Coverage</Text>
+                                            <CustomSelect
+                                                options={etsukoOptions}
+                                                value={specialEventOverrides["Etsuko's Exhaustive Coverage"]?.selectedOption || "Option 2: Energy Down / Gain skill points"}
+                                                onValueChange={(value) => updateSpecialEventOverride("Etsuko's Exhaustive Coverage", "selectedOption", value)}
+                                                placeholder="Select Option"
+                                                width="100%"
+                                            />
+                                        </View>
 
-                                <View style={styles.section}>
-                                    <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 12 }}>Etsuko's Exhaustive Coverage</Text>
-                                    <CustomSelect
-                                        options={etsukoOptions}
-                                        value={specialEventOverrides["Etsuko's Exhaustive Coverage"]?.selectedOption || "Option 2: Energy Down / Gain skill points"}
-                                        onValueChange={(value) => updateSpecialEventOverride("Etsuko's Exhaustive Coverage", "selectedOption", value)}
-                                        placeholder="Select Option"
-                                        width="100%"
-                                    />
-                                </View>
-
-                                <View style={styles.section}>
-                                    <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 8 }}>A Team at Last (Unity Cup)</Text>
-                                    <Text style={{ fontSize: 14, color: colors.textMuted, marginBottom: 12 }}>
-                                        Select your preferred team name for Unity Cup (must be available via your chosen trainee or supports). The available options depend on which characters you have
-                                        bonded with. "Default" will always select the first option.
-                                    </Text>
-                                    <CustomSelect
-                                        options={aTeamAtLastOptions}
-                                        value={specialEventOverrides["A Team at Last"]?.selectedOption || "Default"}
-                                        onValueChange={(value) => updateSpecialEventOverride("A Team at Last", "selectedOption", value)}
-                                        placeholder="Select Team Name for Unity Cup"
-                                        width="100%"
-                                    />
-                                </View>
+                                        <View style={styles.section}>
+                                            <Text style={{ fontSize: 16, fontWeight: "600", color: colors.text, marginBottom: 8 }}>A Team at Last (Unity Cup)</Text>
+                                            <Text style={{ fontSize: 14, color: colors.textMuted, marginBottom: 12 }}>
+                                                Select your preferred team name for Unity Cup (must be available via your chosen trainee or supports). The available options depend on which characters you have
+                                                bonded with. "Default" will always select the first option.
+                                            </Text>
+                                            <CustomSelect
+                                                options={aTeamAtLastOptions}
+                                                value={specialEventOverrides["A Team at Last"]?.selectedOption || "Default"}
+                                                onValueChange={(value) => updateSpecialEventOverride("A Team at Last", "selectedOption", value)}
+                                                placeholder="Select Team Name for Unity Cup"
+                                                width="100%"
+                                            />
+                                        </View>
+                                    </View>
+                                )}
                             </View>
                         </Section>
                     </View>
