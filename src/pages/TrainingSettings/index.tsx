@@ -331,7 +331,7 @@ const TrainingSettings = () => {
                     alignItems: "center",
                     gap: SPACING.sm,
                     paddingHorizontal: SPACING.md,
-                    paddingVertical: SPACING.md,
+                    paddingVertical: SPACING.lg,
                 },
                 selectorMain: { flex: 1, gap: SPACING.sm },
                 selectorTitle: { ...TYPE.body, color: colors.text, fontWeight: "600" as const },
