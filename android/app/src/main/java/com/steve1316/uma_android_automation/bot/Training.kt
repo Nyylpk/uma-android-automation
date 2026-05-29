@@ -277,6 +277,36 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
     /**
      * All tunable numeric constants used by the training scoring math. Each property keeps its current hardcoded value as the default so existing
      * behavior is preserved when no overrides are supplied. Future user settings will wire into the same struct.
+     *
+     * @property ratioBreakpoints Completion-percent boundaries that bucket each stat into a ratio-multiplier tier. Must have exactly one fewer entry than `ratioValues`. Defaults to [30, 50, 70, 90, 110, 130].
+     * @property ratioValues Multipliers paired with `ratioBreakpoints`, indexed by which bucket the stat's completion percent falls into. Index 0 applies when completion < `ratioBreakpoints[0]`; the final entry applies when completion is above every breakpoint.
+     * @property priorityCoefficient Linear coefficient applied to `(activePriority.size - priorityIndex)` to produce the per-stat priority multiplier. Higher values make the user's stat priority list a bigger factor in scoring.
+     * @property levelBoostRank1Factor Weight applied to the level-boost multiplier when the stat is the top-priority entry. Combines with the OCR-detected training level to amplify the score for high-level priority trainings.
+     * @property levelBoostRank2Factor As `levelBoostRank1Factor`, applied to the second-priority stat.
+     * @property levelBoostRank3Factor As `levelBoostRank1Factor`, applied to the third-priority stat. Ranks 4+ receive no boost.
+     * @property mainStatThresholds Per-stat gain threshold at which a training's main-stat score receives the `mainStatBonusMagnitude` multiplier. Acts as a "this looks like an undetected rainbow" heuristic.
+     * @property mainStatBonusMagnitude Multiplier applied to a stat's score when the training's main-stat gain meets the per-stat threshold in `mainStatThresholds`.
+     * @property relationshipOrangeValue Base score contribution for an orange (early-stage) relationship bar.
+     * @property relationshipGreenValue Base score contribution for a green (mid-stage) relationship bar.
+     * @property relationshipBlueValue Base score contribution for a blue (near-rainbow) relationship bar.
+     * @property relationshipDiminishingFactor Coefficient on the bar's fill level for diminishing-returns scaling. Higher values penalize fuller bars more aggressively.
+     * @property relationshipEarlyGameBonus Multiplier applied to relationship score during Junior Year or pre-debut. Encourages relationship building when there is still time to benefit.
+     * @property relationshipTrainerSupportBonus Multiplier applied to bars belonging to the Trainer support card to slightly prefer Trainer over other supports.
+     * @property skillHintPerHintScore Score added per detected skill hint icon on a training.
+     * @property skillHintOverrideScore Floor added to the misc score when the user has enabled "prioritize skill hints" and any hints are present, ensuring skill-hint trainings outscore everything else.
+     * @property statWeightWithBars Weight applied to stat-efficiency score when the training has at least one relationship bar.
+     * @property statWeightWithoutBars Weight applied to stat-efficiency score when the training has no relationship bars (Trainer-only training).
+     * @property relationshipWeightWithBars Weight applied to relationship score in the raw-score composition when bars are present.
+     * @property miscWeight Weight applied to misc score in the raw-score composition.
+     * @property juniorEarlyGameFlatBonus Flat score bonus added during Junior Year to encourage gauge filling early.
+     * @property relationshipScale Multiplier applied to the aggregate relationship score before adding it to the Unity Cup raw score. Tuned to be a significant bonus without exceeding the rainbow burst threshold.
+     * @property rainbowMultiplierEnabled Multiplier applied to total score in Year 2+ when at least one rainbow is detected and the user has enabled the rainbow training bonus.
+     * @property rainbowMultiplierDisabled Multiplier applied when rainbows are detected but the user has disabled the rainbow training bonus. Kept below `rainbowMultiplierEnabled`.
+     * @property rainbowPerInstanceBase Base value for the per-rainbow bonus score, geometrically decayed by `rainbowPerInstanceDecay`.
+     * @property rainbowPerInstanceDecay Geometric decay factor for the per-rainbow bonus. Lower values mean each additional rainbow contributes less.
+     * @property anticipatoryMinFillPercent Minimum fill percent for a green or blue bar to count toward the anticipatory near-max-friendship multiplier.
+     * @property anticipatoryCoefficient Coefficient on the sum of qualifying bar fill ratios when computing the anticipatory multiplier.
+     * @property anticipatoryCap Maximum extra fraction the anticipatory multiplier can add (cap above 1.0). Kept below the real rainbow multiplier so anticipation never outranks a detected rainbow.
      */
     data class TrainingScoringConstants(
         val ratioBreakpoints: List<Double> = listOf(30.0, 50.0, 70.0, 90.0, 110.0, 130.0),
@@ -315,7 +345,13 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
         val anticipatoryMinFillPercent: Double = 10.0,
         val anticipatoryCoefficient: Double = 0.2,
         val anticipatoryCap: Double = 0.6,
-    )
+    ) {
+        init {
+            require(ratioValues.size == ratioBreakpoints.size + 1) {
+                "ratioValues must have exactly one more entry than ratioBreakpoints (got ${ratioValues.size} values vs ${ratioBreakpoints.size} breakpoints)"
+            }
+        }
+    }
 
     /**
      * Store configuration for training scoring calculations.
@@ -558,6 +594,7 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
 
             var score = 0.0
             for (bar in barResults) {
+                // Note: these bar weights are intentionally independent of `TrainingScoringConstants.relationship*Value` because `scoreFriendshipTraining` is a separate scorer that does not take a `TrainingConfig`.
                 val contribution =
                     when (bar.dominantColor) {
                         "orange" -> 0.0
@@ -729,6 +766,7 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
                     val completionPercent = (currentStat.toDouble() / targetStat) * 100.0
 
                     // Ratio-based multiplier: Stats furthest behind get the highest priority.
+                    // Buckets (default constants): <30% -> 5.0 (severely behind), <50% -> 4.0, <70% -> 3.0, <90% -> 2.0, <110% -> 1.0 (at target), <130% -> 0.5, else -> 0.3 (well over).
                     val ratioMultiplier = run {
                         val breakpoints = config.scoring.ratioBreakpoints
                         val values = config.scoring.ratioValues
@@ -768,12 +806,13 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
                     // Main stat gain bonus: If training improves its MAIN stat by a large amount, it is most likely an undetected rainbow.
                     val isMainStat = training.name == statName
                     val mainStatBonus =
-                        if (isMainStat && statGain >= (config.scoring.mainStatThresholds[statName] ?: 30)) {
+                        if (isMainStat && statGain >= (config.scoring.mainStatThresholds[statName] ?: error("No mainStatThresholds entry for $statName"))) {
                             config.scoring.mainStatBonusMagnitude
                         } else {
                             1.0
                         }
 
+                    // Note: the spark magnitude and 600 threshold are intentionally NOT extracted because the `focusOnSparkStatTarget` feature is scheduled for removal.
                     // Spark bonus: Prioritize training sessions for 3* sparks for selected stats below 600 if the setting is enabled.
                     val isSparkStat = statName in config.focusOnSparkStatTarget
                     val canTriggerSpark = currentStat < 600
@@ -785,7 +824,7 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
                             1.0
                         }
 
-                    val bonusNote = if (isMainStat && statGain >= (config.scoring.mainStatThresholds[statName] ?: 30)) " [HIGH MAIN STAT]" else ""
+                    val bonusNote = if (isMainStat && statGain >= (config.scoring.mainStatThresholds[statName] ?: error("No mainStatThresholds entry for $statName"))) " [HIGH MAIN STAT]" else ""
                     val sparkNote = if (isSparkStat && canTriggerSpark) " [SPARK PRIORITY]" else ""
                     val levelNote = if (levelMultiplier > 1.0) " [LVL ${training.trainingLevel} BOOST ${String.format("%.2f", levelMultiplier)}x]" else ""
                     val completionString: String = String.format("%.2f", completionPercent)
