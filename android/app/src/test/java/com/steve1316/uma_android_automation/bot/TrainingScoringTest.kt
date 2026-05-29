@@ -1365,7 +1365,7 @@ class TrainingScoringTest {
         assertEquals(0.25, c.levelBoostRank2Factor)
         assertEquals(0.10, c.levelBoostRank3Factor)
         assertEquals(2.0, c.mainStatBonusMagnitude)
-        assertEquals(30, c.mainStatThresholds[StatName.WIT])
+        assertEquals(15, c.mainStatThresholds[StatName.WIT])
         assertEquals(30, c.mainStatThresholds[StatName.SPEED])
         assertEquals(0.0, c.relationshipOrangeValue)
         assertEquals(1.0, c.relationshipGreenValue)
@@ -1388,5 +1388,76 @@ class TrainingScoringTest {
         assertEquals(10.0, c.anticipatoryMinFillPercent)
         assertEquals(0.2, c.anticipatoryCoefficient)
         assertEquals(0.6, c.anticipatoryCap)
+    }
+
+    @Test
+    @DisplayName("mainStatBonus fires for Wit at gain 15")
+    fun testWitMainStatBonusFiresAtFifteen() {
+        val witTraining =
+            createDefaultTrainingOption(
+                name = StatName.WIT,
+                statGains = statGainsToMap(intArrayOf(0, 0, 0, 0, 15)),
+            )
+        val below =
+            createDefaultTrainingOption(
+                name = StatName.WIT,
+                statGains = statGainsToMap(intArrayOf(0, 0, 0, 0, 14)),
+            )
+
+        val config = createDefaultConfig(trainingOptions = listOf(witTraining, below))
+
+        val withBonus = calculateStatEfficiencyScore(config, witTraining)
+        val withoutBonus = calculateStatEfficiencyScore(config, below)
+
+        // +15 Wit gets 2x bonus; +14 doesn't. Score ratio should be close to (15 * 2) / 14.
+        assertTrue(withBonus > withoutBonus * 2.0, "Wit at +15 should receive the 2x main-stat bonus while +14 does not")
+    }
+
+    @Test
+    @DisplayName("mainStatBonus still requires gain 30 for Speed/Stamina/Power/Guts")
+    fun testNonWitMainStatBonusRequiresThirty() {
+        val speedTraining =
+            createDefaultTrainingOption(
+                name = StatName.SPEED,
+                statGains = statGainsToMap(intArrayOf(29, 0, 0, 0, 0)),
+            )
+        val speedThreshold =
+            createDefaultTrainingOption(
+                name = StatName.SPEED,
+                statGains = statGainsToMap(intArrayOf(30, 0, 0, 0, 0)),
+            )
+
+        val config = createDefaultConfig(trainingOptions = listOf(speedTraining, speedThreshold))
+
+        val below = calculateStatEfficiencyScore(config, speedTraining)
+        val at = calculateStatEfficiencyScore(config, speedThreshold)
+
+        // +30 gets the 2x bonus; +29 doesn't. Expect a big jump despite only +1 gain.
+        assertTrue(at > below * 1.9, "Speed at +30 should receive the 2x main-stat bonus while +29 does not")
+    }
+
+    @Test
+    @DisplayName("mainStatBonus threshold is per-stat, configurable through TrainingScoringConstants")
+    fun testMainStatBonusThresholdIsConfigurable() {
+        val gutsTraining =
+            createDefaultTrainingOption(
+                name = StatName.GUTS,
+                statGains = statGainsToMap(intArrayOf(0, 0, 0, 22, 0)),
+            )
+
+        val configDefault = createDefaultConfig(trainingOptions = listOf(gutsTraining))
+        val customConstants =
+            TrainingScoringConstants(
+                mainStatThresholds = mapOf(StatName.GUTS to 20) +
+                    StatName.entries.filter { it != StatName.GUTS }.associateWith { 30 },
+            )
+        val configCustom =
+            configDefault.copy(scoring = customConstants)
+
+        val defaultScore = calculateStatEfficiencyScore(configDefault, gutsTraining)
+        val customScore = calculateStatEfficiencyScore(configCustom, gutsTraining)
+
+        // Default: Guts +22 below 30, no bonus. Custom: threshold 20, bonus fires.
+        assertTrue(customScore > defaultScore * 1.9, "Lowering the Guts threshold should activate the 2x main-stat bonus")
     }
 }

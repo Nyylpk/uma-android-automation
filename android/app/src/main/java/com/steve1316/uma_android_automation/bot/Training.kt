@@ -321,7 +321,7 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
                 StatName.STAMINA to 30,
                 StatName.POWER to 30,
                 StatName.GUTS to 30,
-                StatName.WIT to 30,
+                StatName.WIT to 15,
             ),
         val mainStatBonusMagnitude: Double = 2.0,
         val relationshipOrangeValue: Double = 0.0,
@@ -2354,7 +2354,9 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
                     if (completion < 70.0) {
                         keyFactors.add("${selected.name} stat is at ${String.format("%.0f", completion)}% of target (behind, higher priority).")
                     }
-                    if (mainGain >= 30 && selected.numRainbow == 0) {
+                    val mainThreshold = config.scoring.mainStatThresholds[selected.name]
+                        ?: error("No mainStatThresholds entry for ${selected.name}")
+                    if (mainGain >= mainThreshold && selected.numRainbow == 0) {
                         keyFactors.add("High main stat gain of $mainGain (potential undetected rainbow bonus).")
                     }
 
