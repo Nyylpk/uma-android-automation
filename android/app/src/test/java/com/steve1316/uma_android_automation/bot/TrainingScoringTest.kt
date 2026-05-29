@@ -11,6 +11,7 @@ import com.steve1316.uma_android_automation.bot.Training.Companion.scoreFriendsh
 import com.steve1316.uma_android_automation.bot.Training.Companion.scoreUnityCupTraining
 import com.steve1316.uma_android_automation.bot.Training.TrainingConfig
 import com.steve1316.uma_android_automation.bot.Training.TrainingOption
+import com.steve1316.uma_android_automation.bot.Training.TrainingScoringConstants
 import com.steve1316.uma_android_automation.types.DateMonth
 import com.steve1316.uma_android_automation.types.DatePhase
 import com.steve1316.uma_android_automation.types.DateYear
@@ -1351,5 +1352,41 @@ class TrainingScoringTest {
     fun testDisableStatTargetsDefault() {
         val config = createDefaultConfig()
         assertEquals(false, config.disableStatTargets, "TrainingConfig.disableStatTargets should default to false")
+    }
+
+    @Test
+    @DisplayName("TrainingScoringConstants defaults match original hardcoded values")
+    fun testScoringConstantsDefaults() {
+        val c = TrainingScoringConstants()
+        assertEquals(listOf(30.0, 50.0, 70.0, 90.0, 110.0, 130.0), c.ratioBreakpoints)
+        assertEquals(listOf(5.0, 4.0, 3.0, 2.0, 1.0, 0.5, 0.3), c.ratioValues)
+        assertEquals(0.1, c.priorityCoefficient)
+        assertEquals(0.75, c.levelBoostRank1Factor)
+        assertEquals(0.25, c.levelBoostRank2Factor)
+        assertEquals(0.10, c.levelBoostRank3Factor)
+        assertEquals(2.0, c.mainStatBonusMagnitude)
+        assertEquals(30, c.mainStatThresholds[StatName.WIT])
+        assertEquals(30, c.mainStatThresholds[StatName.SPEED])
+        assertEquals(0.0, c.relationshipOrangeValue)
+        assertEquals(1.0, c.relationshipGreenValue)
+        assertEquals(2.5, c.relationshipBlueValue)
+        assertEquals(0.5, c.relationshipDiminishingFactor)
+        assertEquals(1.3, c.relationshipEarlyGameBonus)
+        assertEquals(1.15, c.relationshipTrainerSupportBonus)
+        assertEquals(10.0, c.skillHintPerHintScore)
+        assertEquals(10000.0, c.skillHintOverrideScore)
+        assertEquals(0.6, c.statWeightWithBars)
+        assertEquals(0.7, c.statWeightWithoutBars)
+        assertEquals(0.1, c.relationshipWeightWithBars)
+        assertEquals(0.3, c.miscWeight)
+        assertEquals(200.0, c.juniorEarlyGameFlatBonus)
+        assertEquals(1.5, c.relationshipScale)
+        assertEquals(2.0, c.rainbowMultiplierEnabled)
+        assertEquals(1.5, c.rainbowMultiplierDisabled)
+        assertEquals(200.0, c.rainbowPerInstanceBase)
+        assertEquals(0.5, c.rainbowPerInstanceDecay)
+        assertEquals(10.0, c.anticipatoryMinFillPercent)
+        assertEquals(0.2, c.anticipatoryCoefficient)
+        assertEquals(0.6, c.anticipatoryCap)
     }
 }
