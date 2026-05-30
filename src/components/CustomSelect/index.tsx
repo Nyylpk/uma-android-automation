@@ -6,7 +6,7 @@ import { copyToClipboard } from "../../lib/utils"
 import { pressSurfaceInner, pressSurfaceOuter } from "../../lib/pressSurface"
 import { TYPE } from "../../lib/type"
 import { SPACING } from "../../lib/spacing"
-import { Option, Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue, NativeSelectScrollView } from "../ui/select"
+import { Option, Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue, NativeSelectScrollView } from "../ui/select"
 import SearchableItem from "../SearchableItem"
 
 interface SelectOption {
@@ -157,10 +157,13 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                             <SelectGroup>
                                 {groupLabel && <SelectLabel>{groupLabel}</SelectLabel>}
                                 {options &&
-                                    options.map((option) => (
-                                        <SelectItem key={option.value} label={option.label} value={option.value} disabled={option.disabled}>
-                                            {option.label}
-                                        </SelectItem>
+                                    options.map((option, index) => (
+                                        <React.Fragment key={option.value}>
+                                            {index > 0 && <SelectSeparator />}
+                                            <SelectItem label={option.label} value={option.value} disabled={option.disabled}>
+                                                {option.label}
+                                            </SelectItem>
+                                        </React.Fragment>
                                     ))}
                             </SelectGroup>
                         </NativeSelectScrollView>
