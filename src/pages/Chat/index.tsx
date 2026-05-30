@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react"
-import { View, ScrollView, StyleSheet, TextInput, Text, NativeModules, Pressable } from "react-native"
+import { View, ScrollView, StyleSheet, TextInput, Text, NativeModules, Pressable, KeyboardAvoidingView } from "react-native"
 import { useFocusEffect } from "@react-navigation/native"
 import { type MarkedStyles } from "react-native-marked"
 import type { UserTheme } from "react-native-marked/dist/typescript/theme/types"
@@ -15,7 +15,10 @@ import * as verifier from "../../lib/chat/groundingVerifier"
 import { loadChatTuning, trimToCap, type ChatTuning } from "../../lib/chat/chatSettings"
 import { ACTIVE_MODEL_SETTING, resolveActiveModel } from "../../lib/chat/activeModel"
 import { isEmbedderReady } from "../../lib/chat/embedder"
+import { Section } from "../../components/ui/section"
+import InfoCallout from "../../components/ui/info-callout"
 import { TYPE } from "../../lib/type"
+import { SPACING } from "../../lib/spacing"
 
 const HISTORY_CATEGORY = "chat"
 const HISTORY_KEY = "questionHistory"
@@ -269,7 +272,6 @@ const Chat = () => {
         () =>
             StyleSheet.create({
                 root: { flex: 1, margin: 10, backgroundColor: colors.bg },
-                inputColumn: { gap: 8, marginVertical: 10 },
                 input: {
                     borderWidth: 1,
                     borderColor: colors.borderHair,
@@ -291,7 +293,6 @@ const Chat = () => {
                     backgroundColor: colors.surface,
                 },
                 modeLabel: { ...TYPE.caption, fontSize: 11, color: colors.textMuted, marginTop: 8, fontStyle: "italic" },
-                sectionLabel: { ...TYPE.monoLabel, color: colors.textMuted, marginTop: 10, marginBottom: 6 },
                 resultCard: {
                     borderWidth: 1,
                     borderColor: colors.borderHair,
@@ -311,23 +312,12 @@ const Chat = () => {
                     padding: 8,
                 },
                 emptyText: { ...TYPE.body, color: colors.textMuted, textAlign: "center", marginTop: 20, paddingHorizontal: 20 },
-                disclaimer: { ...TYPE.caption, fontSize: 11, color: colors.textMuted, marginTop: 4, marginBottom: 8, fontStyle: "italic" },
                 modelStatus: { ...TYPE.caption, color: colors.text },
-                modelStatusInactive: { ...TYPE.caption, color: colors.textMuted, fontStyle: "italic", marginBottom: 8 },
-                modelSelectorRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8, marginBottom: 8 },
-                embedderCta: {
-                    borderWidth: 1,
-                    borderColor: colors.borderHair,
-                    borderRadius: 8,
-                    padding: 12,
-                    marginVertical: 12,
-                    backgroundColor: colors.surface,
-                },
+                modelStatusInactive: { ...TYPE.caption, color: colors.textMuted, fontStyle: "italic" },
+                modelSelectorRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8 },
                 embedderCtaTitle: { ...TYPE.body, color: colors.text, fontWeight: "600" as const, marginBottom: 4 },
                 embedderCtaBody: { ...TYPE.body, color: colors.textMuted, fontSize: 13, lineHeight: 18 },
                 modelSelectorControl: { flex: 1 },
-                historyHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 12, marginBottom: 6 },
-                historyTitle: { ...TYPE.monoLabel, color: colors.textMuted },
                 historyClear: { ...TYPE.caption, fontSize: 11, color: colors.textMuted, textDecorationLine: "underline" },
                 historyChip: {
                     borderWidth: 1,
@@ -411,76 +401,93 @@ const Chat = () => {
     )
 
     return (
-        <View style={styles.root}>
+        <KeyboardAvoidingView style={styles.root} behavior="padding">
             <PageHeader title="Ask the Docs" />
-            <Text style={styles.disclaimer}>Answers are grounded in README.md, HOW_IT_WORKS.md, in-app option descriptions, and the app's Kotlin source code. Fully offline.</Text>
-            {activeModelFilename === undefined ? null : downloadedModels.length > 0 ? (
-                <View style={styles.modelSelectorRow}>
-                    <Text style={styles.modelStatus}>Model:</Text>
-                    <View style={styles.modelSelectorControl}>
-                        <CustomSelect
-                            options={downloadedModels.map((f) => ({ value: f, label: f }))}
-                            value={activeModelFilename ?? undefined}
-                            onValueChange={handleSelectModel}
-                            placeholder="Select a model"
-                            groupLabel="Downloaded models"
-                        />
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, paddingBottom: SPACING.xl }}>
+            <InfoCallout title="About" collapsible={false} style={{ marginVertical: SPACING.md }}>
+                <Text style={[TYPE.caption, { color: colors.textMuted }]}>
+                    Ask the Docs answers questions about this app by searching its bundled documentation and source code, all on-device.{"\n\n"}Responses are grounded in README.md, HOW_IT_WORKS.md, in-app option descriptions, and the app's Kotlin source code. Fully offline.
+                </Text>
+            </InfoCallout>
+            {activeModelFilename !== undefined && (
+                <Section label="Model">
+                    <View style={{ padding: SPACING.md }}>
+                        {downloadedModels.length > 0 ? (
+                            <View style={styles.modelSelectorRow}>
+                                <Text style={styles.modelStatus}>Model:</Text>
+                                <View style={styles.modelSelectorControl}>
+                                    <CustomSelect
+                                        options={downloadedModels.map((f) => ({ value: f, label: f }))}
+                                        value={activeModelFilename ?? undefined}
+                                        onValueChange={handleSelectModel}
+                                        placeholder="Select a model"
+                                        groupLabel="Downloaded models"
+                                    />
+                                </View>
+                            </View>
+                        ) : (
+                            <Text style={styles.modelStatusInactive}>No model · retrieve-only mode</Text>
+                        )}
                     </View>
-                </View>
-            ) : (
-                <Text style={styles.modelStatusInactive}>No model · retrieve-only mode</Text>
+                </Section>
             )}
 
             {embedderReady === false ? (
-                <View style={styles.embedderCta}>
-                    <Text style={styles.embedderCtaTitle}>Engine not installed</Text>
-                    <Text style={styles.embedderCtaBody}>
-                        Ask the Docs needs to download a small embedder (~22 MB) before it can search the documentation. Open LLM Settings to start the download.
-                    </Text>
-                </View>
+                <Section label="Setup">
+                    <View style={{ padding: SPACING.md }}>
+                        <Text style={styles.embedderCtaTitle}>Engine not installed</Text>
+                        <Text style={styles.embedderCtaBody}>
+                            Ask the Docs needs to download a small embedder (~22 MB) before it can search the documentation. Open LLM Settings to start the download.
+                        </Text>
+                    </View>
+                </Section>
             ) : (
-                <View style={styles.inputColumn}>
-                    <TextInput
-                        style={styles.input}
-                        value={query}
-                        onChangeText={setQuery}
-                        placeholder="Ask a question about the app..."
-                        placeholderTextColor={colors.textMuted}
-                        multiline
-                        textAlignVertical="top"
-                        editable={!isSearching}
-                    />
-                    {isSearching ? (
-                        <CustomButton variant="destructive" onPress={handleStop} disabled={isAborting}>
-                            {isAborting ? "Stopping..." : "Stop"}
-                        </CustomButton>
-                    ) : (
-                        <CustomButton variant="primary" onPress={handleSearch} disabled={query.trim().length === 0 || !tuning}>
-                            Ask
-                        </CustomButton>
-                    )}
-                </View>
+                <Section label="Ask a Question">
+                    <View style={{ padding: SPACING.md, gap: SPACING.sm }}>
+                        <TextInput
+                            style={styles.input}
+                            value={query}
+                            onChangeText={setQuery}
+                            placeholder="Ask a question about the app..."
+                            placeholderTextColor={colors.textMuted}
+                            multiline
+                            textAlignVertical="top"
+                            editable={!isSearching}
+                        />
+                        {isSearching ? (
+                            <CustomButton variant="destructive" onPress={handleStop} disabled={isAborting} isLoading={true}>
+                                {isAborting ? "Stopping..." : "Stop"}
+                            </CustomButton>
+                        ) : (
+                            <CustomButton variant="primary" onPress={handleSearch} disabled={query.trim().length === 0 || !tuning}>
+                                Ask
+                            </CustomButton>
+                        )}
+                    </View>
+                </Section>
             )}
 
-            <ScrollView keyboardShouldPersistTaps="handled">
                 {history.length > 0 && (
-                    <>
-                        <View style={styles.historyHeaderRow}>
-                            <Text style={styles.historyTitle}>Recent questions</Text>
-                            <Pressable onPress={handleClearHistory} android_ripple={{ color: colors.ripple, foreground: true }}>
+                    <Section
+                        label="Recent Questions"
+                        labelRight={
+                            <Pressable onPress={handleClearHistory} android_ripple={{ color: colors.ripple, foreground: true }} hitSlop={8}>
                                 <Text style={styles.historyClear}>Clear</Text>
                             </Pressable>
+                        }
+                    >
+                        <View style={{ padding: SPACING.md }}>
+                            <View style={styles.historyChipRow}>
+                                {history.map((q) => (
+                                    <Pressable key={q} style={styles.historyChip} onPress={() => handleHistoryTap(q)} android_ripple={{ color: colors.ripple, foreground: true }}>
+                                        <Text style={styles.historyChipText} numberOfLines={1}>
+                                            {q}
+                                        </Text>
+                                    </Pressable>
+                                ))}
+                            </View>
                         </View>
-                        <View style={styles.historyChipRow}>
-                            {history.map((q) => (
-                                <Pressable key={q} style={styles.historyChip} onPress={() => handleHistoryTap(q)} android_ripple={{ color: colors.ripple, foreground: true }}>
-                                    <Text style={styles.historyChipText} numberOfLines={1}>
-                                        {q}
-                                    </Text>
-                                </Pressable>
-                            ))}
-                        </View>
-                    </>
+                    </Section>
                 )}
 
                 {isSearching && partialAnswer.length > 0 && (
@@ -510,27 +517,32 @@ const Chat = () => {
                                 </Text>
                             )}
                         </View>
-                        {result.citations.length > 0 && <Text style={styles.sectionLabel}>Sources</Text>}
-                        {result.citations.map((r) => (
-                            <View key={r.id} style={styles.resultCard}>
-                                <Text style={styles.resultHeading}>{citationHeading(r)}</Text>
-                                <Text style={styles.resultMeta}>{`${r.source} · similarity ${(r.score * 100).toFixed(0)}%`}</Text>
-                                {r.kind === "code" ? (
-                                    <View style={styles.codeBlock}>
-                                        <KotlinCode text={r.text} palette={isDark ? DARK_PALETTE : LIGHT_PALETTE} style={{ fontSize: 10, lineHeight: 18 }} />
-                                    </View>
-                                ) : (
-                                    <MarkdownView theme={markedTheme} mdStyles={citationMarkedStyles}>
-                                        {r.text}
-                                    </MarkdownView>
-                                )}
-                            </View>
-                        ))}
+                        {result.citations.length > 0 && (
+                            <Section label="Sources">
+                                <View style={{ padding: SPACING.md, gap: SPACING.sm }}>
+                                    {result.citations.map((r) => (
+                                        <View key={r.id} style={styles.resultCard}>
+                                            <Text style={styles.resultHeading}>{citationHeading(r)}</Text>
+                                            <Text style={styles.resultMeta}>{`${r.source} · similarity ${(r.score * 100).toFixed(0)}%`}</Text>
+                                            {r.kind === "code" ? (
+                                                <View style={styles.codeBlock}>
+                                                    <KotlinCode text={r.text} palette={isDark ? DARK_PALETTE : LIGHT_PALETTE} style={{ fontSize: 10, lineHeight: 18 }} />
+                                                </View>
+                                            ) : (
+                                                <MarkdownView theme={markedTheme} mdStyles={citationMarkedStyles}>
+                                                    {r.text}
+                                                </MarkdownView>
+                                            )}
+                                        </View>
+                                    ))}
+                                </View>
+                            </Section>
+                        )}
                     </>
                 )}
                 {searched && !isSearching && !result && <Text style={styles.emptyText}>No matching documentation found.</Text>}
             </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
     )
 }
 
