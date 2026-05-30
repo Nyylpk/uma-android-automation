@@ -71,6 +71,22 @@ const Settings = () => {
                 managementTileLabel: { ...TYPE.body, color: colors.text, fontWeight: "600" as const, textAlign: "center" as const },
                 managementTileCaption: { ...TYPE.caption, color: colors.textMuted, fontSize: 10, textAlign: "center" as const },
                 managementTileDanger: { borderColor: colors.destructive },
+                dateEntry: {
+                    borderWidth: 1,
+                    borderColor: colors.borderHair,
+                    borderRadius: RADII.md,
+                    backgroundColor: colors.surfaceRaised,
+                    padding: SPACING.md,
+                    gap: SPACING.sm,
+                },
+                dateEntryHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+                dateEntryTitleRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, flex: 1 },
+                dateBadge: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.brand, alignItems: "center" as const, justifyContent: "center" as const },
+                dateBadgeText: { ...TYPE.monoLabel, color: colors.onBrand, fontSize: 11 },
+                dateTitle: { ...TYPE.body, color: colors.text, fontWeight: "600" as const, flexShrink: 1 },
+                dateRemoveButton: { padding: SPACING.xs, borderRadius: 999, overflow: "hidden" as const },
+                dateSelectorRow: { flexDirection: "row" },
+                dateSelectorCell: { flex: 1 },
             }),
         [colors]
     )
@@ -227,6 +243,77 @@ const Settings = () => {
                         />
                     </SearchableItem>
 
+                    {general.enableStopAtDate && (
+                        <SearchableItem id="settings-target-dates" title="Target Dates" description="Stops the bot on the specified dates." parentId="settings-stop-at-date">
+                            <View style={{ padding: SPACING.md, gap: SPACING.sm }}>
+                                {general.stopAtDates.map((dateStr, index) => {
+                                    const parts = dateStr.split(" ")
+                                    const year = parts[0] || "Senior"
+                                    const month = parts[1] || "January"
+                                    const phase = parts[2] || "Early"
+                                    return (
+                                        <View key={index} style={styles.dateEntry}>
+                                            <View style={styles.dateEntryHeader}>
+                                                <View style={styles.dateEntryTitleRow}>
+                                                    <View style={styles.dateBadge}>
+                                                        <Text style={styles.dateBadgeText}>{index + 1}</Text>
+                                                    </View>
+                                                    <Text style={styles.dateTitle} numberOfLines={1}>
+                                                        {year} {month} {phase}
+                                                    </Text>
+                                                </View>
+                                                {general.stopAtDates.length > 1 && (
+                                                    <Pressable
+                                                        onPress={() => handleRemoveStopAtDate(index)}
+                                                        style={styles.dateRemoveButton}
+                                                        hitSlop={8}
+                                                        android_ripple={{ color: colors.ripple, foreground: true }}
+                                                        accessibilityRole="button"
+                                                        accessibilityLabel={`Remove Date ${index + 1}`}
+                                                    >
+                                                        <Ionicons name="trash-outline" size={18} color={colors.destructive} />
+                                                    </Pressable>
+                                                )}
+                                            </View>
+                                            <View style={styles.dateSelectorRow}>
+                                                <View style={styles.dateSelectorCell}>
+                                                    <CustomSelect
+                                                        placeholder="Year"
+                                                        width="100%"
+                                                        options={years}
+                                                        value={year}
+                                                        onValueChange={(value) => handleStopAtDateChange(index, "year", value || "Senior")}
+                                                    />
+                                                </View>
+                                                <View style={styles.dateSelectorCell}>
+                                                    <CustomSelect
+                                                        placeholder="Month"
+                                                        width="100%"
+                                                        options={months}
+                                                        value={month}
+                                                        onValueChange={(value) => handleStopAtDateChange(index, "month", value || "January")}
+                                                    />
+                                                </View>
+                                                <View style={styles.dateSelectorCell}>
+                                                    <CustomSelect
+                                                        placeholder="Phase"
+                                                        width="100%"
+                                                        options={phases}
+                                                        value={phase}
+                                                        onValueChange={(value) => handleStopAtDateChange(index, "phase", value || "Early")}
+                                                    />
+                                                </View>
+                                            </View>
+                                        </View>
+                                    )
+                                })}
+                                <CustomButton onPress={handleAddStopAtDate} variant="outline" icon={<Ionicons name="add" size={18} color={colors.text} />} style={{ marginVertical: SPACING.sm }}>
+                                    Add Date
+                                </CustomButton>
+                            </View>
+                        </SearchableItem>
+                    )}
+
                     <SearchableItem id="settings-crane-game-attempt" title="Enable Crane Game Attempt" description="Attempt to complete the crane game instead of stopping">
                         <Row
                             title="Enable Crane Game Attempt"
@@ -242,60 +329,7 @@ const Settings = () => {
                             right={<Switch checked={misc.enableSettingsDisplay} onCheckedChange={(checked) => updateMisc({ enableSettingsDisplay: checked })} />}
                         />
                     </SearchableItem>
-
                 </Section>
-
-                {general.enableStopAtDate && (
-                    <SearchableItem id="settings-stop-at-date" title="Target Dates" description="Stops the bot on the specified dates." style={{ marginLeft: 16, marginTop: 8 }}>
-                        {general.stopAtDates.map((dateStr, index) => {
-                            const parts = dateStr.split(" ")
-                            return (
-                                <View key={index} style={{ marginBottom: index < general.stopAtDates.length - 1 ? 12 : 0 }}>
-                                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                                        <Text style={{ fontSize: 14, fontWeight: "600", color: colors.text }}>Date {index + 1}</Text>
-                                        {general.stopAtDates.length > 1 && (
-                                            <CustomButton onPress={() => handleRemoveStopAtDate(index)} variant="destructive" size="sm" fontSize={12}>
-                                                Remove
-                                            </CustomButton>
-                                        )}
-                                    </View>
-                                    <View style={{ flexDirection: "row", gap: 8, justifyContent: "space-between" }}>
-                                        <View style={{ flex: 1 }}>
-                                            <CustomSelect
-                                                placeholder="Year"
-                                                width="100%"
-                                                options={years}
-                                                value={parts[0]}
-                                                onValueChange={(value) => handleStopAtDateChange(index, "year", value || "Senior")}
-                                            />
-                                        </View>
-                                        <View style={{ flex: 1 }}>
-                                            <CustomSelect
-                                                placeholder="Month"
-                                                width="100%"
-                                                options={months}
-                                                value={parts[1]}
-                                                onValueChange={(value) => handleStopAtDateChange(index, "month", value || "January")}
-                                            />
-                                        </View>
-                                        <View style={{ flex: 1 }}>
-                                            <CustomSelect
-                                                placeholder="Phase"
-                                                width="100%"
-                                                options={phases}
-                                                value={parts[2]}
-                                                onValueChange={(value) => handleStopAtDateChange(index, "phase", value || "Early")}
-                                            />
-                                        </View>
-                                    </View>
-                                </View>
-                            )
-                        })}
-                        <CustomButton onPress={handleAddStopAtDate} variant="default" fontSize={14} style={{ marginTop: 12, alignSelf: "flex-start" }}>
-                            + Add Date
-                        </CustomButton>
-                    </SearchableItem>
-                )}
 
                 <Section label="WAIT DELAY">
                     <View style={{ padding: SPACING.md }}>
@@ -341,7 +375,6 @@ const Settings = () => {
                         />
                     </View>
                 </Section>
-
 
                 <Section label="DATA MANAGEMENT">
                     <SearchableItem id="settings-management-title" title="Settings Management" description="Import and export settings from JSON file or access the app's data directory.">
