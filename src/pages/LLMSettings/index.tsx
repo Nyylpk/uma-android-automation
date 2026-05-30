@@ -525,7 +525,7 @@ const LLMSettings = () => {
                                     const freeRamGb = deviceCaps.availRamBytes / 1024 / 1024 / 1024
                                     const fillRatio = totalRamGb > 0 ? Math.min(1, Math.max(0, freeRamGb / totalRamGb)) : 0
                                     return (
-                                        <View style={{ paddingHorizontal: SPACING.md, paddingVertical: SPACING.md }}>
+                                        <View style={{ padding: SPACING.md }}>
                                             <RamGauge
                                                 label="Free RAM headroom"
                                                 verdict={`${freeRamGb.toFixed(1)} GB`}
@@ -546,18 +546,20 @@ const LLMSettings = () => {
                                     )
                                 })()
                             ) : (
-                                <View style={{ paddingHorizontal: SPACING.md, paddingVertical: SPACING.md }}>
+                                <View style={{ padding: SPACING.md }}>
                                     <Text style={styles.hint}>Reading device capabilities...</Text>
                                 </View>
                             )}
                         </Section>
 
-                        <Section label="Ask the Docs Engine">
-                            <View style={{ paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md }}>
-                                <Text style={[styles.hint, { marginBottom: SPACING.md }]}>
+                        <Section label="Ask the Docs Engine" firstDivider={false}>
+                            <View style={{ padding: SPACING.md }}>
+                                <Text style={styles.hint}>
                                     The MiniLM embedder (~<Text style={[TYPE.monoValue, { color: colors.text }]}>{Math.round(EMBEDDER_SIZE_BYTES / 1024 / 1024)}</Text> MB) powers documentation
                                     retrieval. It is downloaded on demand to keep the APK small; both retrieve-only search and the chat model require it. Hosted on Hugging Face; no token required.
                                 </Text>
+                            </View>
+                            <View style={{ padding: SPACING.md, paddingTop: 0 }}>
                                 {!embedderReady ? (
                                     <GlassSurface>
                                         <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.md, padding: SPACING.md }}>
@@ -580,24 +582,26 @@ const LLMSettings = () => {
                                         </View>
                                     </GlassSurface>
                                 ) : (
-                                    <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm }}>
+                                    <View style={{ flexDirection: "row", alignItems: "center" }}>
                                         <Text style={{ ...TYPE.caption, color: colors.textMuted, flex: 1 }}>Engine installed · {Math.round(EMBEDDER_SIZE_BYTES / 1024 / 1024)} MB</Text>
                                         <CustomButton variant="destructive" onPress={handleDeleteEmbedder}>
                                             Delete
                                         </CustomButton>
                                     </View>
                                 )}
-                                {embedderProgressText && <Text style={[styles.hint, { paddingHorizontal: SPACING.md, marginTop: SPACING.xs }]}>{embedderProgressText}</Text>}
+                                {embedderProgressText && <Text style={[styles.hint, { marginTop: SPACING.xs }]}>{embedderProgressText}</Text>}
                             </View>
                         </Section>
 
-                        <Section label="Chat Model (llama.cpp / GGUF)">
-                            <View style={{ paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md }}>
+                        <Section label="Chat Model (llama.cpp / GGUF)" firstDivider={false} lastDivider={false}>
+                            <View style={{ padding: SPACING.md, paddingBottom: 0 }}>
                                 {downloadedModels.length === 0 && <Text style={styles.statusRow}>Not downloaded</Text>}
                                 <Text style={styles.hint}>
                                     The Qwen presets are public, no token required. Bigger models summarize better but need more RAM and download time. Pick Custom to paste a different .gguf URL; the
                                     token field will appear if the source is gated.
                                 </Text>
+                            </View>
+                            <View style={{ padding: SPACING.md }}>
                                 {MODEL_PRESETS.map((p) => {
                                     const selected = p.url === CUSTOM_URL_SENTINEL ? isCustomSelected : modelUrl === p.url
                                     const onPress =
@@ -620,46 +624,48 @@ const LLMSettings = () => {
                                         </Pressable>
                                     )
                                 })}
-                                {isCustomSelected && (
-                                    <>
-                                        <View style={styles.linkRowContainer}>
-                                            {modelUrl !== CUSTOM_URL_SENTINEL && modelUrl.trim().length > 0 && (
-                                                <Pressable
-                                                    style={styles.linkRow}
-                                                    onPress={() => Linking.openURL(modelUrl.replace(/\/resolve\/main\/.*$/, ""))}
-                                                    android_ripple={{ color: colors.ripple, foreground: true }}
-                                                >
-                                                    <Text style={styles.link}>Open selected model page</Text>
-                                                </Pressable>
-                                            )}
+                            </View>
+                            {isCustomSelected && (
+                                <View style={{ padding: SPACING.md }}>
+                                    <View style={styles.linkRowContainer}>
+                                        {modelUrl !== CUSTOM_URL_SENTINEL && modelUrl.trim().length > 0 && (
                                             <Pressable
                                                 style={styles.linkRow}
-                                                onPress={() => Linking.openURL("https://huggingface.co/settings/tokens")}
+                                                onPress={() => Linking.openURL(modelUrl.replace(/\/resolve\/main\/.*$/, ""))}
                                                 android_ripple={{ color: colors.ripple, foreground: true }}
                                             >
-                                                <Text style={styles.link}>Create token</Text>
+                                                <Text style={styles.link}>Open selected model page</Text>
                                             </Pressable>
-                                        </View>
-                                        <TextInput
-                                            style={styles.tokenInput}
-                                            value={hfToken}
-                                            onChangeText={persistHfToken}
-                                            placeholder="hf_... (only for gated repos)"
-                                            placeholderTextColor={colors.textMuted}
-                                            autoCapitalize="none"
-                                            autoCorrect={false}
-                                        />
-                                        <TextInput
-                                            style={styles.tokenInput}
-                                            value={modelUrl === CUSTOM_URL_SENTINEL ? "" : modelUrl}
-                                            onChangeText={persistModelUrl}
-                                            placeholder="Model .gguf URL"
-                                            placeholderTextColor={colors.textMuted}
-                                            autoCapitalize="none"
-                                            autoCorrect={false}
-                                        />
-                                    </>
-                                )}
+                                        )}
+                                        <Pressable
+                                            style={styles.linkRow}
+                                            onPress={() => Linking.openURL("https://huggingface.co/settings/tokens")}
+                                            android_ripple={{ color: colors.ripple, foreground: true }}
+                                        >
+                                            <Text style={styles.link}>Create token</Text>
+                                        </Pressable>
+                                    </View>
+                                    <TextInput
+                                        style={styles.tokenInput}
+                                        value={hfToken}
+                                        onChangeText={persistHfToken}
+                                        placeholder="hf_... (only for gated repos)"
+                                        placeholderTextColor={colors.textMuted}
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                    />
+                                    <TextInput
+                                        style={styles.tokenInput}
+                                        value={modelUrl === CUSTOM_URL_SENTINEL ? "" : modelUrl}
+                                        onChangeText={persistModelUrl}
+                                        placeholder="Model .gguf URL"
+                                        placeholderTextColor={colors.textMuted}
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                    />
+                                </View>
+                            )}
+                            <View style={{ padding: SPACING.md, paddingTop: 0 }}>
                                 {progressText && <Text style={styles.hint}>{progressText}</Text>}
                                 <View style={styles.buttonRow}>
                                     {!isDownloading && (
@@ -678,7 +684,7 @@ const LLMSettings = () => {
 
                         {downloadedModels.length > 0 && (
                             <Section label="Downloaded Models">
-                                <View style={{ paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md }}>
+                                <View style={{ padding: SPACING.md }}>
                                     <Text style={styles.hint}>Tap Use to switch the active chat model. Keep multiple variants so you can A/B without re-downloading.</Text>
                                     {downloadedModels.map((m) => {
                                         const isActive = (activeModelFilename ?? downloadedModels[0]?.filename) === m.filename
@@ -745,8 +751,10 @@ const LLMSettings = () => {
                                 </Pressable>
                             }
                         >
-                            <View style={{ paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md }}>
+                            <View style={{ padding: SPACING.md }}>
                                 <Text style={styles.hint}>Bigger numbers = longer, slower answers. Changes apply to the next chat call. Engine context window changes reload the loaded model.</Text>
+                            </View>
+                            <View style={{ padding: SPACING.md }}>
                                 <CustomSlider
                                     label="Max output tokens"
                                     description="Upper bound on answer length. 768 default is enough for 4-10 sentences; 1024+ slows generation noticeably on phones."
@@ -757,6 +765,8 @@ const LLMSettings = () => {
                                     max={2048}
                                     step={64}
                                 />
+                            </View>
+                            <View style={{ padding: SPACING.md }}>
                                 <CustomSlider
                                     label="Context per citation (chars)"
                                     description="How much of each retrieved doc section is fed to the LLM. Larger gives the model more to summarize from but eats KV cache budget."
@@ -767,6 +777,8 @@ const LLMSettings = () => {
                                     max={4000}
                                     step={100}
                                 />
+                            </View>
+                            <View style={{ padding: SPACING.md }}>
                                 <CustomSlider
                                     label="Model context window (tokens)"
                                     description="Engine KV cache size. 4096 default fits 4 expanded citations + scaffold + 768 output. Raising this requires the model to support it."
@@ -777,11 +789,15 @@ const LLMSettings = () => {
                                     max={16384}
                                     step={1024}
                                 />
-                                {ekvCapWarning && <Text style={styles.warningHint}>{ekvCapWarning}</Text>}
                             </View>
+                            {ekvCapWarning && (
+                                <View style={{ padding: SPACING.md, paddingTop: 0 }}>
+                                    <Text style={styles.warningHint}>{ekvCapWarning}</Text>
+                                </View>
+                            )}
                         </Section>
 
-                        <WarningContainer>
+                        <WarningContainer style={{ marginTop: 0, marginBottom: SPACING.md }}>
                             Generated answers may occasionally be wrong or phrased imprecisely. A verifier guards against clear hallucinations by falling back to showing the source text verbatim, but
                             always cross-check important answers against the full docs.
                         </WarningContainer>

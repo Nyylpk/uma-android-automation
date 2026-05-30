@@ -147,8 +147,8 @@ const PlanTab: React.FC<PlanTabProps> = ({ planKey }) => {
         () =>
             StyleSheet.create({
                 unknown: { ...TYPE.body, color: colors.textMuted, padding: SPACING.md },
-                hostPad: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm },
-                sectionDescription: { ...TYPE.caption, color: colors.textMuted, lineHeight: 18, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm },
+                hostPad: { padding: SPACING.md },
+                sectionDescription: { ...TYPE.caption, color: colors.textMuted, lineHeight: 18 },
                 subsectionTitle: { ...TYPE.body, color: colors.text, fontWeight: "600", marginBottom: SPACING.xs },
                 strategyDescription: { ...TYPE.caption, color: colors.textMuted, lineHeight: 18, marginTop: SPACING.xs },
                 listHeader: { flexDirection: "row", alignItems: "center", marginBottom: SPACING.sm, gap: SPACING.sm },
@@ -265,9 +265,9 @@ const PlanTab: React.FC<PlanTabProps> = ({ planKey }) => {
     return (
         <View>
             <Section label="Skill Type Filters">
-                <View>
+                <View style={{ padding: SPACING.md }}>
                     <Text style={styles.sectionDescription}>
-                        Exclude entire skill color categories from purchase. Useful when "Best Skills First" or "Optimize Rank" is picking unwanted skills like debuffs or stat boosts.
+                        Exclude entire skill color categories from purchase. Useful when the Spending Strategies "Best Skills First" or "Optimize Rank" is picking unwanted skills like debuffs or stat boosts.
                     </Text>
                 </View>
                 <SearchableItem id={`exclude-green-skills-${config.name}`} title="Skip All Green Skills" description="Exclude green stat-trigger skills">

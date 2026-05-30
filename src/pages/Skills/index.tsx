@@ -76,10 +76,10 @@ const Skills: React.FC<{ route?: { params?: SkillsRouteParams } }> = ({ route })
                 scroll: { padding: SPACING.md, gap: SPACING.sm },
                 intro: { ...TYPE.body, color: colors.text, marginBottom: SPACING.sm },
                 tabHost: { padding: SPACING.xs },
-                planHead: { padding: SPACING.md, gap: 2 },
+                planHead: { padding: SPACING.md, paddingBottom: 0, gap: 2 },
                 planTitle: { ...TYPE.h2, color: colors.text },
-                planDescription: { ...TYPE.caption, color: colors.textMuted },
-                sliderHost: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm },
+                planDescription: { ...TYPE.caption, color: colors.textMuted, paddingBottom: SPACING.md },
+                sliderHost: { padding: SPACING.md },
             }),
         [colors]
     )
@@ -96,7 +96,7 @@ const Skills: React.FC<{ route?: { params?: SkillsRouteParams } }> = ({ route })
                     </Text>
                 </InfoCallout>
                 <StyleSection />
-                <Section label="Skill Plans">
+                <Section label="Skill Plans" firstDivider={false}>
                     <View style={styles.tabHost}>
                         <TabStrip items={TAB_ITEMS} activeKey={activeKey} onChange={onChange} />
                     </View>

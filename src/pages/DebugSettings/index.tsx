@@ -5,7 +5,6 @@ import * as Clipboard from "expo-clipboard"
 import { useTheme } from "../../context/ThemeContext"
 import { DebugContext, BotMetaContext } from "../../context/BotStateContext"
 import CustomSlider from "../../components/CustomSlider"
-import CustomCheckbox from "../../components/CustomCheckbox"
 import { Separator } from "../../components/ui/separator"
 import PageHeader from "../../components/PageHeader"
 import WarningContainer from "../../components/WarningContainer"
@@ -14,7 +13,6 @@ import SearchableItem from "../../components/SearchableItem"
 import { SearchPageProvider } from "../../context/SearchPageContext"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
 import { Section } from "../../components/ui/section"
-import { GlassSurface } from "../../components/ui/glass-surface"
 import { Row } from "../../components/ui/row"
 import { Switch } from "../../components/ui/switch"
 import { SectionLabel } from "../../components/ui/section-label"
@@ -255,7 +253,7 @@ const DebugSettings = () => {
         () =>
             StyleSheet.create({
                 root: { flex: 1, flexDirection: "column", justifyContent: "center", margin: 10, backgroundColor: colors.bg },
-                hostPad: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm },
+                hostPad: { padding: SPACING.md },
                 sectionDescription: { ...TYPE.caption, color: colors.textMuted, lineHeight: 18, paddingHorizontal: SPACING.md, paddingTop: SPACING.sm },
                 chip: {
                     ...TYPE.monoLabel,
@@ -472,75 +470,79 @@ const DebugSettings = () => {
                         {/* //////////////////////////////////////////////////////////////////////////////////////////////////
                             //////////////////////////////////////////////////////////////////////////////////////////////////
                             Remote Log Viewer */}
-                        <View style={{ marginTop: SPACING.lg }}>
-                            <SectionLabel label="Remote Log Viewer" />
-                            <GlassSurface>
-                                <View style={{ padding: SPACING.md, gap: SPACING.sm }}>
-                                    <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.sm }}>
-                                        <View style={{ width: 28, height: 28, borderRadius: 999, backgroundColor: colors.brandSubtle, alignItems: "center", justifyContent: "center" }}>
-                                            <Ionicons name="cellular-outline" size={14} color={colors.brand} />
-                                        </View>
-                                        <View style={{ flex: 1 }}>
-                                            <Text style={{ ...TYPE.body, color: colors.text, fontWeight: "600" as const }}>Remote Log Viewer</Text>
-                                            <Text style={{ ...TYPE.caption, color: colors.textMuted }}>Same WiFi required</Text>
-                                        </View>
-                                        <SearchableItem
-                                            id="settings-enable-remote-log-viewer"
-                                            title="Enable Remote Log Viewer"
-                                            description="Starts an HTTP server on this device when the bot runs. Open the URL shown below in a browser on your computer to view logs in real-time."
-                                        >
-                                            <Switch checked={debug.enableRemoteLogViewer} onCheckedChange={(checked) => updateDebug({ enableRemoteLogViewer: checked })} />
-                                        </SearchableItem>
+                        <Section label="Remote Log Viewer">
+                            <View style={{ padding: SPACING.md, gap: SPACING.sm }}>
+                                <Text style={[TYPE.caption, { color: colors.textMuted }]}>
+                                    Starts an HTTP server on this device when the bot runs. Open the URL shown below in a browser on your computer to view logs in real-time.
+                                </Text>
+                                <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.sm, paddingVertical: SPACING.md }}>
+                                    <View style={{ width: 28, height: 28, borderRadius: 999, backgroundColor: colors.brandSubtle, alignItems: "center", justifyContent: "center" }}>
+                                        <Ionicons name="cellular-outline" size={14} color={colors.brand} />
                                     </View>
-                                    {debug.enableRemoteLogViewer && (
-                                        <>
-                                            <Pressable
-                                                onPress={handleCopyRlvUrl}
-                                                android_ripple={{ color: colors.ripple, foreground: true }}
-                                                style={{ padding: SPACING.sm, backgroundColor: colors.surfaceRaised, borderRadius: RADII.md, flexDirection: "row", alignItems: "center", gap: SPACING.sm }}
-                                            >
-                                                <Text style={{ ...TYPE.monoLabel, color: colors.brand, flex: 1 }}>{rlvUrl}</Text>
-                                                <Ionicons name="copy-outline" size={14} color={colors.textMuted} />
-                                            </Pressable>
-                                            <Text style={{ ...TYPE.caption, color: colors.textMuted }}>Port {debug.remoteLogViewerPort} · Active</Text>
-                                            <CustomSlider
-                                                searchId="settings-remote-log-viewer-port"
-                                                searchCondition={debug.enableRemoteLogViewer}
-                                                parentId="settings-enable-remote-log-viewer"
-                                                value={debug.remoteLogViewerPort}
-                                                placeholder={defaultSettings.debug.remoteLogViewerPort}
-                                                onValueChange={(value) => updateDebug({ remoteLogViewerPort: value })}
-                                                onSlidingComplete={(value) => updateDebug({ remoteLogViewerPort: value })}
-                                                min={1024}
-                                                max={65535}
-                                                step={1}
-                                                showValue
-                                                showLabels
-                                                label="Server Port"
-                                                description="Port number for the log stream server. Change only if the default conflicts with another service."
-                                            />
-                                            {deviceIp === "10.0.2.15" && <Text style={{ ...TYPE.caption, color: colors.warningText }}>Emulator detected - direct connection to {deviceIp} will fail. Use ADB port forwarding instead.</Text>}
-                                        </>
-                                    )}
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={{ ...TYPE.body, color: colors.text, fontWeight: "600" as const }}>Remote Log Viewer</Text>
+                                        <Text style={{ ...TYPE.caption, color: colors.textMuted }}>Same WiFi required</Text>
+                                    </View>
+                                    <SearchableItem
+                                        id="settings-enable-remote-log-viewer"
+                                        title="Enable Remote Log Viewer"
+                                        description="Starts an HTTP server on this device when the bot runs. Open the URL shown below in a browser on your computer to view logs in real-time."
+                                    >
+                                        <Switch checked={debug.enableRemoteLogViewer} onCheckedChange={(checked) => updateDebug({ enableRemoteLogViewer: checked })} />
+                                    </SearchableItem>
                                 </View>
-                            </GlassSurface>
-                        </View>
-
-                        <Separator style={{ marginVertical: 16 }} />
+                                {debug.enableRemoteLogViewer && (
+                                    <>
+                                        <Pressable
+                                            onPress={handleCopyRlvUrl}
+                                            android_ripple={{ color: colors.ripple, foreground: true }}
+                                            style={{ padding: SPACING.sm, backgroundColor: colors.surfaceRaised, borderRadius: RADII.md, flexDirection: "row", alignItems: "center", gap: SPACING.sm }}
+                                        >
+                                            <Text style={{ ...TYPE.monoLabel, color: colors.brand, flex: 1 }}>{rlvUrl}</Text>
+                                            <Ionicons name="copy-outline" size={14} color={colors.textMuted} />
+                                        </Pressable>
+                                        <Text style={{ ...TYPE.caption, color: colors.textMuted }}>Port {debug.remoteLogViewerPort} · Active</Text>
+                                        <CustomSlider
+                                            searchId="settings-remote-log-viewer-port"
+                                            searchCondition={debug.enableRemoteLogViewer}
+                                            parentId="settings-enable-remote-log-viewer"
+                                            value={debug.remoteLogViewerPort}
+                                            placeholder={defaultSettings.debug.remoteLogViewerPort}
+                                            onValueChange={(value) => updateDebug({ remoteLogViewerPort: value })}
+                                            onSlidingComplete={(value) => updateDebug({ remoteLogViewerPort: value })}
+                                            min={1024}
+                                            max={65535}
+                                            step={1}
+                                            showValue
+                                            showLabels
+                                            label="Server Port"
+                                            description="Port number for the log stream server. Change only if the default conflicts with another service."
+                                        />
+                                        {deviceIp === "10.0.2.15" && <Text style={{ ...TYPE.caption, color: colors.warningText }}>Emulator detected - direct connection to {deviceIp} will fail. Use ADB port forwarding instead.</Text>}
+                                    </>
+                                )}
+                            </View>
+                        </Section>
 
                         {/* //////////////////////////////////////////////////////////////////////////////////////////////////
                             //////////////////////////////////////////////////////////////////////////////////////////////////
                             Screen Recording Settings */}
-                        <Section label="Screen Recording Settings">
-                            <View style={styles.hostPad}>
-                                <Text style={[TYPE.caption, { color: colors.textMuted, marginBottom: SPACING.md }]}>Configure the quality settings for screen recording.</Text>
-                                <CustomCheckbox
-                                    searchId="enable-screen-recording"
-                                    checked={debug.enableScreenRecording}
-                                    onCheckedChange={(checked) => updateDebug({ enableScreenRecording: checked })}
-                                    label="Enable Screen Recording"
+                        <Section label="Screen Recording Settings" firstDivider={false}>
+                            <View style={{ padding: SPACING.md, paddingBottom: 0 }}>
+                                <Text style={[TYPE.caption, { color: colors.textMuted }]}>Configure the quality settings for screen recording.</Text>
+                            </View>
+                            <SearchableItem
+                                id="enable-screen-recording"
+                                title="Enable Screen Recording"
+                                description="Records the screen while the bot is running. The mp4 file will be saved to the /recordings folder of the app's data directory. Note that performance and battery life may be impacted while recording."
+                            >
+                                <Row
+                                    title="Enable Screen Recording"
                                     description="Records the screen while the bot is running. The mp4 file will be saved to the /recordings folder of the app's data directory. Note that performance and battery life may be impacted while recording."
+                                    right={<Switch checked={debug.enableScreenRecording} onCheckedChange={(checked) => updateDebug({ enableScreenRecording: checked })} />}
                                 />
+                            </SearchableItem>
+                            <View style={{ padding: SPACING.md }}>
                                 <CustomSlider
                                     searchId="recording-bit-rate"
                                     searchCondition={debug.enableScreenRecording}
@@ -688,12 +690,12 @@ const DebugSettings = () => {
                         <View style={{ marginTop: SPACING.sm, marginBottom: SPACING.lg }}>
                             <SectionLabel label="Debug Tests" />
                             <View style={{ backgroundColor: colors.surface, borderRadius: RADII.lg, borderWidth: 1, borderColor: colors.borderHair, overflow: "hidden" }}>
-                                <View style={{ paddingHorizontal: SPACING.md, paddingTop: SPACING.md, paddingBottom: SPACING.sm }}>
+                                <View style={{ padding: SPACING.md, paddingBottom: 0 }}>
                                     <Text style={[TYPE.caption, { color: colors.textMuted, lineHeight: 18, marginBottom: SPACING.sm }]}>
-                                        Run diagnostic tests to verify template matching and OCR functionality. Only one test can be enabled at a time.
+                                        Run diagnostic tests to verify template matching and OCR functionality.
                                     </Text>
                                     <WarningContainer style={{ marginTop: 0 }}>
-                                        {"⚠️ Only one debug test can be enabled at a time. Enabling a test will automatically disable the others.\n\nHaving Debug Mode enabled will output more helpful logs."}
+                                        {"⚠️ Only one debug test can be enabled at a time. \n\nHaving Debug Mode enabled will output more helpful logs."}
                                     </WarningContainer>
                                 </View>
                                 {DEBUG_TESTS.map((test, idx) => (

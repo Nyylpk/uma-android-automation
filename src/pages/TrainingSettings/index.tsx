@@ -351,9 +351,9 @@ const TrainingSettings = () => {
                     paddingVertical: 2,
                 },
                 selectorChipText: { ...TYPE.caption, color: colors.brand, fontWeight: "600" as const },
-                sliderShell: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm },
+                sliderShell: { padding: SPACING.md },
                 metaText: { ...TYPE.caption, color: colors.textMuted, paddingHorizontal: SPACING.md, paddingTop: SPACING.xs, paddingBottom: SPACING.md },
-                groupHeader: { paddingHorizontal: SPACING.md, paddingTop: SPACING.md, paddingBottom: SPACING.xs },
+                groupHeader: { padding: SPACING.md, paddingBottom: 0 },
                 groupHeaderTitle: { ...TYPE.body, color: colors.text, fontWeight: "600" as const },
                 groupHeaderDescription: { ...TYPE.caption, color: colors.textMuted, marginTop: 2 },
                 distanceRow: {
@@ -861,7 +861,7 @@ const TrainingSettings = () => {
                                     {/* Per-distance stat targets stay nested inside the Distance section so the whole distance domain reads as one block. */}
                                     <View style={disableStatTargets ? { opacity: 0.5 } : undefined} pointerEvents={disableStatTargets ? "none" : "auto"}>
                                         <SearchableItem id="stat-targets-by-distance" title="Stat Targets by Distance" description="Set target values for each stat based on race distance.">
-                                            <View style={{ paddingHorizontal: SPACING.md, paddingTop: SPACING.md, paddingBottom: SPACING.xs }}>
+                                            <View style={{ padding: SPACING.md, paddingBottom: 0 }}>
                                                 <Text style={[TYPE.body, { color: colors.text, fontWeight: "600" as const }]}>Stat Targets by Distance</Text>
                                                 <Text style={[TYPE.caption, { color: colors.textMuted, marginTop: 2 }]}>Set target values for each stat based on race distance.</Text>
                                             </View>

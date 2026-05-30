@@ -13,7 +13,6 @@ import CustomButton from "../../components/CustomButton"
 import PageHeader from "../../components/PageHeader"
 import { Row } from "../../components/ui/row"
 import { Section } from "../../components/ui/section"
-import { SectionLabel } from "../../components/ui/section-label"
 import { Switch } from "../../components/ui/switch"
 import WarningContainer from "../../components/WarningContainer"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../../components/ui/alert-dialog"
@@ -55,7 +54,6 @@ const Settings = () => {
                 managementGrid: {
                     flexDirection: "row",
                     gap: SPACING.sm,
-                    marginTop: SPACING.sm,
                 },
                 managementTile: {
                     flex: 1,
@@ -70,8 +68,8 @@ const Settings = () => {
                     gap: 6,
                     overflow: "hidden",
                 },
-                managementTileLabel: { ...TYPE.body, color: colors.text, fontWeight: "600" as const },
-                managementTileCaption: { ...TYPE.caption, color: colors.textMuted, fontSize: 10 },
+                managementTileLabel: { ...TYPE.body, color: colors.text, fontWeight: "600" as const, textAlign: "center" as const },
+                managementTileCaption: { ...TYPE.caption, color: colors.textMuted, fontSize: 10, textAlign: "center" as const },
                 managementTileDanger: { borderColor: colors.destructive },
             }),
         [colors]
@@ -311,95 +309,109 @@ const Settings = () => {
                     </SearchableItem>
                 )}
 
-                <CustomSlider
-                    searchId="settings-wait-delay"
-                    value={general.waitDelay}
-                    placeholder={defaultSettings.general.waitDelay}
-                    onValueChange={(value) => {
-                        updateGeneral({ waitDelay: value })
-                    }}
-                    onSlidingComplete={(value) => {
-                        updateGeneral({ waitDelay: value })
-                    }}
-                    min={0.0}
-                    max={1.0}
-                    step={0.1}
-                    label="Wait Delay"
-                    labelUnit="s"
-                    showValue={true}
-                    showLabels={true}
-                    description="Sets the delay between actions and imaging operations. Lowering this will make the bot run much faster at the risk of the bot losing track of its location after loading/connecting screens."
-                />
-
-                <CustomSlider
-                    searchId="settings-dialog-wait-delay"
-                    value={general.dialogWaitDelay}
-                    placeholder={defaultSettings.general.dialogWaitDelay}
-                    onValueChange={(value) => {
-                        updateGeneral({ dialogWaitDelay: value })
-                    }}
-                    onSlidingComplete={(value) => {
-                        updateGeneral({ dialogWaitDelay: value })
-                    }}
-                    min={0.0}
-                    max={1.0}
-                    step={0.1}
-                    label="Dialog Wait Delay"
-                    labelUnit="s"
-                    showValue={true}
-                    showLabels={true}
-                    description="Sets the delay between clicking a button that opens dialog and actually handling the dialog. Lowering this will make the bot run faster at an increased risk of the bot incorrectly handling dialogs that pop up."
-                />
-
-                <CustomSlider
-                    searchId="settings-overlay-button-size"
-                    value={misc.overlayButtonSizeDP}
-                    placeholder={defaultSettings.misc.overlayButtonSizeDP}
-                    onValueChange={(value) => {
-                        updateMisc({ overlayButtonSizeDP: value })
-                    }}
-                    onSlidingComplete={(value) => {
-                        updateMisc({ overlayButtonSizeDP: value })
-                    }}
-                    min={30}
-                    max={60}
-                    step={5}
-                    label="Overlay Button Size"
-                    labelUnit=" dp"
-                    showValue={true}
-                    showLabels={true}
-                    description="Sets the size of the floating overlay button in density-independent pixels (dp). Higher values make the button easier to tap."
-                />
-
-                <View style={{ marginTop: SPACING.lg }}>
-                    <SectionLabel label="DATA MANAGEMENT" />
-                </View>
-                <SearchableItem id="settings-management-title" title="Settings Management" description="Import and export settings from JSON file or access the app's data directory.">
-                    <View style={styles.managementGrid}>
-                        <Pressable style={styles.managementTile} android_ripple={{ color: colors.ripple, foreground: true }} onPress={handleImportSettings}>
-                            <Ionicons name="download-outline" size={24} color={colors.brand} />
-                            <Text style={styles.managementTileLabel}>Import</Text>
-                            <Text style={styles.managementTileCaption}>Load from JSON</Text>
-                        </Pressable>
-                        <Pressable style={styles.managementTile} android_ripple={{ color: colors.ripple, foreground: true }} onPress={handleExportSettings}>
-                            <Ionicons name="share-outline" size={24} color={colors.brand} />
-                            <Text style={styles.managementTileLabel}>Export</Text>
-                            <Text style={styles.managementTileCaption}>Save to JSON</Text>
-                        </Pressable>
-                        <Pressable style={styles.managementTile} android_ripple={{ color: colors.ripple, foreground: true }} onPress={openDataDirectory}>
-                            <Ionicons name="folder-outline" size={24} color={colors.brand} />
-                            <Text style={styles.managementTileLabel}>Data</Text>
-                            <Text style={styles.managementTileCaption}>Open folder</Text>
-                        </Pressable>
-                        <Pressable style={[styles.managementTile, styles.managementTileDanger]} android_ripple={{ color: colors.ripple, foreground: true }} onPress={() => setShowResetDialog(true)}>
-                            <Ionicons name="refresh-outline" size={24} color={colors.destructive} />
-                            <Text style={[styles.managementTileLabel, { color: colors.destructive }]}>Reset</Text>
-                            <Text style={styles.managementTileCaption}>Restore defaults</Text>
-                        </Pressable>
+                <Section label="WAIT DELAY">
+                    <View style={{ padding: SPACING.md }}>
+                        <CustomSlider
+                            searchId="settings-wait-delay"
+                            value={general.waitDelay}
+                            placeholder={defaultSettings.general.waitDelay}
+                            onValueChange={(value) => {
+                                updateGeneral({ waitDelay: value })
+                            }}
+                            onSlidingComplete={(value) => {
+                                updateGeneral({ waitDelay: value })
+                            }}
+                            min={0.0}
+                            max={1.0}
+                            step={0.1}
+                            label="Wait Delay"
+                            labelUnit="s"
+                            showValue={true}
+                            showLabels={true}
+                            description="Sets the delay between actions and imaging operations. Lowering this will make the bot run much faster at the risk of the bot losing track of its location after loading/connecting screens."
+                        />
                     </View>
-                </SearchableItem>
+                    <View style={{ padding: SPACING.md }}>
+                        <CustomSlider
+                            searchId="settings-dialog-wait-delay"
+                            value={general.dialogWaitDelay}
+                            placeholder={defaultSettings.general.dialogWaitDelay}
+                            onValueChange={(value) => {
+                                updateGeneral({ dialogWaitDelay: value })
+                            }}
+                            onSlidingComplete={(value) => {
+                                updateGeneral({ dialogWaitDelay: value })
+                            }}
+                            min={0.0}
+                            max={1.0}
+                            step={0.1}
+                            label="Dialog Wait Delay"
+                            labelUnit="s"
+                            showValue={true}
+                            showLabels={true}
+                            description="Sets the delay between clicking a button that opens dialog and actually handling the dialog. Lowering this will make the bot run faster at an increased risk of the bot incorrectly handling dialogs that pop up."
+                        />
+                    </View>
+                </Section>
 
-                <WarningContainer style={{ marginTop: SPACING.md, marginBottom: 12 }}>
+                <Section label="OVERLAY BUTTON SIZE">
+                    <View style={{ padding: SPACING.md }}>
+                        <CustomSlider
+                            searchId="settings-overlay-button-size"
+                            value={misc.overlayButtonSizeDP}
+                            placeholder={defaultSettings.misc.overlayButtonSizeDP}
+                            onValueChange={(value) => {
+                                updateMisc({ overlayButtonSizeDP: value })
+                            }}
+                            onSlidingComplete={(value) => {
+                                updateMisc({ overlayButtonSizeDP: value })
+                            }}
+                            min={30}
+                            max={60}
+                            step={5}
+                            label="Overlay Button Size"
+                            labelUnit=" dp"
+                            showValue={true}
+                            showLabels={true}
+                            description="Sets the size of the floating overlay button in density-independent pixels (dp). Higher values make the button easier to tap."
+                        />
+                    </View>
+                </Section>
+                        
+                <Section label="DATA MANAGEMENT">
+                    <SearchableItem id="settings-management-title" title="Settings Management" description="Import and export settings from JSON file or access the app's data directory.">
+                        <View style={{ padding: SPACING.md }}>
+                            <View style={styles.managementGrid}>
+                            <Pressable style={styles.managementTile} android_ripple={{ color: colors.ripple, foreground: true }} onPress={handleImportSettings}>
+                                <Ionicons name="download-outline" size={24} color={colors.brand} />
+                                <Text style={styles.managementTileLabel}>Import</Text>
+                                <Text style={styles.managementTileCaption}>Load from JSON</Text>
+                            </Pressable>
+                            <Pressable style={styles.managementTile} android_ripple={{ color: colors.ripple, foreground: true }} onPress={handleExportSettings}>
+                                <Ionicons name="share-outline" size={24} color={colors.brand} />
+                                <Text style={styles.managementTileLabel}>Export</Text>
+                                <Text style={styles.managementTileCaption}>Save to JSON</Text>
+                            </Pressable>
+                            <Pressable style={styles.managementTile} android_ripple={{ color: colors.ripple, foreground: true }} onPress={openDataDirectory}>
+                                <Ionicons name="folder-outline" size={24} color={colors.brand} />
+                                <Text style={styles.managementTileLabel}>Data</Text>
+                                <Text style={styles.managementTileCaption}>Open folder</Text>
+                            </Pressable>
+                            <Pressable
+                                style={[styles.managementTile, styles.managementTileDanger]}
+                                android_ripple={{ color: colors.ripple, foreground: true }}
+                                onPress={() => setShowResetDialog(true)}
+                            >
+                                <Ionicons name="refresh-outline" size={24} color={colors.destructive} />
+                                <Text style={[styles.managementTileLabel, { color: colors.destructive }]}>Reset</Text>
+                                <Text style={styles.managementTileCaption}>Restore defaults</Text>
+                            </Pressable>
+                            </View>
+                        </View>
+                    </SearchableItem>
+                </Section>
+
+                <WarningContainer style={{ marginTop: 0, marginBottom: SPACING.md }}>
                     <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
                         <Text style={{ fontWeight: "bold", color: colors.warningText }}>⚠️ File Explorer Note:</Text>
                         <Text style={{ fontSize: 14, color: colors.warningText, lineHeight: 20 }}>

@@ -10,7 +10,7 @@ import SearchableItem from "../../components/SearchableItem"
 import WizardSteps, { WizardStep } from "../../components/WizardSteps"
 import { Row } from "../../components/ui/row"
 import { Switch } from "../../components/ui/switch"
-import { SectionLabel } from "../../components/ui/section-label"
+import { Section } from "../../components/ui/section"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
 import { NativeModules } from "react-native"
 import { TYPE } from "../../lib/type"
@@ -86,9 +86,6 @@ const DiscordSettings = () => {
                     justifyContent: "center",
                     margin: 10,
                     backgroundColor: colors.bg,
-                },
-                section: {
-                    marginBottom: SPACING.md,
                 },
                 textInput: {
                     borderWidth: 1,
@@ -208,30 +205,25 @@ const DiscordSettings = () => {
         <View style={styles.root}>
             <SearchPageProvider page="DiscordSettings" scrollViewRef={scrollViewRef}>
                 <PageHeader title="Discord Settings" />
-                <ScrollView
-                    ref={scrollViewRef}
-                    nestedScrollEnabled={true}
-                    showsVerticalScrollIndicator={false}
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ flexGrow: 1 }}
-                >
+                <ScrollView ref={scrollViewRef} nestedScrollEnabled={true} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
                     <View className="m-1">
-                        {/* Enable Discord Notifications */}
-                        <SearchableItem id="enableDiscordNotifications" title="Enable Discord Notifications" description="DM run results when the bot stops">
-                            <Row
-                                title="Discord Notifications"
-                                description="DM run results when the bot stops"
-                                right={<Switch checked={enableDiscordNotifications} onCheckedChange={(checked) => updateDiscordSetting("enableDiscordNotifications", checked)} />}
-                            />
-                        </SearchableItem>
+                        <Section label="Notifications">
+                            <SearchableItem id="enableDiscordNotifications" title="Enable Discord Notifications" description="DM run results when the bot stops">
+                                <Row
+                                    title="Discord Notifications"
+                                    description="DM run results when the bot stops"
+                                    right={<Switch checked={enableDiscordNotifications} onCheckedChange={(checked) => updateDiscordSetting("enableDiscordNotifications", checked)} />}
+                                />
+                            </SearchableItem>
+                        </Section>
 
-                        {/* Setup wizard */}
-                        <View style={styles.section}>
-                            <SectionLabel label="Setup" />
-                            <WizardSteps steps={steps} activeIndex={activeIndex} />
-                        </View>
+                        <Section label="Setup">
+                            <View style={{ padding: SPACING.md }}>
+                                <WizardSteps steps={steps} activeIndex={activeIndex} />
+                            </View>
+                        </Section>
 
-                        <WarningContainer>
+                        <WarningContainer style={{ marginTop: 0, marginBottom: SPACING.md }}>
                             <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
                                 <Text style={{ fontWeight: "bold", color: colors.warningText }}>⚠️ Security Note: </Text>
                                 <Text style={{ fontSize: 14, color: colors.warningText, lineHeight: 20 }}>

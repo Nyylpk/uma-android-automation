@@ -198,7 +198,7 @@ const RacingSettings = () => {
                                     right={<Switch checked={enableFarmingFans} onCheckedChange={(checked) => updateRacingSetting("enableFarmingFans", checked)} />}
                                 />
                             </SearchableItem>
-                            <View style={{ paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm }}>
+                            <View style={{ padding: SPACING.md }}>
                                 <CustomSlider
                                     searchId="days-to-run-extra-races"
                                     value={daysToRunExtraRaces}
@@ -332,7 +332,7 @@ const RacingSettings = () => {
                                 </>
                             ) : (
                                 <>
-                                    <View style={{ paddingHorizontal: SPACING.lg, paddingTop: SPACING.md, paddingBottom: SPACING.sm }}>
+                                    <View style={{ padding: SPACING.md, paddingBottom: 0 }}>
                                         <Text style={[TYPE.caption, { color: colors.textMuted }]}>
                                             Set a different race strategy for each track distance. Auto picks the best strategy. Default leaves the in-game strategy alone.
                                         </Text>
@@ -361,7 +361,7 @@ const RacingSettings = () => {
                                         </View>
                                     </View>
                                     <View>
-                                        <Text style={styles.perDistanceGroupLabel}>CLASSIC AND SENIOR YEAR</Text>
+                                        <Text style={[styles.perDistanceGroupLabel, { paddingTop: 0 }]}>CLASSIC AND SENIOR YEAR</Text>
                                         <View style={styles.perDistanceBody}>
                                             {(["Short", "Mile", "Medium", "Long"] as const).map((distance) => (
                                                 <View key={`original-${distance}`} style={styles.perDistanceItem}>
@@ -439,7 +439,7 @@ const RacingSettings = () => {
                                         description="If you renamed your agenda in-game, enter the custom title here. Leave blank to use the selected agenda name above."
                                         parentId="enable-user-in-game-race-agenda"
                                     >
-                                        <View style={{ paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md, gap: SPACING.xs }}>
+                                        <View style={{ padding: SPACING.md, gap: SPACING.xs }}>
                                             <Text style={[TYPE.body, { color: colors.text, fontWeight: "500" as const }]}>Custom Agenda Title (Optional)</Text>
                                             <Text style={[TYPE.caption, { color: colors.textMuted }]}>If you renamed your agenda in-game, enter the custom title here. Leave blank to use the selected agenda name above.</Text>
                                             <TextInput
