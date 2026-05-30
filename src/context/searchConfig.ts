@@ -127,12 +127,6 @@ const searchConfig: SearchOption[] = [
         parentId: "enable-riskier-training",
     },
     {
-        id: "focus-on-sparks",
-        title: "Focus on Sparks",
-        description: "Select which stats should receive priority to get to at least 600 to get the best chance to receive 3* sparks.",
-        page: "TrainingSettings",
-    },
-    {
         id: "enable-prioritize-skill-hints",
         title: "Prioritize Skill Hints",
         description: "When enabled, the bot will prioritize acquiring skill hints, bypassing stat prioritization and blacklist, while still being constrained by the failure chance thresholds.",
