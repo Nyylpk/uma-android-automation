@@ -55,8 +55,8 @@ function SelectTrigger({
             android_ripple={{ color: colors.ripple, foreground: true }}
             {...props}
         >
-            <>{children}</>
-            <Icon as={ChevronDown} aria-hidden={true} className="text-muted-foreground size-4" />
+            <View style={{ flex: 1, minWidth: 0 }}>{children}</View>
+            <Icon as={ChevronDown} aria-hidden={true} className="text-muted-foreground size-4 shrink-0" />
         </SelectPrimitive.Trigger>
     )
 }
