@@ -61,14 +61,13 @@ const ProfileCreationModal: React.FC<ProfileCreationModalProps> = ({ visible, on
                     borderWidth: 1,
                     borderColor: colors.borderHair,
                 },
-                label: { ...TYPE.monoLabel, color: colors.textMuted, marginBottom: SPACING.xs, marginTop: SPACING.sm },
+                label: { ...TYPE.monoLabel, color: colors.textMuted, marginBottom: SPACING.xs },
                 input: {
                     backgroundColor: colors.surfaceRaised,
                     borderWidth: 1,
                     borderColor: colors.borderHair,
                     borderRadius: RADII.md,
                     paddingHorizontal: SPACING.md,
-                    paddingVertical: SPACING.sm,
                     color: colors.text,
                     fontSize: 14,
                     marginBottom: SPACING.md,
@@ -229,18 +228,27 @@ const ProfileCreationModal: React.FC<ProfileCreationModalProps> = ({ visible, on
     )
 
     return (
-        <SheetModal visible={visible} onRequestClose={handleClose} header={header} footer={footer}>
-            <Text style={styles.label}>NAME</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="Profile name"
-                placeholderTextColor={colors.textMuted}
-                value={profileName}
-                onChangeText={setProfileName}
-                editable={!isCreating}
-                autoCapitalize="words"
-                autoCorrect={false}
-            />
+        <SheetModal
+            visible={visible}
+            onRequestClose={handleClose}
+            header={header}
+            footer={footer}
+            subHeader={
+                <>
+                    <Text style={styles.label}>NAME</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Profile name"
+                        placeholderTextColor={colors.textMuted}
+                        value={profileName}
+                        onChangeText={setProfileName}
+                        editable={!isCreating}
+                        autoCapitalize="words"
+                        autoCorrect={false}
+                    />
+                </>
+            }
+        >
             <Text style={styles.label}>SNAPSHOT - ALL SETTINGS</Text>
             {snapshotRows.map((row, idx) => (
                 <View key={`${row.key}-${idx}`} style={styles.kvRow}>
