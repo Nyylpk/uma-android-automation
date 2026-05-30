@@ -6,7 +6,7 @@ import { useNavigation } from "@react-navigation/native"
 import { useSettings } from "../context/SettingsContext"
 import { Settings, defaultSettings, getLatestSettingsSnapshot } from "../context/BotStateContext"
 import { logErrorWithTimestamp } from "../lib/logger"
-import { deepMerge } from "../lib/settingsUtils"
+import { deepMerge, applyMigrations } from "../lib/settingsUtils"
 
 /**
  * Format a value for display in the preview dialog.
@@ -67,8 +67,12 @@ const compareSettings = (current: Settings, imported: Settings) => {
         if (!currentCategory || !importedCategory) continue
 
         for (const key of Object.keys(importedCategory)) {
-            // Skip large settings fields that shouldn't be shown in preview.
-            if ((category === "racing" && (key === "epithetsData" || key === "characterPresetsData" || key === "racesData")) || (category === "misc" && key === "formattedSettingsString")) {
+            // Skip large settings fields that shouldn't be shown in preview, plus the Discord token (excluded from import entirely; see `useSettingsManager.importSettings`).
+            if (
+                (category === "racing" && (key === "epithetsData" || key === "characterPresetsData" || key === "racesData")) ||
+                (category === "misc" && key === "formattedSettingsString") ||
+                (category === "discord" && key === "discordToken")
+            ) {
                 continue
             }
 
@@ -98,8 +102,11 @@ const loadFromJSONFile = async (fileUri: string): Promise<Settings> => {
     try {
         const data = await new File(fileUri).text()
         const parsed = JSON.parse(data) as Settings
-        // Merge the parsed settings with the default settings.
-        return deepMerge(defaultSettings, parsed as Partial<Settings>)
+        // Merge with defaults so missing fields populate, then apply migrations so the preview reflects the post-import shape
+        // (e.g. fields relocated between categories show up under the new category, matching what `useSettingsManager.importSettings` does).
+        const merged = deepMerge(defaultSettings, parsed as Partial<Settings>)
+        const { settings } = applyMigrations(merged, parsed)
+        return settings
     } catch (error) {
         logErrorWithTimestamp(`Error reading settings from JSON file: ${error}`)
         throw error
