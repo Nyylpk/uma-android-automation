@@ -9,6 +9,7 @@ import com.steve1316.uma_android_automation.bot.Training.Companion.getRemainingF
 import com.steve1316.uma_android_automation.bot.Training.Companion.levelBoostMultiplier
 import com.steve1316.uma_android_automation.bot.Training.Companion.scoreFriendshipTraining
 import com.steve1316.uma_android_automation.bot.Training.Companion.scoreUnityCupTraining
+import com.steve1316.uma_android_automation.bot.Training.Companion.scoringConstantsFromMap
 import com.steve1316.uma_android_automation.bot.Training.TrainingConfig
 import com.steve1316.uma_android_automation.bot.Training.TrainingOption
 import com.steve1316.uma_android_automation.bot.Training.TrainingScoringConstants
@@ -1531,5 +1532,40 @@ class TrainingScoringTest {
         // Top: 1.0 + 0.5 * 4 = 3.0. Bottom: 1.0 + 0.5 * 1 = 1.5. Ratio 2.0.
         val ratio = topScore / bottomScore
         assertEquals(2.0, ratio, 0.01, "Top-of-list priority should be 2x stronger than bottom-of-list under coefficient 0.5")
+    }
+
+    @Test
+    @DisplayName("scoringConstantsFromMap: empty map returns all defaults")
+    fun scoringConstantsFromMapEmptyReturnsDefaults() {
+        val defaults = TrainingScoringConstants()
+        val result = scoringConstantsFromMap(emptyMap())
+        assertEquals(defaults, result, "Empty settings map should yield defaults")
+    }
+
+    @Test
+    @DisplayName("scoringConstantsFromMap: single override applied, others remain default")
+    fun scoringConstantsFromMapSingleOverride() {
+        val defaults = TrainingScoringConstants()
+        val result = scoringConstantsFromMap(mapOf("priorityCoefficient" to 0.8))
+        assertEquals(0.8, result.priorityCoefficient, 1e-9, "priorityCoefficient should reflect override")
+        assertEquals(defaults.copy(priorityCoefficient = 0.8), result, "All other fields should match defaults")
+    }
+
+    @Test
+    @DisplayName("scoringConstantsFromMap: per-stat threshold override applied")
+    fun scoringConstantsFromMapStatThresholdOverride() {
+        val defaults = TrainingScoringConstants()
+        val result = scoringConstantsFromMap(mapOf("mainStatThresholdWit" to 25))
+        assertEquals(25, result.mainStatThresholds[StatName.WIT], "WIT threshold should reflect override")
+        assertEquals(defaults.mainStatThresholds[StatName.SPEED], result.mainStatThresholds[StatName.SPEED], "SPEED threshold unchanged")
+    }
+
+    @Test
+    @DisplayName("scoringConstantsFromMap: non-numeric or NaN values fall back to default")
+    fun scoringConstantsFromMapInvalidFallback() {
+        val defaults = TrainingScoringConstants()
+        val result = scoringConstantsFromMap(mapOf("priorityCoefficient" to "oops", "miscWeight" to Double.NaN))
+        assertEquals(defaults.priorityCoefficient, result.priorityCoefficient, 1e-9, "Non-numeric value should fall back")
+        assertEquals(defaults.miscWeight, result.miscWeight, 1e-9, "NaN value should fall back")
     }
 }

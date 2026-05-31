@@ -449,6 +449,107 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
         internal val TAG: String = "[${MainActivity.loggerTag}]Training"
 
         /**
+         * Build a [TrainingScoringConstants] from an arbitrary settings map keyed by the same strings used by the TypeScript counterpart
+         * `scoringConstantsFromSettings()` in `src/lib/training/scoring/scoringConstantsFromSettings.ts`. Any missing or non-numeric value falls back to the
+         * matching field in [defaults]. This pure function exists so unit tests can exercise the mapping without needing a live [SettingsHelper].
+         *
+         * @param settings Map of setting key to value. Numeric values are read as [Number] and converted to Double or Int as appropriate.
+         * @param defaults Defaults used when a key is missing or non-numeric. Almost always [TrainingScoringConstants] with no args.
+         * @return A fully populated [TrainingScoringConstants] mirroring the supplied overrides.
+         */
+        fun scoringConstantsFromMap(settings: Map<String, Any?>, defaults: TrainingScoringConstants = TrainingScoringConstants()): TrainingScoringConstants {
+            fun d(key: String, fallback: Double): Double = (settings[key] as? Number)?.toDouble()?.takeIf { it.isFinite() } ?: fallback
+            fun i(key: String, fallback: Int): Int = (settings[key] as? Number)?.toInt() ?: fallback
+            return defaults.copy(
+                ratioBreakpoints = listOf(
+                    d("ratioBreakpoint1", defaults.ratioBreakpoints[0]),
+                    d("ratioBreakpoint2", defaults.ratioBreakpoints[1]),
+                    d("ratioBreakpoint3", defaults.ratioBreakpoints[2]),
+                    d("ratioBreakpoint4", defaults.ratioBreakpoints[3]),
+                    d("ratioBreakpoint5", defaults.ratioBreakpoints[4]),
+                    d("ratioBreakpoint6", defaults.ratioBreakpoints[5]),
+                ),
+                ratioValues = listOf(
+                    d("ratioValue1", defaults.ratioValues[0]),
+                    d("ratioValue2", defaults.ratioValues[1]),
+                    d("ratioValue3", defaults.ratioValues[2]),
+                    d("ratioValue4", defaults.ratioValues[3]),
+                    d("ratioValue5", defaults.ratioValues[4]),
+                    d("ratioValue6", defaults.ratioValues[5]),
+                    d("ratioValue7", defaults.ratioValues[6]),
+                ),
+                priorityCoefficient = d("priorityCoefficient", defaults.priorityCoefficient),
+                levelBoostRank1Factor = d("levelBoostRank1Factor", defaults.levelBoostRank1Factor),
+                levelBoostRank2Factor = d("levelBoostRank2Factor", defaults.levelBoostRank2Factor),
+                levelBoostRank3Factor = d("levelBoostRank3Factor", defaults.levelBoostRank3Factor),
+                mainStatThresholds = mapOf(
+                    StatName.SPEED to i("mainStatThresholdSpeed", defaults.mainStatThresholds[StatName.SPEED]!!),
+                    StatName.STAMINA to i("mainStatThresholdStamina", defaults.mainStatThresholds[StatName.STAMINA]!!),
+                    StatName.POWER to i("mainStatThresholdPower", defaults.mainStatThresholds[StatName.POWER]!!),
+                    StatName.GUTS to i("mainStatThresholdGuts", defaults.mainStatThresholds[StatName.GUTS]!!),
+                    StatName.WIT to i("mainStatThresholdWit", defaults.mainStatThresholds[StatName.WIT]!!),
+                ),
+                mainStatBonusMagnitude = d("mainStatBonusMagnitude", defaults.mainStatBonusMagnitude),
+                relationshipOrangeValue = d("relationshipOrangeValue", defaults.relationshipOrangeValue),
+                relationshipGreenValue = d("relationshipGreenValue", defaults.relationshipGreenValue),
+                relationshipBlueValue = d("relationshipBlueValue", defaults.relationshipBlueValue),
+                relationshipDiminishingFactor = d("relationshipDiminishingFactor", defaults.relationshipDiminishingFactor),
+                relationshipEarlyGameBonus = d("relationshipEarlyGameBonus", defaults.relationshipEarlyGameBonus),
+                relationshipTrainerSupportBonus = d("relationshipTrainerSupportBonus", defaults.relationshipTrainerSupportBonus),
+                skillHintPerHintScore = d("skillHintPerHintScore", defaults.skillHintPerHintScore),
+                skillHintOverrideScore = d("skillHintOverrideScore", defaults.skillHintOverrideScore),
+                statWeightWithBars = d("statWeightWithBars", defaults.statWeightWithBars),
+                statWeightWithoutBars = d("statWeightWithoutBars", defaults.statWeightWithoutBars),
+                relationshipWeightWithBars = d("relationshipWeightWithBars", defaults.relationshipWeightWithBars),
+                miscWeight = d("miscWeight", defaults.miscWeight),
+                juniorEarlyGameFlatBonus = d("juniorEarlyGameFlatBonus", defaults.juniorEarlyGameFlatBonus),
+                relationshipScale = d("relationshipScale", defaults.relationshipScale),
+                rainbowMultiplierEnabled = d("rainbowMultiplierEnabled", defaults.rainbowMultiplierEnabled),
+                rainbowMultiplierDisabled = d("rainbowMultiplierDisabled", defaults.rainbowMultiplierDisabled),
+                rainbowPerInstanceBase = d("rainbowPerInstanceBase", defaults.rainbowPerInstanceBase),
+                rainbowPerInstanceDecay = d("rainbowPerInstanceDecay", defaults.rainbowPerInstanceDecay),
+                anticipatoryMinFillPercent = d("anticipatoryMinFillPercent", defaults.anticipatoryMinFillPercent),
+                anticipatoryCoefficient = d("anticipatoryCoefficient", defaults.anticipatoryCoefficient),
+                anticipatoryCap = d("anticipatoryCap", defaults.anticipatoryCap),
+            )
+        }
+
+        /**
+         * Build a [TrainingScoringConstants] from persisted settings under the `training` namespace via [SettingsHelper]. Any missing key falls back to the
+         * default value on a freshly-constructed [TrainingScoringConstants]. Mirrors the TypeScript `scoringConstantsFromSettings()` exactly key-for-key.
+         *
+         * @return A fully populated [TrainingScoringConstants] mirroring the user's saved overrides.
+         */
+        fun scoringConstantsFromSettings(): TrainingScoringConstants {
+            val defaults = TrainingScoringConstants()
+            val keys = listOf(
+                "ratioBreakpoint1", "ratioBreakpoint2", "ratioBreakpoint3", "ratioBreakpoint4", "ratioBreakpoint5", "ratioBreakpoint6",
+                "ratioValue1", "ratioValue2", "ratioValue3", "ratioValue4", "ratioValue5", "ratioValue6", "ratioValue7",
+                "priorityCoefficient", "levelBoostRank1Factor", "levelBoostRank2Factor", "levelBoostRank3Factor",
+                "mainStatBonusMagnitude", "relationshipOrangeValue", "relationshipGreenValue", "relationshipBlueValue",
+                "relationshipDiminishingFactor", "relationshipEarlyGameBonus", "relationshipTrainerSupportBonus",
+                "skillHintPerHintScore", "skillHintOverrideScore",
+                "statWeightWithBars", "statWeightWithoutBars", "relationshipWeightWithBars", "miscWeight",
+                "juniorEarlyGameFlatBonus", "relationshipScale",
+                "rainbowMultiplierEnabled", "rainbowMultiplierDisabled", "rainbowPerInstanceBase", "rainbowPerInstanceDecay",
+                "anticipatoryMinFillPercent", "anticipatoryCoefficient", "anticipatoryCap",
+            )
+            val intKeys = listOf("mainStatThresholdSpeed", "mainStatThresholdStamina", "mainStatThresholdPower", "mainStatThresholdGuts", "mainStatThresholdWit")
+            // Use NaN as the per-key default so we can distinguish "user set it" from "missing"; scoringConstantsFromMap drops NaN via isFinite check.
+            val map: MutableMap<String, Any?> = mutableMapOf()
+            for (k in keys) {
+                val v = SettingsHelper.getDoubleSetting("training", k, Double.NaN)
+                if (!v.isNaN()) map[k] = v
+            }
+            for (k in intKeys) {
+                // Sentinel of Int.MIN_VALUE marks "missing"; any real override is in [0, 9999].
+                val v = SettingsHelper.getIntSetting("training", k, Int.MIN_VALUE)
+                if (v != Int.MIN_VALUE) map[k] = v
+            }
+            return scoringConstantsFromMap(map, defaults)
+        }
+
+        /**
          * Retrieve the scenario-specific cap for a given stat.
          *
          * @param scenario The current training scenario.
@@ -2137,6 +2238,7 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
                 disableStatTargets = disableStatTargets,
                 enablePrioritizeNearMaxFriendship = enablePrioritizeNearMaxFriendship,
                 statsTrainedOverBuffer = statsTrainedOverBuffer,
+                scoring = scoringConstantsFromSettings(),
             )
 
         // Compute scores and determine the best training option.
