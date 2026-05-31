@@ -204,3 +204,22 @@ export interface TrainingConfig {
     /** Tunable scoring constants used by the scoring functions. */
     scoring: TrainingScoringConstants
 }
+
+/** Numeric rank of each `DateYear` for ordering comparisons (PRE_DEBUT=0, JUNIOR=1, CLASSIC=2, SENIOR=3). */
+export const YEAR_RANK: Record<DateYear, number> = {
+    [DateYear.PRE_DEBUT]: 0,
+    [DateYear.JUNIOR]: 1,
+    [DateYear.CLASSIC]: 2,
+    [DateYear.SENIOR]: 3,
+}
+
+/**
+ * Returns true when year `a` is strictly later than year `b` per `YEAR_RANK`.
+ *
+ * @param a The candidate later year.
+ * @param b The candidate earlier year.
+ * @returns True if `a` is strictly after `b`.
+ */
+export function yearGreaterThan(a: DateYear, b: DateYear): boolean {
+    return YEAR_RANK[a] > YEAR_RANK[b]
+}
