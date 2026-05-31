@@ -1,4 +1,4 @@
-import { ALL_STAT_NAMES, BarFillResult, DEFAULT_TRAINING_SCORING_CONSTANTS, StatName, TrainingConfig, TrainingOption } from "../../lib/training/scoring"
+import { ALL_STAT_NAMES, BarFillResult, DEFAULT_TRAINING_SCORING_CONSTANTS, StatName, TrainingConfig, TrainingOption, TrainingScoringConstants } from "../../lib/training/scoring"
 import { SandboxScenario } from "./scenarioState"
 
 const TIER_FILL_PERCENT: Record<"blue" | "green" | "orange", number> = { blue: 0, green: 50, orange: 100 }
@@ -25,9 +25,10 @@ export interface ScenarioScoringInputs {
  * Hydrate a `SandboxScenario` into a scoring `TrainingConfig` plus 5 `TrainingOption`s ready to feed into the scoring functions exported from `src/lib/training/scoring`.
  *
  * @param scenario The user's sandbox scenario.
+ * @param constants Scoring constants to embed in the returned `config.scoring`. Defaults to `DEFAULT_TRAINING_SCORING_CONSTANTS` so existing callers work unchanged.
  * @returns Scoring inputs for the 5 trainings.
  */
-export function scenarioToScoring(scenario: SandboxScenario): ScenarioScoringInputs {
+export function scenarioToScoring(scenario: SandboxScenario, constants: TrainingScoringConstants = DEFAULT_TRAINING_SCORING_CONSTANTS): ScenarioScoringInputs {
     const config: TrainingConfig = {
         currentStats: { ...scenario.traineeTotals },
         statPrioritization: [StatName.SPEED, StatName.STAMINA, StatName.POWER, StatName.GUTS, StatName.WIT],
@@ -45,7 +46,7 @@ export function scenarioToScoring(scenario: SandboxScenario): ScenarioScoringInp
         disableStatTargets: false,
         enablePrioritizeNearMaxFriendship: true,
         statsTrainedOverBuffer: new Set(),
-        scoring: DEFAULT_TRAINING_SCORING_CONSTANTS,
+        scoring: constants,
     }
 
     const trainings: TrainingOption[] = ALL_STAT_NAMES.map((name) => {

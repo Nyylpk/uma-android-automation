@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useReducer } from "react"
+import React, { useContext, useEffect, useMemo, useReducer } from "react"
 import { Pressable, StyleSheet, View } from "react-native"
 import Ionicons from "@react-native-vector-icons/ionicons"
 import { useTheme } from "../../context/ThemeContext"
-import { ALL_STAT_NAMES, calculateRawTrainingScore, StatName } from "../../lib/training/scoring"
+import { TrainingContext } from "../../context/BotStateContext"
+import { ALL_STAT_NAMES, calculateRawTrainingScore, scoringConstantsFromSettings, StatName } from "../../lib/training/scoring"
 import { loadSandboxScenario, saveSandboxScenario } from "../../lib/asyncStorage/sandboxScenarioStorage"
 import { SPACING } from "../../lib/spacing"
 import { TYPE } from "../../lib/type"
@@ -34,6 +35,7 @@ export interface TrainingScoringSandboxProps {
  */
 export function TrainingScoringSandbox({ open, onClose }: TrainingScoringSandboxProps): React.ReactElement {
     const { colors } = useTheme()
+    const { training } = useContext(TrainingContext)
     const [scenario, dispatch] = useReducer(scenarioReducer, initialScenario)
 
     // Hydrate from AsyncStorage once on mount.
@@ -56,7 +58,8 @@ export function TrainingScoringSandbox({ open, onClose }: TrainingScoringSandbox
         return () => clearTimeout(handle)
     }, [scenario])
 
-    const { config, trainings } = useMemo(() => scenarioToScoring(scenario), [scenario])
+    const constants = useMemo(() => scoringConstantsFromSettings(training as unknown as Record<string, unknown>), [training])
+    const { config, trainings } = useMemo(() => scenarioToScoring(scenario, constants), [scenario, constants])
 
     const scoresByTraining = useMemo(() => {
         const out: Partial<Record<StatName, number>> = {}

@@ -1,6 +1,6 @@
 import { scenarioToScoring } from "../scenarioToScoring"
 import { initialScenario } from "../scenarioState"
-import { StatName, DateYear } from "../../../lib/training/scoring"
+import { DEFAULT_TRAINING_SCORING_CONSTANTS, StatName, DateYear } from "../../../lib/training/scoring"
 
 describe("scenarioToScoring", () => {
     test("default scenario maps every training and uses CLASSIC year", () => {
@@ -40,5 +40,11 @@ describe("scenarioToScoring", () => {
         const { config } = scenarioToScoring({ ...initialScenario, year: DateYear.SENIOR })
         expect(config.currentDate.year).toBe(DateYear.SENIOR)
         expect(config.currentDate.isSummer).toBe(false)
+    })
+
+    test("custom constants are used in the returned config.scoring", () => {
+        const constants = { ...DEFAULT_TRAINING_SCORING_CONSTANTS, priorityCoefficient: 1.7 }
+        const { config } = scenarioToScoring(initialScenario, constants)
+        expect(config.scoring.priorityCoefficient).toBe(1.7)
     })
 })
