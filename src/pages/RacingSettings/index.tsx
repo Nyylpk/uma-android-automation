@@ -9,6 +9,7 @@ import { SearchPageProvider } from "../../context/SearchPageContext"
 import CustomSelect from "../../components/CustomSelect"
 import CustomSlider from "../../components/CustomSlider"
 import PageHeader from "../../components/PageHeader"
+import InfoContainer from "../../components/InfoContainer"
 import WarningContainer from "../../components/WarningContainer"
 import SearchableItem from "../../components/SearchableItem"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
@@ -393,6 +394,7 @@ const RacingSettings = () => {
                             </SearchableItem>
                             {enableUserInGameRaceAgenda && (
                                 <>
+                                    <InfoContainer style={{ marginHorizontal: SPACING.md }}>Critical energy level and consecutive race limits are ignored for the user in-game racing agenda.</InfoContainer>
                                     <SearchableItem
                                         id="user-in-game-race-agenda"
                                         title="Select Agenda"
