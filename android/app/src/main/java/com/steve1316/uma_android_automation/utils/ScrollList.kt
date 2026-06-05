@@ -3,6 +3,7 @@ package com.steve1316.uma_android_automation.utils
 import android.graphics.Bitmap
 import com.steve1316.automation_library.data.SharedData
 import com.steve1316.automation_library.utils.MessageLog
+import com.steve1316.automation_library.utils.SettingsHelper
 import com.steve1316.uma_android_automation.MainActivity
 import com.steve1316.uma_android_automation.bot.Game
 import com.steve1316.uma_android_automation.components.ComponentInterface
@@ -179,6 +180,9 @@ class ScrollList private constructor(private val game: Game, private val bboxLis
     var bIsScrollable: Boolean = false
         private set
 
+    /** Whether to scroll by blind swipes instead of relying on in-game scrollbar detection. Read from the user setting. */
+    private val swipeMode: Boolean = SettingsHelper.getBooleanSetting("general", "enableSwipeBasedScrolling")
+
     companion object {
         private val TAG: String = "[${MainActivity.loggerTag}]ScrollList"
 
@@ -315,6 +319,49 @@ class ScrollList private constructor(private val game: Game, private val bboxLis
 
             // Step 2: Fallback to component-based detection.
             MessageLog.d(TAG, "[DEBUG] processWithFallback:: ScrollList region not found. Falling back to ${fallbackComponent.template.basename} detection.")
+
+            val swipeMode = SettingsHelper.getBooleanSetting("general", "enableSwipeBasedScrolling")
+            if (swipeMode) {
+                // The list region wasn't found, so swipe a full-screen pseudo-list and dedupe by key across frames.
+                val fullScreen = ScrollList(game, BoundingBox(0, 0, sourceBitmap.width, sourceBitmap.height), entryDetectionConfig ?: ScrollListEntryDetectionConfig())
+                val processedKeys = mutableSetOf<String>()
+                val startTime: Long = System.currentTimeMillis()
+                var consecutiveNoNewFrames = 0
+                var scrollCount = 0
+                var bitmap: Bitmap = sourceBitmap
+                while (System.currentTimeMillis() - startTime < maxTimeMs && scrollCount < 40) {
+                    val frameEntries = detectEntriesByComponent(game, bitmap, fallbackComponent)
+                    if (frameEntries.isEmpty() && scrollCount == 0) {
+                        MessageLog.w(TAG, "[WARN] processWithFallback:: Failed to detect any entries using fallback component.")
+                        return false
+                    }
+
+                    var newThisFrame = 0
+                    for (entry in frameEntries) {
+                        // Fall back to a visual fingerprint when the keyExtractor can't read the row (e.g. greyed-out items) so duplicates still dedupe.
+                        val key = if (keyExtractor != null) (keyExtractor(entry) ?: entrySignature(entry.bitmap)) else null
+                        if (key != null && processedKeys.contains(key)) continue
+                        if (key != null) processedKeys.add(key)
+                        newThisFrame++
+                        if (onEntry.onEntryDetected(fullScreen, entry)) {
+                            return true
+                        }
+                    }
+
+                    if (frameEntries.isNotEmpty() && newThisFrame == 0) consecutiveNoNewFrames++ else consecutiveNoNewFrames = 0
+                    if (consecutiveNoNewFrames >= 2) {
+                        MessageLog.d(TAG, "[DEBUG] processWithFallback:: No new entries for 2 frames. Exiting (swipe mode).")
+                        return true
+                    }
+
+                    if (bScrollBottomToTop) fullScreen.scrollUp() else fullScreen.scrollDown()
+                    scrollCount++
+                    game.wait(0.5, skipWaitingForLoading = true)
+                    bitmap = game.imageUtils.getSourceBitmap()
+                }
+                return true
+            }
+
             val entries = detectEntriesByComponent(game, sourceBitmap, fallbackComponent)
             if (entries.isEmpty()) {
                 MessageLog.w(TAG, "[WARN] processWithFallback:: Failed to detect any entries using fallback component.")
@@ -338,6 +385,30 @@ class ScrollList private constructor(private val game: Game, private val bboxLis
             }
 
             return true
+        }
+
+        /**
+         * Computes a stable visual fingerprint of a row bitmap for deduplication when no text key is available (e.g. greyed-out / purchased rows).
+         * Downscales to an 8x8 grayscale average hash so the same row yields the same key across frames despite minor capture jitter.
+         *
+         * @param bitmap The entry's cropped bitmap.
+         * @return A stable "SIG_"-prefixed key derived from the bitmap's visual content.
+         */
+        private fun entrySignature(bitmap: Bitmap): String {
+            val small = Bitmap.createScaledBitmap(bitmap, 8, 8, true)
+            val pixels = IntArray(64)
+            small.getPixels(pixels, 0, 8, 0, 0, 8, 8)
+            val gray =
+                IntArray(64) { i ->
+                    val p = pixels[i]
+                    (((p shr 16) and 0xFF) + ((p shr 8) and 0xFF) + (p and 0xFF)) / 3
+                }
+            val avg = gray.average()
+            var hash = 0L
+            for (i in 0 until 64) {
+                if (gray[i] >= avg) hash = hash or (1L shl i)
+            }
+            return "SIG_$hash"
         }
 
         /**
@@ -586,7 +657,7 @@ class ScrollList private constructor(private val game: Game, private val bboxLis
      */
     private fun scrollToTop(bitmap: Bitmap? = null) {
         val bboxThumb: BoundingBox? = getListScrollBarBoundingRegion().second
-        if (!bIsScrollable) {
+        if (!bIsScrollable && !swipeMode) {
             MessageLog.d(TAG, "[DEBUG] scrollToTop:: List is not scrollable.")
             return
         }
@@ -623,7 +694,7 @@ class ScrollList private constructor(private val game: Game, private val bboxLis
      */
     private fun scrollToBottom(bitmap: Bitmap? = null) {
         val bboxThumb: BoundingBox? = getListScrollBarBoundingRegion().second
-        if (!bIsScrollable) {
+        if (!bIsScrollable && !swipeMode) {
             MessageLog.d(TAG, "[DEBUG] scrollToBottom:: List is not scrollable.")
             return
         }
@@ -700,7 +771,7 @@ class ScrollList private constructor(private val game: Game, private val bboxLis
      * @param durationMs Swipe duration. Minimum 250ms for Accessibility Service registration.
      */
     fun scrollDown(startLoc: Point? = null, entryHeight: Int = 0, durationMs: Long = 250L) {
-        if (!bIsScrollable) {
+        if (!bIsScrollable && !swipeMode) {
             MessageLog.d(TAG, "[DEBUG] scrollDown:: List is not scrollable.")
             return
         }
@@ -722,7 +793,7 @@ class ScrollList private constructor(private val game: Game, private val bboxLis
      * @param durationMs Swipe duration. Minimum 250ms for Accessibility Service registration.
      */
     fun scrollUp(startLoc: Point? = null, entryHeight: Int = 0, durationMs: Long = 250L) {
-        if (!bIsScrollable) {
+        if (!bIsScrollable && !swipeMode) {
             MessageLog.d(TAG, "[DEBUG] scrollUp:: List is not scrollable.")
             return
         }
@@ -774,6 +845,12 @@ class ScrollList private constructor(private val game: Game, private val bboxLis
         // Stores keys from the previous frame to identify the overlap with the current frame.
         var lastFrameKeys: List<String> = emptyList()
 
+        // Swipe-mode termination: stop after consecutive frames with no new entries, bounded by a hard scroll cap.
+        var consecutiveNoNewFrames = 0
+        val maxNoNewFrames = 2
+        var scrollCount = 0
+        val maxScrollCount = 40
+
         var index = 0
         while (System.currentTimeMillis() - startTime < maxTimeMs) {
             var currentFrameEntries: List<ScrollListEntry> = emptyList()
@@ -809,11 +886,12 @@ class ScrollList private constructor(private val game: Game, private val bboxLis
 
             if (currentFrameEntries.isEmpty()) {
                 MessageLog.d(TAG, "[DEBUG] process:: No entries detected in current frame after retries.")
+                if (swipeMode) consecutiveNoNewFrames = 0
             } else {
                 // Determine the overlap with the previous frame's entries using the provided keyExtractor.
                 var skipCount = 0
                 if (keyExtractor != null && lastFrameKeys.isNotEmpty()) {
-                    val currentFrameKeys = currentFrameEntries.map { keyExtractor(it) ?: "UNKNOWN_${it.index}" }
+                    val currentFrameKeys = currentFrameEntries.map { keyExtractor(it) ?: entrySignature(it.bitmap) }
 
                     // Find the largest suffix of lastFrameKeys that matches a prefix of currentFrameKeys.
                     for (i in lastFrameKeys.size.coerceAtMost(currentFrameKeys.size) downTo 1) {
@@ -830,6 +908,11 @@ class ScrollList private constructor(private val game: Game, private val bboxLis
                     }
                 }
 
+                // In swipe mode, a frame whose entries are all duplicates means no new content scrolled in.
+                if (swipeMode) {
+                    if (currentFrameEntries.size - skipCount <= 0) consecutiveNoNewFrames++ else consecutiveNoNewFrames = 0
+                }
+
                 // Process only the new entries that weren't part of the overlap.
                 for (i in skipCount until currentFrameEntries.size) {
                     val entry = currentFrameEntries[i]
@@ -841,7 +924,7 @@ class ScrollList private constructor(private val game: Game, private val bboxLis
 
                 // Update the last frame's keys for the next iteration's overlap detection.
                 if (keyExtractor != null) {
-                    lastFrameKeys = currentFrameEntries.map { keyExtractor(it) ?: "UNKNOWN_${it.index}" }
+                    lastFrameKeys = currentFrameEntries.map { keyExtractor(it) ?: entrySignature(it.bitmap) }
                 }
             }
 
@@ -849,12 +932,13 @@ class ScrollList private constructor(private val game: Game, private val bboxLis
             val avgEntryHeight: Int = if (entryBboxes.isEmpty()) 0 else entryBboxes.map { it.h }.average().toInt()
             val scrollStartLoc: Point? = if (currentFrameEntries.isEmpty()) null else Point(bboxEntries.x.toDouble(), currentFrameEntries.last().bbox.y.toDouble())
 
-            if (bIsScrollable) {
+            if (bIsScrollable || swipeMode) {
                 if (bScrollBottomToTop) {
                     scrollUp(startLoc = scrollStartLoc, entryHeight = avgEntryHeight)
                 } else {
                     scrollDown(startLoc = scrollStartLoc, entryHeight = avgEntryHeight)
                 }
+                scrollCount++
                 // Slight delay to allow screen to settle before next iteration.
                 game.wait(0.5, skipWaitingForLoading = true)
             } else {
@@ -862,21 +946,33 @@ class ScrollList private constructor(private val game: Game, private val bboxLis
                 return true // Return true since we processed the only frame.
             }
 
-            // SCROLLBAR CHANGE DETECTION LOGIC
-            // Breaks loop if no change to Y position or no scrollbar detected.
-            val bboxThumb: BoundingBox? = getListScrollBarBoundingRegion().second
-            if (bboxThumb == null) {
-                MessageLog.d(TAG, "[DEBUG] process:: No scrollbar thumb detected. Exiting loop.")
-                return true
-            }
+            if (swipeMode) {
+                // Swipe mode has no scrollbar to consult, so terminate on a content signal or the hard scroll cap.
+                if (consecutiveNoNewFrames >= maxNoNewFrames) {
+                    MessageLog.d(TAG, "[DEBUG] process:: No new entries for $maxNoNewFrames frames. Exiting loop (swipe mode).")
+                    return true
+                }
+                if (scrollCount >= maxScrollCount) {
+                    MessageLog.d(TAG, "[DEBUG] process:: Reached max scroll count of $maxScrollCount. Exiting loop (swipe mode).")
+                    return true
+                }
+            } else {
+                // SCROLLBAR CHANGE DETECTION LOGIC
+                // Breaks loop if no change to Y position or no scrollbar detected.
+                val bboxThumb: BoundingBox? = getListScrollBarBoundingRegion().second
+                if (bboxThumb == null) {
+                    MessageLog.d(TAG, "[DEBUG] process:: No scrollbar thumb detected. Exiting loop.")
+                    return true
+                }
 
-            // If the scrollbar hasn't changed after scrolling, that means we've reached the end of the list.
-            if (prevThumbY != null && bboxThumb.y == prevThumbY) {
-                MessageLog.d(TAG, "[DEBUG] process:: Reached end of scroll list. Exiting loop.")
-                return true
-            }
+                // If the scrollbar hasn't changed after scrolling, that means we've reached the end of the list.
+                if (prevThumbY != null && bboxThumb.y == prevThumbY) {
+                    MessageLog.d(TAG, "[DEBUG] process:: Reached end of scroll list. Exiting loop.")
+                    return true
+                }
 
-            prevThumbY = bboxThumb.y
+                prevThumbY = bboxThumb.y
+            }
         }
 
         MessageLog.e(TAG, "[ERROR] process:: Timed out.")
