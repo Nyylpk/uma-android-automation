@@ -18,6 +18,7 @@ import com.steve1316.uma_android_automation.components.CheckboxShopItem
 import com.steve1316.uma_android_automation.components.IconDialogScrollListBottomRight
 import com.steve1316.uma_android_automation.components.IconDialogScrollListTopLeft
 import com.steve1316.uma_android_automation.components.LabelOnSale
+import com.steve1316.uma_android_automation.components.LabelPurchased
 import com.steve1316.uma_android_automation.types.Mood
 import com.steve1316.uma_android_automation.types.StatName
 import com.steve1316.uma_android_automation.types.Trainee
@@ -232,6 +233,8 @@ class TrackblazerShopList(private val game: Game) {
      */
     fun getShopItemName(entry: ScrollListEntry, isDisabled: Boolean = false): String? {
         val bitmap = entry.bitmap
+        // Whether the row was anchored via the "Purchased" badge. Purchased names are black text on a grey background, which thresholding washes out.
+        var isPurchased = false
         // Find the item's checkbox to use as a reference point.
         var refPoint = CheckboxShopItem.findImageWithBitmap(game.imageUtils, bitmap)
 
@@ -246,11 +249,19 @@ class TrackblazerShopList(private val game: Game) {
                 if (refPoint != null && game.debugMode) {
                     MessageLog.d(TAG, "[DEBUG] getShopItemName:: Using plus button as reference for item name detection.")
                 }
+                // Fallback: Try the "Purchased" badge for already-purchased items, which have neither a checkbox nor a plus button.
+                if (refPoint == null) {
+                    refPoint = LabelPurchased.findImageWithBitmap(game.imageUtils, bitmap)
+                    if (refPoint != null) {
+                        isPurchased = true
+                        if (game.debugMode) MessageLog.d(TAG, "[DEBUG] getShopItemName:: Using purchased badge as reference for item name detection.")
+                    }
+                }
             }
         }
 
         if (refPoint == null) {
-            if (game.debugMode) MessageLog.e(TAG, "[ERROR] getShopItemName:: Failed to find any reference point (checkbox or plus button) for this Item.")
+            if (game.debugMode) MessageLog.e(TAG, "[ERROR] getShopItemName:: Failed to find any reference point (checkbox, plus button, or purchased badge) for this Item.")
             return null
         }
 
@@ -272,8 +283,8 @@ class TrackblazerShopList(private val game: Game) {
 
         var detectedText = ""
 
-        if (!isDisabled) {
-            // Perform OCR with thresholding first for enabled items.
+        if (!isDisabled && !isPurchased) {
+            // Perform OCR with thresholding first for enabled items. Skipped for disabled/purchased rows whose greyed text thresholding washes out.
             detectedText =
                 game.imageUtils.performOCROnRegion(
                     croppedName,
@@ -290,7 +301,7 @@ class TrackblazerShopList(private val game: Game) {
         }
 
         if (detectedText.isEmpty()) {
-            if (game.debugMode && !isDisabled) MessageLog.d(TAG, "[DEBUG] getShopItemName:: Threshold OCR failed for $refPoint, trying without thresholding...")
+            if (game.debugMode && !isDisabled && !isPurchased) MessageLog.d(TAG, "[DEBUG] getShopItemName:: Threshold OCR failed for $refPoint, trying without thresholding...")
             // Fallback to OCR without thresholding.
             detectedText =
                 game.imageUtils.performOCROnRegion(
@@ -744,6 +755,7 @@ class TrackblazerShopList(private val game: Game) {
         // Scan the entire shop to log each item and its price, and to identify what is available.
         MessageLog.i(TAG, "[INFO] Beginning process of scanning shop items...")
         val availableInShop = mutableListOf<Triple<String, Int, ScrollListEntry>>()
+        val purchasedInShop = mutableListOf<String>()
         val itemNameMap = mutableMapOf<Int, String>()
         var totalEntriesDetected = 0
         processItemsWithFallback(
@@ -758,15 +770,20 @@ class TrackblazerShopList(private val game: Game) {
             val isDisabled = isEntryDisabled(entry.bitmap)
             val itemName = itemNameMap[entry.index] ?: getShopItemName(entry, isDisabled)
             if (itemName != null) {
-                val price = getShopItemPrice(itemName, entry.bitmap)
-                MessageLog.i(TAG, "\t$itemName: $price coins at index ${entry.index}")
-                availableInShop.add(Triple(itemName, price, entry))
+                if (LabelPurchased.findImageWithBitmap(game.imageUtils, entry.bitmap) != null) {
+                    // Already-purchased items can't be bought again, so track them only for the summary.
+                    purchasedInShop.add(itemName)
+                } else {
+                    val price = getShopItemPrice(itemName, entry.bitmap)
+                    MessageLog.i(TAG, "\t$itemName: $price coins at index ${entry.index}")
+                    availableInShop.add(Triple(itemName, price, entry))
+                }
             }
             false
         }
 
         // Log a warning if the scan failed to read any item names due to OCR failure.
-        if (availableInShop.isEmpty() && totalEntriesDetected != 0) {
+        if (availableInShop.isEmpty() && purchasedInShop.isEmpty() && totalEntriesDetected != 0) {
             MessageLog.w(
                 TAG,
                 "[WARN] buyItems:: Scanned the list of items in the Shop but could not read any of the names. OCR is dependent on correct display setup configuration. User's current display setup: ${SharedData.displayWidth}x${SharedData.displayHeight}, DPI ${SharedData.displayDPI}",
@@ -833,12 +850,15 @@ class TrackblazerShopList(private val game: Game) {
             }
         }
 
-        if (availableInShop.isNotEmpty()) {
-            sb.appendLine("Identified ${availableInShop.size} items that are able to be purchased. Current coins: $currentCoins.")
+        if (availableInShop.isNotEmpty() || purchasedInShop.isNotEmpty()) {
+            sb.appendLine("Current coins: $currentCoins.")
             sb.appendLine("Items found:")
             sb.appendLine("")
             availableInShop.forEach { (name, _, _) ->
                 sb.appendLine("  - $name")
+            }
+            purchasedInShop.forEach { name ->
+                sb.appendLine("  - $name (Purchased)")
             }
         } else {
             if (totalEntriesDetected == 0) {

@@ -170,6 +170,10 @@ object LabelOnSale : ComponentInterface {
     override val template = Template("components/label/on_sale", region = Region.topHalf)
 }
 
+object LabelPurchased : ComponentInterface {
+    override val template = Template("components/label/purchased")
+}
+
 object LabelRivalRacer : ComponentInterface {
     override val template = Template("components/label/rival_racer", region = Region.rightHalf)
 }
