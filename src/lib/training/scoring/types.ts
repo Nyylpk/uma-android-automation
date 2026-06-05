@@ -68,10 +68,10 @@ export interface TrainingOption {
 
 /** Tunable scoring constants used by the training scoring functions. */
 export interface TrainingScoringConstants {
-    /** Completion-percentage breakpoints (ascending) used to bucket stats into ratio multiplier tiers. */
+    /** Completion-percentage breakpoints (ascending) used to bucket stats into ratio multiplier tiers. Fixed at [15, 30, 45, 60, 75, 90] and not user-tunable. */
     ratioBreakpoints: number[]
-    /** Ratio multipliers paired with `ratioBreakpoints`; one entry longer than the breakpoints list (last value is the over-target tier). */
-    ratioValues: number[]
+    /** Ratio multipliers paired with `ratioBreakpoints`; one entry longer than the breakpoints list (last entry covers stats at or above 90% of target). */
+    ratioMultipliers: number[]
     /** Coefficient applied to the priority-list tiebreaker bonus (higher = stronger priority influence). */
     priorityCoefficient: number
     /** Level-boost factor applied when the trained stat is rank 1 in the priority list. */
@@ -130,8 +130,8 @@ export interface TrainingScoringConstants {
 
 /** Default values for `TrainingScoringConstants`, matching the constants currently hardcoded in the Kotlin scoring functions. */
 export const DEFAULT_TRAINING_SCORING_CONSTANTS: TrainingScoringConstants = {
-    ratioBreakpoints: [30, 50, 70, 90, 110, 130],
-    ratioValues: [5, 4, 3, 2, 1, 0.5, 0.3],
+    ratioBreakpoints: [15, 30, 45, 60, 75, 90],
+    ratioMultipliers: [5, 4, 3, 2, 1, 0.5, 0.3],
     priorityCoefficient: 0.5,
     levelBoostRank1Factor: 0.75,
     levelBoostRank2Factor: 0.25,
@@ -162,7 +162,7 @@ export const DEFAULT_TRAINING_SCORING_CONSTANTS: TrainingScoringConstants = {
     rainbowMultiplierDisabled: 1.5,
     rainbowPerInstanceBase: 200,
     rainbowPerInstanceDecay: 0.5,
-    anticipatoryMinFillPercent: 10,
+    anticipatoryMinFillPercent: 50,
     anticipatoryCoefficient: 0.2,
     anticipatoryCap: 0.6,
 }

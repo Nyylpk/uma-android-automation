@@ -24,9 +24,9 @@ export function calculateStatEfficiencyScore(config: TrainingConfig, training: T
 
             const ratioMultiplier = (() => {
                 const breakpoints = config.scoring.ratioBreakpoints
-                const values = config.scoring.ratioValues
+                const multipliers = config.scoring.ratioMultipliers
                 const bucket = breakpoints.findIndex((b) => completionPercent < b)
-                return bucket === -1 ? values[values.length - 1] : values[bucket]
+                return bucket === -1 ? multipliers[multipliers.length - 1] : multipliers[bucket]
             })()
 
             const priorityMultiplier = priorityIndex !== -1 ? 1.0 + config.scoring.priorityCoefficient * (activePriority.length - priorityIndex) : 1.0

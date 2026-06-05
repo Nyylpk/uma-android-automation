@@ -45,7 +45,7 @@ describe("calculateStatEfficiencyScore", () => {
 
     test("Wit main-stat bonus does NOT fire at 10 gain (threshold 15)", () => {
         const score = calculateStatEfficiencyScore(makeConfig(), makeTraining({ statGains: { [StatName.WIT]: 10 } }))
-        // completion=100/1200*100=8.33%, ratioMultiplier=5.0 (bucket <30)
+        // completion=100/1200*100=8.33%, ratioMultiplier=5.0 (bucket <15)
         // priorityMultiplier = 1 + 0.5*(5-0) = 3.5 (Wit is index 0 in priority)
         // mainStatBonus = 1.0 (gain < threshold)
         // score = 10 * 5 * 3.5 * 1 * 1 = 175

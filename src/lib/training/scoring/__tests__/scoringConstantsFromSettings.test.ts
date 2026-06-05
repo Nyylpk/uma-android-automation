@@ -21,15 +21,15 @@ describe("scoringConstantsFromSettings", () => {
         expect(result.mainStatThresholds[StatName.GUTS]).toBe(DEFAULT_TRAINING_SCORING_CONSTANTS.mainStatThresholds[StatName.GUTS])
     })
 
-    test("ratio breakpoint and value array overrides are applied per-index", () => {
+    test("ratio multiplier overrides are applied per-index; breakpoints stay locked to defaults", () => {
         const result = scoringConstantsFromSettings({
-            ratioBreakpoint1: 25,
-            ratioBreakpoint6: 140,
-            ratioValue1: 6,
-            ratioValue7: 0.25,
+            ratioMultiplier1: 6,
+            ratioMultiplier7: 0.25,
+            // Breakpoints are not user-tunable -- any value here is ignored.
+            ratioBreakpoint1: 999,
         })
-        expect(result.ratioBreakpoints).toEqual([25, 50, 70, 90, 110, 140])
-        expect(result.ratioValues).toEqual([6, 4, 3, 2, 1, 0.5, 0.25])
+        expect(result.ratioBreakpoints).toEqual([15, 30, 45, 60, 75, 90])
+        expect(result.ratioMultipliers).toEqual([6, 4, 3, 2, 1, 0.5, 0.25])
     })
 
     test("non-numeric and non-finite values fall back to defaults", () => {

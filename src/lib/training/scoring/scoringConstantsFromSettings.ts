@@ -27,22 +27,16 @@ function num(settings: Settings, key: string, fallback: number): number {
 export function scoringConstantsFromSettings(settings: Settings): TrainingScoringConstants {
     const d = DEFAULT_TRAINING_SCORING_CONSTANTS
     return {
-        ratioBreakpoints: [
-            num(settings, "ratioBreakpoint1", d.ratioBreakpoints[0]),
-            num(settings, "ratioBreakpoint2", d.ratioBreakpoints[1]),
-            num(settings, "ratioBreakpoint3", d.ratioBreakpoints[2]),
-            num(settings, "ratioBreakpoint4", d.ratioBreakpoints[3]),
-            num(settings, "ratioBreakpoint5", d.ratioBreakpoints[4]),
-            num(settings, "ratioBreakpoint6", d.ratioBreakpoints[5]),
-        ],
-        ratioValues: [
-            num(settings, "ratioValue1", d.ratioValues[0]),
-            num(settings, "ratioValue2", d.ratioValues[1]),
-            num(settings, "ratioValue3", d.ratioValues[2]),
-            num(settings, "ratioValue4", d.ratioValues[3]),
-            num(settings, "ratioValue5", d.ratioValues[4]),
-            num(settings, "ratioValue6", d.ratioValues[5]),
-            num(settings, "ratioValue7", d.ratioValues[6]),
+        // Breakpoints are fixed and not user-tunable; always sourced from defaults.
+        ratioBreakpoints: d.ratioBreakpoints,
+        ratioMultipliers: [
+            num(settings, "ratioMultiplier1", d.ratioMultipliers[0]),
+            num(settings, "ratioMultiplier2", d.ratioMultipliers[1]),
+            num(settings, "ratioMultiplier3", d.ratioMultipliers[2]),
+            num(settings, "ratioMultiplier4", d.ratioMultipliers[3]),
+            num(settings, "ratioMultiplier5", d.ratioMultipliers[4]),
+            num(settings, "ratioMultiplier6", d.ratioMultipliers[5]),
+            num(settings, "ratioMultiplier7", d.ratioMultipliers[6]),
         ],
         priorityCoefficient: num(settings, "priorityCoefficient", d.priorityCoefficient),
         levelBoostRank1Factor: num(settings, "levelBoostRank1Factor", d.levelBoostRank1Factor),
