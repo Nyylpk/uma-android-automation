@@ -1,13 +1,24 @@
 <AppUpdater>
   <update>
-    <latestVersion>5.7.0</latestVersion>
+    <latestVersion>5.7.1</latestVersion>
     <url>https://github.com/steve1316/uma-android-automation/releases</url>
     <releaseNotes>
-v5.7.0 - Changelog
+v5.7.1 - Changelog
 
 New
 ---
-- Top-to-bottom redesign of the app's frontend, focused on consistency and polish.
+- Add `Enable Swipe-Based Scrolling` toggle to the `Settings` page that scrolls in-game lists by swiping instead of detecting the in-game scrollbar. It is disabled by default.
+- Add `Trackblazer Force-Train Energy Floor (Summer/Finale)` scenario override to the `Scenario Overrides Settings` page. During Summer and the Finale the `Trackblazer` scenario normally always picks training, but if energy is at or below this floor the bot falls through to the standard decision flow so items are not queued for a training with little hope of success.
+
+Adjustments
+---
+- Update game data up to `Sweep Tosho` (2026-06-03).
+- Read purchased `Trackblazer` shop items via the new purchased badge anchor so already-bought items are detected reliably.
+- Always run `Trackblazer` scheduled races regardless of critical energy or consecutive-race limits and/or related settings so an agenda race is never skipped.
+
+Fixes
+---
+- Fix leftover stale option IDs and routing in the in-app settings search so results jump to the correct page.
 
     </releaseNotes>
   </update>
