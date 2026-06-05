@@ -231,6 +231,7 @@ ${longTargetsString}${formatAdvancedScoringSection(settings.training)}
 
 ---------- Misc Options ----------
 🔍 Enable Crane Game Attempt: ${settings.general.enableCraneGameAttempt ? "✅" : "❌"}
+🌀 Enable Swipe-Based Scrolling: ${settings.general.enableSwipeBasedScrolling ? "✅" : "❌"}
 🛑 Stop Before Finals: ${settings.general.enableStopBeforeFinals ? "✅" : "❌"}
 🛑 Stop At Date: ${settings.general.enableStopAtDate ? `✅ (${settings.general.stopAtDates.join(", ")})` : "❌"}
 ⏰ Wait Delay: ${settings.general.waitDelay}s

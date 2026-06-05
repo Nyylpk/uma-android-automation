@@ -34,6 +34,7 @@ export interface Settings {
     general: {
         scenario: string
         enableCraneGameAttempt: boolean
+        enableSwipeBasedScrolling: boolean
         enableStopBeforeFinals: boolean
         enableStopAtDate: boolean
         stopAtDates: string[]
@@ -233,6 +234,7 @@ export const defaultSettings: Settings = {
     general: {
         scenario: "",
         enableCraneGameAttempt: false,
+        enableSwipeBasedScrolling: false,
         enableStopBeforeFinals: false,
         enableStopAtDate: false,
         stopAtDates: ["Senior January Early"],

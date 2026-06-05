@@ -478,6 +478,16 @@
         ],
         "(❯❯❯)\nTrying Hard with Everyone's Support!": [
             "Energy +15\nHaru Urara bond +5\nUnruffled hint +1"
+        ],
+        "(❯)\nA Wonderful Wedding?": [
+            "Randomly either\n----------\nEnergy +15\nGet Charming ○ status\nHaru Urara bond +5\n----------\n\n----------\nEnergy +15\nHaru Urara bond +5"
+        ],
+        "(❯❯)\nThe Theme's Decided!": [
+            "Energy +25\nHaru Urara bond +5",
+            "Mood +2\nHeal a negative status effect\nHaru Urara bond +5"
+        ],
+        "(❯❯❯)\nThe Gift of Excitement": [
+            "Energy +50\nHard Worker hint +1\nHaru Urara bond +5"
         ]
     },
     "Hishi Akebono": {
@@ -541,6 +551,16 @@
         "(❯❯)\nIkuno-Style Support": [
             "Wit +15\nFrenzied Front Runners hint +3\nIkuno Dictus bond +5",
             "Wit +15\nFrenzied End Closers hint +3\nIkuno Dictus bond +5"
+        ],
+        "(❯)\nIkuno-style Cuteness Research": [
+            "Maximum Energy +4\nStamina +15\nWit +5\nIkuno Dictus bond +5"
+        ],
+        "(❯❯)\nGlasses-style Umadol Song ☆": [
+            "Energy +15\nIkuno Dictus bond +10",
+            "Get Practice Perfect ○ status\nIkuno Dictus bond +10"
+        ],
+        "(❯❯❯)\nIkuno-style Socializing": [
+            "Randomly either\n----------\nEnergy +15\nStamina +15\nGuts +8\nWit +8\nKeep Going! hint +3\nIkuno Dictus bond +5\n----------\n\n----------\nEnergy +10\nStamina +8\nGuts +5\nWit +5\nFull Throttle hint +3\nIkuno Dictus bond +5"
         ]
     },
     "Inari One": {
@@ -1207,6 +1227,13 @@
         "Conquering the Crowds": [
             "Power +5\nSkill points +15\nOguri Cap bond +5",
             "Nakayama Racecourse ○ hint +1\nOguri Cap bond +5"
+        ],
+        "(❯)\n\"I Just Can't Quit Food\" —Oguri Cap": [
+            "Oguri Cap bond +15",
+            "(random) Energy -10\nGuts +15\nOguri Cap bond +5"
+        ],
+        "(❯❯)\n\"Happiness? Don't Mind If I Do\" —Oguri Cap": [
+            "Power +7\nGuts +7\nSkill points +10\nWet Conditions ○ hint +1\nOguri Cap bond +5"
         ]
     },
     "Rice Shower": {
@@ -1237,6 +1264,16 @@
         ],
         "(❯❯❯)\nA Page from a Day of Hard Work": [
             "Randomly either\n----------\nEnergy -10\nExtra Tank hint +1\nRice Shower bond +5\n----------\n\n----------\nEnergy -10\nAdrenaline Rush hint +1\nRice Shower bond +5\n----------\n\n----------\nEnergy -10\nStamina +5\nGuts +5\nAdrenaline Rush hint +3\nRice Shower bond +5"
+        ],
+        "(❯)\nForever a Child in Our Eyes": [
+            "Energy -5\nWit +15\nRice Shower bond +5"
+        ],
+        "(❯❯)\nThey Grow Up So Fast": [
+            "Energy -5\nKyoto Racecourse ○ hint +2\nRice Shower bond +5",
+            "Energy +20\nRice Shower bond +5"
+        ],
+        "(❯❯❯)\nHearts Full of Bittersweet Joy": [
+            "Energy -10\nWit +25\nShatterproof hint +1\nRice Shower bond +5"
         ]
     },
     "Riko Kashimoto": {
@@ -1706,6 +1743,16 @@
         "Yeehaw! Party Tonight ☆": [
             "Energy -10\nSpeed +5\nPower +10\nTaiki Shuttle bond +5",
             "Prepared to Pass hint +1\nTaiki Shuttle bond +5"
+        ],
+        "(❯)\nLesson One: Party Hearty": [
+            "Speed +7\nPower +7\nTaiki Shuttle bond +5"
+        ],
+        "(❯❯)\nLesson Two: The Show Must Go On": [
+            "Randomly either\n----------\nPower +15\nMile Corners ○ hint +2\nTaiki Shuttle bond +5\n----------\n\n----------\nPower +10\nEvent chain ended",
+            "Speed +10\nTaiki Shuttle bond +5"
+        ],
+        "(❯❯❯)\nLesson Three: Live in the Moment": [
+            "Speed +10\nPower +10\nGuts +10\nMile Maven hint +1\nTaiki Shuttle bond +5"
         ]
     },
     "Tamamo Cross": {

@@ -220,6 +220,19 @@
             "Dirt": "E"
         }
     },
+    "Inari One": {
+        "name": "Inari One",
+        "distanceAptitudes": {
+            "Sprint": "F",
+            "Mile": "B",
+            "Medium": "A",
+            "Long": "A"
+        },
+        "surfaceAptitudes": {
+            "Turf": "A",
+            "Dirt": "A"
+        }
+    },
     "Ines Fujin": {
         "name": "Ines Fujin",
         "distanceAptitudes": {
@@ -400,6 +413,19 @@
         "surfaceAptitudes": {
             "Turf": "A",
             "Dirt": "E"
+        }
+    },
+    "Mejiro Palmer": {
+        "name": "Mejiro Palmer",
+        "distanceAptitudes": {
+            "Sprint": "G",
+            "Mile": "F",
+            "Medium": "A",
+            "Long": "A"
+        },
+        "surfaceAptitudes": {
+            "Turf": "A",
+            "Dirt": "G"
         }
     },
     "Mejiro Ryan": {
@@ -604,6 +630,19 @@
             "Mile": "G",
             "Medium": "A",
             "Long": "A"
+        },
+        "surfaceAptitudes": {
+            "Turf": "A",
+            "Dirt": "G"
+        }
+    },
+    "Sweep Tosho": {
+        "name": "Sweep Tosho",
+        "distanceAptitudes": {
+            "Sprint": "E",
+            "Mile": "A",
+            "Medium": "A",
+            "Long": "D"
         },
         "surfaceAptitudes": {
             "Turf": "A",

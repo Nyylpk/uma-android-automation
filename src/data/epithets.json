@@ -2039,13 +2039,21 @@
             "Tokai Teio only",
             "Inherit memories from a parent that won at least 7 G1 races",
             "Be the most popular in at least 4 G1 races",
-            "Win the Satsuki Sho, Tokyo Yushun (Japanese Derby) and Arima Kinen (Senior) while being undefeated"
+            "Win the Satsuki Sho and Tokyo Yushun (Japanese Derby) while being undefeated",
+            "Win the Arima Kinen (Senior)"
         ],
         "scenarios": [],
         "characters": [
             "Tokai Teio"
         ],
-        "matchers": []
+        "matchers": [
+            {
+                "type": "winRace",
+                "name": "Arima Kinen",
+                "atClass": "Senior",
+                "displayLabel": "Win the Arima Kinen"
+            }
+        ]
     },
     "Moneymaker": {
         "name": "Moneymaker",
@@ -2373,6 +2381,19 @@
                 "displayLabel": "Win 10 Dirt races"
             }
         ]
+    },
+    "Pouty Witch": {
+        "name": "Pouty Witch",
+        "bullet_points": [
+            "Sweep Tosho only",
+            "Win the Tulip Sho and Shuka Sho as a End Closer",
+            "Win the Takarazuka Kinen (Senior), Queen Elizabeth II Cup (Senior) and Arima Kinen (Senior) as a Late Surger or End Closer"
+        ],
+        "scenarios": [],
+        "characters": [
+            "Sweep Tosho"
+        ],
+        "matchers": []
     },
     "Power & Perseverance": {
         "name": "Power & Perseverance",
@@ -3026,6 +3047,20 @@
         "characters": [],
         "matchers": []
     },
+    "Stormy Front Runner": {
+        "name": "Stormy Front Runner",
+        "bullet_points": [
+            "Mejiro Palmer only",
+            "Raise your Front Runner aptitude to S",
+            "Win a G1 as a Front Runner while being 4th most popular or worse",
+            "Win the Tenno Sho (Spring), Takarazuka Kinen (Senior), Arima Kinen (Senior) as a Front Runner"
+        ],
+        "scenarios": [],
+        "characters": [
+            "Mejiro Palmer"
+        ],
+        "matchers": []
+    },
     "Straightaway Supreme": {
         "name": "Straightaway Supreme",
         "bullet_points": [
@@ -3671,6 +3706,18 @@
                 "displayLabel": "Win the St. Lite Kinen"
             }
         ]
+    },
+    "Warlord from Oi": {
+        "name": "Warlord from Oi",
+        "bullet_points": [
+            "Inari One only",
+            "Win 4 G1 races on both turf and dirt terrain, including winning the Tokyo Daishoten, Takarazuka Kinen (Senior) as a Pace Chaser and winning the Tenno Sho (Spring), Arima Kinen as a Late Surger or End Closer"
+        ],
+        "scenarios": [],
+        "characters": [
+            "Inari One"
+        ],
+        "matchers": []
     },
     "Way of Kings": {
         "name": "Way of Kings",
