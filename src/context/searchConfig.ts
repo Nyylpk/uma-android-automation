@@ -227,12 +227,12 @@ const searchConfig: SearchOption[] = [
     {
         id: "training-scoring-ratio-curve",
         title: "Ratio Curve",
-        description: "Adjust the ratio bucket thresholds and values that drive stat-efficiency scoring.",
+        description: "Tune the per-bucket ratio multipliers that drive stat-efficiency scoring. Buckets at 15/30/45/60/75/90% of target are fixed.",
         page: "TrainingSettings",
     },
     {
-        id: "training-scoring-composition-weights",
-        title: "Composition Weights",
+        id: "training-scoring-weights",
+        title: "Score Weights",
         description: "Adjust how stat efficiency, relationships, and misc contribute to the final score.",
         page: "TrainingSettings",
     },
