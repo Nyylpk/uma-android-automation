@@ -322,6 +322,18 @@ const Settings = () => {
                         />
                     </SearchableItem>
 
+                    <SearchableItem
+                        id="settings-enable-swipe-based-scrolling"
+                        title="Enable Swipe-Based Scrolling"
+                        description="Scroll lists by swiping instead of detecting the in-game scrollbar. Enable this if the bot cannot scroll lists normally."
+                    >
+                        <Row
+                            title="Enable Swipe-Based Scrolling"
+                            description="Scroll lists by swiping instead of detecting the in-game scrollbar. Enable this if the bot cannot scroll lists normally."
+                            right={<Switch checked={general.enableSwipeBasedScrolling} onCheckedChange={(checked) => updateGeneral({ enableSwipeBasedScrolling: checked })} />}
+                        />
+                    </SearchableItem>
+
                     <SearchableItem id="settings-enable-settings-display" title="Enable Settings Display in Message Log" description="Show current bot configuration in the message log">
                         <Row
                             title="Enable Settings Display in Message Log"
