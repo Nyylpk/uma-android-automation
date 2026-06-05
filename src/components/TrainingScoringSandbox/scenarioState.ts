@@ -70,14 +70,14 @@ function emptyFriendBars(): FriendBars {
 }
 
 function emptyTraining(): SandboxTrainingScenario {
-    return { statGains: emptyStatGains(), energyGain: 0, trainingLevel: 1, rainbow: false, friendBars: emptyFriendBars() }
+    return { statGains: emptyStatGains(), energyGain: 0, trainingLevel: 5, rainbow: false, friendBars: emptyFriendBars() }
 }
 
-/** Sensible baseline: mid-Classic year, Energy 65, Good mood, no Charm, zero stats and zero gains. */
+/** Sensible baseline: Senior year, full energy, Great mood, no Charm, level-5 trainings with zero stats and zero gains. */
 export const initialScenario: SandboxScenario = {
-    energy: 65,
-    mood: "GOOD",
-    year: DateYear.CLASSIC,
+    energy: 100,
+    mood: "GREAT",
+    year: DateYear.SENIOR,
     charm: false,
     traineeTotals: { [StatName.SPEED]: 0, [StatName.STAMINA]: 0, [StatName.POWER]: 0, [StatName.GUTS]: 0, [StatName.WIT]: 0 },
     trainings: { [StatName.SPEED]: emptyTraining(), [StatName.STAMINA]: emptyTraining(), [StatName.POWER]: emptyTraining(), [StatName.GUTS]: emptyTraining(), [StatName.WIT]: emptyTraining() },

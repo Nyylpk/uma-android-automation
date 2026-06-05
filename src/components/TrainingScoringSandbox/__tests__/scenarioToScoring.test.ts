@@ -3,10 +3,10 @@ import { initialScenario } from "../scenarioState"
 import { DEFAULT_TRAINING_SCORING_CONSTANTS, StatName, DateYear } from "../../../lib/training/scoring"
 
 describe("scenarioToScoring", () => {
-    test("default scenario maps every training and uses CLASSIC year", () => {
+    test("default scenario maps every training and uses SENIOR year", () => {
         const { config, trainings } = scenarioToScoring(initialScenario)
         expect(trainings.length).toBe(5)
-        expect(config.currentDate.year).toBe(DateYear.CLASSIC)
+        expect(config.currentDate.year).toBe(DateYear.SENIOR)
         expect(config.statTargets[StatName.SPEED]).toBe(1200)
     })
 
