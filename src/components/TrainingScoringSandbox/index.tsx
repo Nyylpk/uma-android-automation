@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useMemo, useReducer } from "react"
 import { Pressable, StyleSheet, View } from "react-native"
 import Ionicons from "@react-native-vector-icons/ionicons"
 import { useTheme } from "../../context/ThemeContext"
-import { TrainingContext } from "../../context/BotStateContext"
+import { GeneralMiscContext, TrainingContext } from "../../context/BotStateContext"
 import { ALL_STAT_NAMES, calculateRawTrainingScore, scoringConstantsFromSettings, StatName } from "../../lib/training/scoring"
 import { loadSandboxScenario, saveSandboxScenario } from "../../lib/asyncStorage/sandboxScenarioStorage"
 import { SPACING } from "../../lib/spacing"
@@ -35,6 +35,7 @@ export interface TrainingScoringSandboxProps {
 export function TrainingScoringSandbox({ open, onClose }: TrainingScoringSandboxProps): React.ReactElement {
     const { colors } = useTheme()
     const { training } = useContext(TrainingContext)
+    const { general } = useContext(GeneralMiscContext)
     const [scenario, dispatch] = useReducer(scenarioReducer, initialScenario)
 
     // Hydrate from AsyncStorage once on mount.
@@ -58,7 +59,22 @@ export function TrainingScoringSandbox({ open, onClose }: TrainingScoringSandbox
     }, [scenario])
 
     const constants = useMemo(() => scoringConstantsFromSettings(training as unknown as Record<string, unknown>), [training])
-    const { config, trainings } = useMemo(() => scenarioToScoring(scenario, constants), [scenario, constants])
+    const settingsInputs = useMemo(
+        () => ({
+            statPrioritization: training.statPrioritization,
+            summerTrainingStatPriority: training.summerTrainingStatPriority,
+            trainingBlacklist: training.trainingBlacklist,
+            scenario: general.scenario,
+            enableRainbowTrainingBonus: training.enableRainbowTrainingBonus,
+            disableTrainingOnMaxedStat: training.disableTrainingOnMaxedStat,
+            enablePrioritizeSkillHints: training.enablePrioritizeSkillHints,
+            enableTrainingLevelWeighting: training.enableTrainingLevelWeighting,
+            disableStatTargets: training.disableStatTargets,
+            enablePrioritizeNearMaxFriendship: training.enablePrioritizeNearMaxFriendship,
+        }),
+        [training, general.scenario]
+    )
+    const { config, trainings } = useMemo(() => scenarioToScoring(scenario, constants, settingsInputs), [scenario, constants, settingsInputs])
 
     const scoresByTraining = useMemo(() => {
         const out: Partial<Record<StatName, number>> = {}
@@ -146,8 +162,9 @@ export function TrainingScoringSandbox({ open, onClose }: TrainingScoringSandbox
     return (
         <SheetModal visible={open} onRequestClose={onClose} header={header} footer={footer} maxWidth={800} heightFraction={0.55}>
             <Text style={styles.description}>
-                Preview which training the scoring formula would pick against a synthetic scenario. Edit the stat gains, trainee totals, and run-wide state below; the winning training is highlighted
-                in amber.
+                Preview which training the scoring formula would pick against a synthetic scenario. Uses all current Training Settings - priority lists, blacklist,
+                Advanced multipliers, every feature toggle, and the selected scenario - except for the per-distance stat targets, which the sandbox always treats as a flat
+                1200 so the ratio buckets stay predictable. Edit the stat gains, trainee totals, and run-wide state below; the winning training is highlighted in amber.
             </Text>
             <StatTable scenario={scenario} dispatch={dispatch} />
             <TrainingCircleRow scenario={scenario} scoresByTraining={scoresByTraining} winnerTraining={winnerTraining} dispatch={dispatch} />

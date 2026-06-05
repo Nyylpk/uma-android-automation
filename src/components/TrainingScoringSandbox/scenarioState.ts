@@ -35,6 +35,8 @@ export interface SandboxScenario {
     mood: Mood
     /** Career year. */
     year: DateYear
+    /** Whether the run is currently in the Summer Training block. Drives the swap from `statPrioritization` to `summerTrainingStatPriority` in the scoring pipeline. */
+    summer: boolean
     /** Whether Good-Luck Charm is active. */
     charm: boolean
     /** Trainee cumulative stat totals 0-1200 each. */
@@ -50,6 +52,7 @@ export type ScenarioAction =
     | { type: "set-energy"; energy: number }
     | { type: "set-mood"; mood: Mood }
     | { type: "set-year"; year: DateYear }
+    | { type: "set-summer"; summer: boolean }
     | { type: "set-charm"; charm: boolean }
     | { type: "set-trainee-total"; stat: StatName; value: number }
     | { type: "select-training"; training: StatName }
@@ -78,6 +81,7 @@ export const initialScenario: SandboxScenario = {
     energy: 100,
     mood: "GREAT",
     year: DateYear.SENIOR,
+    summer: false,
     charm: false,
     traineeTotals: { [StatName.SPEED]: 0, [StatName.STAMINA]: 0, [StatName.POWER]: 0, [StatName.GUTS]: 0, [StatName.WIT]: 0 },
     trainings: { [StatName.SPEED]: emptyTraining(), [StatName.STAMINA]: emptyTraining(), [StatName.POWER]: emptyTraining(), [StatName.GUTS]: emptyTraining(), [StatName.WIT]: emptyTraining() },
@@ -99,6 +103,8 @@ export function scenarioReducer(state: SandboxScenario, action: ScenarioAction):
             return { ...state, mood: action.mood }
         case "set-year":
             return { ...state, year: action.year }
+        case "set-summer":
+            return { ...state, summer: action.summer }
         case "set-charm":
             return { ...state, charm: action.charm }
         case "set-trainee-total":

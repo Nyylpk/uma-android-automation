@@ -256,6 +256,10 @@ export function EditorStrip({ scenario, dispatch }: EditorStripProps): React.Rea
                         <Text style={styles.label}>Year</Text>
                         <SegmentedRow options={YEAR_OPTIONS} selected={scenario.year} onSelect={(v) => dispatch({ type: "set-year", year: v })} />
                     </View>
+                    <View style={styles.gridRow}>
+                        <Text style={styles.label}>Summer</Text>
+                        <Switch checked={scenario.summer} onCheckedChange={(v) => dispatch({ type: "set-summer", summer: v })} />
+                    </View>
                     <View style={[styles.gridRow, !isTrackblazer && styles.disabledRow]} pointerEvents={isTrackblazer ? "auto" : "none"}>
                         <Text style={styles.label}>Charm{isTrackblazer ? "" : " (Trackblazer)"}</Text>
                         <Switch checked={scenario.charm} onCheckedChange={(v) => dispatch({ type: "set-charm", charm: v })} />
