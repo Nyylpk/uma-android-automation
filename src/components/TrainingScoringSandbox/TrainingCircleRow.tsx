@@ -1,5 +1,6 @@
 import React, { useMemo } from "react"
 import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native"
+import { LinearGradient } from "expo-linear-gradient"
 import { useTheme } from "../../context/ThemeContext"
 import { ALL_STAT_NAMES, StatName } from "../../lib/training/scoring"
 import { SPACING } from "../../lib/spacing"
@@ -31,6 +32,9 @@ const TIER_COLORS: Record<"blue" | "green" | "orange", string> = {
 }
 
 const AMBER = "#f59e0b"
+
+// Soft 7-stop rainbow used to fill a training circle when it is in rainbow state. Tailwind 400-shade hues so light/dark text still has reasonable contrast over the gradient.
+const RAINBOW_COLORS: [string, string, ...string[]] = ["#f87171", "#fb923c", "#fbbf24", "#34d399", "#60a5fa", "#a78bfa", "#f472b6"]
 
 /** Props for `TrainingCircleRow`. */
 export interface TrainingCircleRowProps {
@@ -98,14 +102,23 @@ export function TrainingCircleRow({ scenario, scoresByTraining, winnerTraining, 
                     color: colors.textMuted,
                     fontSize: isNarrow ? 8 : 11,
                 },
-                rainbowDot: {
+                rainbowFill: {
                     position: "absolute",
-                    top: 4,
-                    left: 4,
-                    width: 8,
-                    height: 8,
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
                     borderRadius: 999,
-                    backgroundColor: AMBER,
+                    overflow: "hidden",
+                },
+                rainbowScrim: {
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    borderRadius: 999,
+                    backgroundColor: "rgba(0,0,0,0.18)",
                 },
                 tierRow: {
                     position: "absolute",
@@ -146,7 +159,12 @@ export function TrainingCircleRow({ scenario, scoresByTraining, winnerTraining, 
                 return (
                     <View key={stat} style={styles.col}>
                         <Pressable onPress={() => dispatch({ type: "select-training", training: stat })} style={[styles.circle, isSelected && styles.circleSelected]}>
-                            {t.rainbow ? <View style={styles.rainbowDot} /> : null}
+                            {t.rainbow ? (
+                                <>
+                                    <LinearGradient colors={RAINBOW_COLORS} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.rainbowFill} pointerEvents="none" />
+                                    <View style={styles.rainbowScrim} pointerEvents="none" />
+                                </>
+                            ) : null}
                             <Text style={styles.circleLabel}>{(isNarrow ? STAT_LABELS_SHORT : STAT_LABELS)[stat]}</Text>
                             <Text style={styles.circleLv}>Lv {t.trainingLevel}</Text>
                             <View style={styles.tierRow}>
