@@ -31,7 +31,7 @@ const searchConfig: SearchOption[] = [
     {
         id: "settings-enable-swipe-based-scrolling",
         title: "Enable Swipe-Based Scrolling",
-        description: "Scroll lists by swiping instead of detecting the in-game scrollbar. Enable this if the bot cannot scroll lists normally.",
+        description: "Scroll lists by swiping instead of detecting the in-game scrollbar. Enable this if the bot cannot scroll lists normally. This may or may not work depending on the device.",
         page: "SettingsMain",
     },
     {
