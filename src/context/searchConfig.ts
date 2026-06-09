@@ -760,6 +760,27 @@ const searchConfig: SearchOption[] = [
         page: "ScenarioOverridesSettings",
     },
     {
+        id: "trackblazer-skip-empowering-megaphone-below-gain",
+        title: "Trackblazer Skip Empowering Megaphone Below Stat Gain",
+        description:
+            "Skip the Empowering Megaphone (+60% for 2 turns) when the selected training's main stat gain is below this value, falling through to a lower tier whose threshold is met. 0 = always allowed.",
+        page: "ScenarioOverridesSettings",
+    },
+    {
+        id: "trackblazer-skip-motivating-megaphone-below-gain",
+        title: "Trackblazer Skip Motivating Megaphone Below Stat Gain",
+        description:
+            "Skip the Motivating Megaphone (+40% for 3 turns) when the selected training's main stat gain is below this value, falling through to a lower tier whose threshold is met. 0 = always allowed.",
+        page: "ScenarioOverridesSettings",
+    },
+    {
+        id: "trackblazer-skip-coaching-megaphone-below-gain",
+        title: "Trackblazer Skip Coaching Megaphone Below Stat Gain",
+        description:
+            "Skip the Coaching Megaphone (+20% for 4 turns) when the selected training's main stat gain is below this value. 0 = always allowed.",
+        page: "ScenarioOverridesSettings",
+    },
+    {
         id: "trackblazer-max-retries-per-race",
         title: "Trackblazer Max Retries per Race",
         description: "The maximum number of times the bot will attempt to retry a failed race in the Trackblazer scenario.",
