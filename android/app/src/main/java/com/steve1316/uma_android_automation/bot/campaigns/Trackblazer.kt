@@ -2714,7 +2714,7 @@ class Trackblazer(game: Game) : Campaign(game) {
             if (selectedMainGain < threshold) {
                 MessageLog.i(
                     TAG,
-                    "[TRACKBLAZER] Skipping $itemName: selected $trainingSelected main gain ($selectedMainGain) below threshold ($threshold). Trying a lower tier.",
+                    "[TRACKBLAZER] Skipping $itemName: selected $trainingSelected main gain ($selectedMainGain) below its threshold ($threshold). Conserving this tier. A lower eligible tier may still be used this turn.",
                 )
                 decisionTracer.recordItemDecision(
                     itemName,
