@@ -2740,7 +2740,14 @@ class Trackblazer(game: Game) : Campaign(game) {
             }
 
             val reason = "Increasing training gains for the next few turns."
-            if (clickItemPlusButton(itemName, entry, "[TRACKBLAZER] Queuing best eligible megaphone: \"$itemName\" (main gain $selectedMainGain >= threshold $threshold).", nextInventory, reason = reason)) {
+            if (clickItemPlusButton(
+                    itemName,
+                    entry,
+                    "[TRACKBLAZER] Queuing best eligible megaphone: \"$itemName\" (main gain $selectedMainGain >= threshold $threshold).",
+                    nextInventory,
+                    reason = reason,
+                )
+            ) {
                 trainee.megaphoneTurnCounter = MegaphoneSelection.durationFor(itemName)
                 decisionTracer.recordItemDecision(
                     itemName,
