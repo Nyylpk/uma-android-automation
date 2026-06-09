@@ -263,9 +263,13 @@ class Trackblazer(game: Game) : Campaign(game) {
      */
     private val lowMainStatGainItemFloor: Int = SettingsHelper.getIntSetting("scenarioOverrides", "trackblazerSkipBadMoodItemsBelowGain", 15)
 
-    /** Per-tier minimum selected-training main stat gain required to spend each megaphone. 0 = always allowed. */
+    /** Minimum selected-training main stat gain required to spend the Empowering Megaphone (+60% for 2 turns). 0 = always allowed. */
     private val empoweringMegaphoneMinGain: Int = SettingsHelper.getIntSetting("scenarioOverrides", "trackblazerSkipEmpoweringMegaphoneBelowGain", 0)
+
+    /** Minimum selected-training main stat gain required to spend the Motivating Megaphone (+40% for 3 turns). 0 = always allowed. */
     private val motivatingMegaphoneMinGain: Int = SettingsHelper.getIntSetting("scenarioOverrides", "trackblazerSkipMotivatingMegaphoneBelowGain", 0)
+
+    /** Minimum selected-training main stat gain required to spend the Coaching Megaphone (+20% for 4 turns). 0 = always allowed. */
     private val coachingMegaphoneMinGain: Int = SettingsHelper.getIntSetting("scenarioOverrides", "trackblazerSkipCoachingMegaphoneBelowGain", 0)
 
     /** Megaphone item name -> its minimum-gain threshold, consumed by `MegaphoneSelection.bestEligibleMegaphone`. */
@@ -2724,7 +2728,8 @@ class Trackblazer(game: Game) : Campaign(game) {
                 return null
             }
 
-            // Only the best eligible megaphone in inventory should fire this turn; defer otherwise.
+            // Only the best eligible megaphone in inventory should fire this turn; defer otherwise. This relies on
+            // nextInventory being pre-seeded from currentInventory so every tier's count is known regardless of scan order.
             val bestEligible = MegaphoneSelection.bestEligibleMegaphone(selectedMainGain, nextInventory, megaphoneThresholds)
             if (bestEligible != itemName) {
                 MessageLog.i(
