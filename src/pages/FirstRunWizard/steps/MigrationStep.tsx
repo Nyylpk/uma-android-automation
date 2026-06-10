@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native"
+import CustomButton from "../../../components/CustomButton"
 import { useTheme } from "../../../context/ThemeContext"
 import { storageBridge, LegacyCounts, MigrationResult } from "../../../lib/storageBridge"
 
@@ -26,7 +27,6 @@ const styles = StyleSheet.create({
     meta: { fontSize: 12, marginTop: 2 },
     errorBox: { borderWidth: 1, borderRadius: 8, padding: 12, marginBottom: 12 },
     errorText: { fontSize: 13, marginBottom: 8 },
-    errorAction: { fontSize: 13, fontWeight: "600" },
 })
 
 /** Step 2 of the first-run wizard (retroactive only): pick what to do with files at the legacy path.
@@ -91,9 +91,7 @@ const MigrationStep = ({ legacyCounts, onChoice, onAdvance }: Props) => {
             {error && (
                 <View style={[styles.errorBox, { borderColor: colors.error }]}>
                     <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
-                    <Pressable onPress={onAdvance}>
-                        <Text style={[styles.errorAction, { color: colors.text }]}>Continue with partial move</Text>
-                    </Pressable>
+                    <CustomButton onPress={onAdvance}>Continue with partial move</CustomButton>
                 </View>
             )}
             {card("move", "->", "Move them", "Copy to your new folder, remove originals", false, true)}
