@@ -52,17 +52,12 @@ class StorageBridgeModule(reactContext: ReactApplicationContext) :
             promise.reject("PICKER_BUSY", "A folder picker is already in progress.")
             return
         }
-        val activity = currentActivity
-        if (activity == null) {
-            promise.reject("NO_ACTIVITY", "There is no foreground activity to host the folder picker.")
-            return
-        }
         try {
             val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
             }
             pendingPickPromise = promise
-            activity.startActivityForResult(intent, REQUEST_CODE_PICK_FOLDER)
+            appContext.startActivityForResult(intent, REQUEST_CODE_PICK_FOLDER, null)
         } catch (e: Exception) {
             pendingPickPromise = null
             Log.e(TAG, "Failed to launch folder picker", e)
@@ -153,7 +148,7 @@ class StorageBridgeModule(reactContext: ReactApplicationContext) :
         }
     }
 
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         // No-op. The folder picker delivers its result via onActivityResult.
     }
 }
