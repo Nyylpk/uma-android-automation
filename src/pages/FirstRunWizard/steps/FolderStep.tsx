@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react"
-import { StyleSheet, Text, View } from "react-native"
+import { useEffect, useRef, useState } from "react"
+import { Pressable, StyleSheet, Text, View } from "react-native"
 import CustomButton from "../../../components/CustomButton"
 import { useTheme } from "../../../context/ThemeContext"
 import { storageBridge, PickedFolder } from "../../../lib/storageBridge"
@@ -32,8 +32,10 @@ const styles = StyleSheet.create({
     selectedLabel: { fontSize: 11, fontWeight: "600", letterSpacing: 0.6, marginBottom: 4 },
     selectedName: { fontSize: 16, fontWeight: "600", marginBottom: 8 },
     selectedSub: { fontSize: 12, lineHeight: 18 },
-    changeLink: { fontSize: 12, textAlign: "center", marginTop: 12 },
-    error: { fontSize: 13, marginTop: 12 },
+    changeLinkPressable: { alignSelf: "center", paddingVertical: 10, paddingHorizontal: 12 },
+    changeLink: { fontSize: 12, textAlign: "center", textDecorationLine: "underline" },
+    errorBlock: { marginTop: 12, gap: 8 },
+    error: { fontSize: 13 },
 })
 
 /** Step 1 of the first-run wizard: storage folder selection.
@@ -48,6 +50,16 @@ const FolderStep = ({ onPick, onAdvance, onCtaChange }: Props) => {
     const { colors } = useTheme()
     const [picked, setPicked] = useState<PickedFolder | null>(null)
     const [error, setError] = useState<string | null>(null)
+    const onPickRef = useRef(onPick)
+    const onCtaChangeRef = useRef(onCtaChange)
+
+    useEffect(() => {
+        onPickRef.current = onPick
+    })
+
+    useEffect(() => {
+        onCtaChangeRef.current = onCtaChange
+    })
 
     useEffect(() => {
         let cancelled = false
@@ -56,20 +68,20 @@ const FolderStep = ({ onPick, onAdvance, onCtaChange }: Props) => {
                 const existing = await storageBridge.getCurrentFolder()
                 if (!cancelled && existing) {
                     setPicked(existing)
-                    onPick(existing)
+                    onPickRef.current(existing)
                 }
-            } catch {
-                // swallow
+            } catch (e) {
+                console.warn("[FolderStep] getCurrentFolder failed", e)
             }
         })()
         return () => {
             cancelled = true
         }
-    }, [onPick])
+    }, [])
 
     useEffect(() => {
-        onCtaChange(picked ? { label: "Continue", enabled: true, onPress: onAdvance } : null)
-    }, [picked, onAdvance, onCtaChange])
+        onCtaChangeRef.current(picked ? { label: "Continue", enabled: true, onPress: onAdvance } : null)
+    }, [picked, onAdvance])
 
     const handlePick = async () => {
         setError(null)
@@ -79,7 +91,7 @@ const FolderStep = ({ onPick, onAdvance, onCtaChange }: Props) => {
             const folder = await storageBridge.getCurrentFolder()
             if (folder) {
                 setPicked(folder)
-                onPick(folder)
+                onPickRef.current(folder)
             }
         } catch (e) {
             setError("Couldn't open the folder picker. Retry?")
@@ -99,12 +111,17 @@ const FolderStep = ({ onPick, onAdvance, onCtaChange }: Props) => {
                     <Text style={[styles.selectedLabel, { color: colors.success }]}>SELECTED</Text>
                     <Text style={[styles.selectedName, { color: colors.text }]}>{picked.name}</Text>
                     <Text style={[styles.selectedSub, { color: colors.textMuted }]}>logs/{"\n"}recordings/{"\n"}backups/</Text>
-                    <Text style={[styles.changeLink, { color: colors.textMuted }]} onPress={handlePick}>
-                        Change folder
-                    </Text>
+                    <Pressable onPress={handlePick} style={styles.changeLinkPressable} hitSlop={8}>
+                        <Text style={[styles.changeLink, { color: colors.primary }]}>Change folder</Text>
+                    </Pressable>
                 </View>
             )}
-            {error && <Text style={[styles.error, { color: colors.error }]}>{error}</Text>}
+            {error && (
+                <View style={styles.errorBlock}>
+                    <Text style={[styles.error, { color: colors.error }]}>{error}</Text>
+                    <CustomButton onPress={handlePick}>Retry</CustomButton>
+                </View>
+            )}
         </View>
     )
 }
