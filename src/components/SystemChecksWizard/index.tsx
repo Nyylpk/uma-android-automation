@@ -21,7 +21,12 @@ export interface SystemCheckResults {
 
 /** Props for `SystemChecksWizard`. */
 interface Props {
-    /** Called once the user has visited all 3 inner sub-steps. The argument is the final snapshot. */
+    /** Called exactly once when the wizard has been fully exercised. Fires either when the user
+     * advances through all 3 sub-steps (the explicit path) or when all 3 permissions are already
+     * granted on mount (the implicit path, where the wizard would otherwise show the done card
+     * immediately and the user has nothing to walk through). The argument is the final snapshot of
+     * grant state at the moment of firing.
+     */
     onAllVisited?: (results: SystemCheckResults) => void
     /** When true, the wizard renders with tighter padding and no outer card border so it nests cleanly inside a parent wizard. */
     embeddedInWizard?: boolean
@@ -432,10 +437,10 @@ const SystemChecksWizard = ({ onAllVisited, embeddedInWizard = false }: Props) =
                     </View>
                     <View style={navStyle}>
                         <CustomButton variant="ghost" disabled={currentWizardStep === 0} onPress={goBack}>
-                            Back
+                            ← Back
                         </CustomButton>
                         <CustomButton variant="ghost" disabled={currentWizardStep === wizardSteps.length - 1} onPress={goNext}>
-                            Next
+                            Next →
                         </CustomButton>
                     </View>
                 </>
