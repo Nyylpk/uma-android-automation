@@ -414,7 +414,7 @@ const SystemChecksWizard = ({ onAllVisited, embeddedInWizard = false }: Props) =
                             {activeStep.flags.map((flag) => {
                                 const chipStyle = !flag.ready ? styles.statusChipPending : flag.granted ? styles.statusChipGranted : styles.statusChipMissing
                                 const chipColor = !flag.ready ? colors.textMuted : flag.granted ? colors.success : colors.error
-                                const chipText = !flag.ready ? "Checking..." : flag.granted ? "Granted" : "Missing"
+                                const chipText = !flag.ready ? "Checking..." : flag.granted ? "✅ Granted" : "❌ Missing"
                                 return (
                                     <View key={flag.label} style={[styles.statusChip, chipStyle]}>
                                         <Text style={[styles.statusChipText, { color: chipColor }]}>{flag.label}</Text>
