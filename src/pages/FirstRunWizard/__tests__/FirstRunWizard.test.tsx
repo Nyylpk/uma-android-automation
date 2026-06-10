@@ -9,6 +9,7 @@ jest.mock("../../../lib/storageBridge", () => ({
         getCurrentFolder: jest.fn(),
         pickFolder: jest.fn(),
         migrateLegacyFiles: jest.fn(),
+        validateAccess: jest.fn().mockResolvedValue(true),
     },
 }))
 jest.mock("../../../context/ThemeContext", () => ({

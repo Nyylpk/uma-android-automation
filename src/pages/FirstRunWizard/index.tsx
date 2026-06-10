@@ -4,7 +4,7 @@ import CustomButton from "../../components/CustomButton"
 import { SystemCheckResults } from "../../components/SystemChecksWizard"
 import { useTheme } from "../../context/ThemeContext"
 import { useLegacyFileScan } from "../../hooks/useLegacyFileScan"
-import { PickedFolder, MigrationResult } from "../../lib/storageBridge"
+import { storageBridge, PickedFolder, MigrationResult } from "../../lib/storageBridge"
 import FolderStep, { CtaState } from "./steps/FolderStep"
 import MigrationStep, { MigrationChoice } from "./steps/MigrationStep"
 import SystemChecksStep from "./steps/SystemChecksStep"
@@ -26,6 +26,8 @@ const styles = StyleSheet.create({
     body: { flex: 1 },
     footer: { padding: 16 },
     saveError: { fontSize: 12, marginBottom: 8, textAlign: "center" },
+    accessBanner: { marginHorizontal: 16, marginBottom: 8, padding: 12, borderWidth: 1, borderRadius: 8 },
+    accessBannerText: { fontSize: 13, lineHeight: 18 },
 })
 
 /** Top-level first-run wizard. Mounted by `AppWithBootstrap` when `firstRun.completed` is unset.
@@ -46,6 +48,7 @@ const FirstRunWizard = ({ onComplete }: Props) => {
     const [outerCta, setOuterCta] = useState<CtaState | null>(null)
     const [pendingAdvance, setPendingAdvance] = useState(false)
     const [saveError, setSaveError] = useState<string | null>(null)
+    const [accessError, setAccessError] = useState<string | null>(null)
 
     const steps = useMemo((): StepKey[] => {
         const list: StepKey[] = ["folder"]
@@ -57,7 +60,25 @@ const FirstRunWizard = ({ onComplete }: Props) => {
     const total = steps.length
     const current = steps[Math.min(outerStep, total - 1)]
 
-    const advance = useCallback(() => setOuterStep(prev => Math.min(prev + 1, steps.length - 1)), [steps.length])
+    const advance = useCallback(async () => {
+        // Verify the picked folder is still accessible before advancing past step 1.
+        if (outerStep >= 1) {
+            const ok = await storageBridge.validateAccess()
+            if (!ok) {
+                setOuterStep(0)
+                setPicked(null)
+                setOuterCta(null)
+                setAccessError("That folder is no longer accessible. Pick another one.")
+                return
+            }
+        }
+        setOuterStep(prev => Math.min(prev + 1, steps.length - 1))
+    }, [steps.length, outerStep])
+
+    const handlePicked = useCallback((folder: PickedFolder | null) => {
+        setPicked(folder)
+        if (folder != null) setAccessError(null)
+    }, [])
 
     // If the user tapped Continue on step 1 while the scan was in flight, advance once the list settles.
     useEffect(() => {
@@ -91,7 +112,7 @@ const FirstRunWizard = ({ onComplete }: Props) => {
     const stepBody = (() => {
         switch (current) {
             case "folder":
-                return <FolderStep onPick={setPicked} onAdvance={handleFolderAdvance} onCtaChange={setOuterCta} />
+                return <FolderStep onPick={handlePicked} onAdvance={handleFolderAdvance} onCtaChange={setOuterCta} />
             case "migration":
                 if (!counts) return null
                 return <MigrationStep legacyCounts={counts} onChoice={handleMigrationChoice} onAdvance={advance} />
@@ -120,6 +141,11 @@ const FirstRunWizard = ({ onComplete }: Props) => {
             <View style={[styles.progressTrack, { backgroundColor: colors.borderHair }]}>
                 <View style={[styles.progressFill, { width: `${((outerStep + 1) / total) * 100}%`, backgroundColor: colors.primary }]} />
             </View>
+            {accessError && outerStep === 0 && (
+                <View style={[styles.accessBanner, { backgroundColor: colors.warningSubtle ?? colors.surface, borderColor: colors.warning }]}>
+                    <Text style={[styles.accessBannerText, { color: colors.warning }]}>{accessError}</Text>
+                </View>
+            )}
             <View style={styles.body}>{stepBody}</View>
             {outerCta && (
                 <View style={styles.footer}>
