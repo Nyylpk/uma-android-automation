@@ -102,7 +102,7 @@ const FolderStep = ({ onPick, onAdvance, onCtaChange }: Props) => {
         <View style={styles.root}>
             <Text style={[styles.headline, { color: colors.text }]}>Where should the bot save your files?</Text>
             <Text style={[styles.hint, { color: colors.textMuted }]}>
-                Newer Android hides app folders from file managers. Pick somewhere visible like Documents/. We'll create logs/, recordings/, and backups/ inside.
+                Choose a folder somewhere you can open in your file manager. Recent Android versions hide app-private storage from file managers, so the bot needs a spot you control. It will put its logs/ and recordings/ subfolders inside whatever you pick.
             </Text>
             {picked == null ? (
                 <CustomButton onPress={handlePick}>Pick a folder</CustomButton>
@@ -110,7 +110,7 @@ const FolderStep = ({ onPick, onAdvance, onCtaChange }: Props) => {
                 <View style={[styles.selected, { borderColor: colors.success }]}>
                     <Text style={[styles.selectedLabel, { color: colors.success }]}>SELECTED</Text>
                     <Text style={[styles.selectedName, { color: colors.text }]}>{picked.name}</Text>
-                    <Text style={[styles.selectedSub, { color: colors.textMuted }]}>logs/{"\n"}recordings/{"\n"}backups/</Text>
+                    <Text style={[styles.selectedSub, { color: colors.textMuted }]}>logs/{"\n"}recordings/</Text>
                     <Pressable onPress={handlePick} style={styles.changeLinkPressable} hitSlop={8}>
                         <Text style={[styles.changeLink, { color: colors.primary }]}>Change folder</Text>
                     </Pressable>
