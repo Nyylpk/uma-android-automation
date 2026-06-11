@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
  * @returns A React node.
  */
 const SystemChecksStep = ({ onSnapshot, onAdvance, onCtaChange }: Props) => {
-    const [results, setResults] = useState<SystemCheckResults | null>(null)
+    const [granted, setGranted] = useState<SystemCheckResults | null>(null)
 
     // Latest-ref pattern so the effects don't re-run on parent callback identity changes.
     const onSnapshotRef = useRef(onSnapshot)
@@ -37,13 +37,18 @@ const SystemChecksStep = ({ onSnapshot, onAdvance, onCtaChange }: Props) => {
     useEffect(() => { onAdvanceRef.current = onAdvance })
 
     const handleAllVisited = useCallback((r: SystemCheckResults) => {
-        setResults(r)
         onSnapshotRef.current(r)
     }, [])
 
+    const handlePermissionsChange = useCallback((r: SystemCheckResults) => {
+        setGranted(r)
+    }, [])
+
+    const allGranted = granted !== null && granted.accessibility && granted.overlay && granted.battery
+
     useEffect(() => {
-        onCtaChangeRef.current({ label: "Finish", enabled: results !== null, onPress: () => onAdvanceRef.current() })
-    }, [results])
+        onCtaChangeRef.current({ label: "Finish", enabled: allGranted, onPress: () => onAdvanceRef.current() })
+    }, [allGranted])
 
     // Clear the registered CTA on unmount so the outer footer doesn't render a stale "Finish" if the
     // user navigates back to an earlier step.
@@ -53,7 +58,7 @@ const SystemChecksStep = ({ onSnapshot, onAdvance, onCtaChange }: Props) => {
 
     return (
         <View style={styles.root}>
-            <SystemChecksWizard onAllVisited={handleAllVisited} />
+            <SystemChecksWizard onAllVisited={handleAllVisited} onPermissionsChange={handlePermissionsChange} />
         </View>
     )
 }

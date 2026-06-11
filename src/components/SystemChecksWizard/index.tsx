@@ -28,6 +28,11 @@ interface Props {
      * grant state at the moment of firing.
      */
     onAllVisited?: (results: SystemCheckResults) => void
+    /** Called every time any of the three permission grants changes (including the initial poll on
+     * mount and subsequent AppState refreshes). Use this to live-track whether all permissions are
+     * currently granted, e.g. to gate a parent wizard's Finish button.
+     */
+    onPermissionsChange?: (results: SystemCheckResults) => void
     /** When true, the wizard renders with tighter padding and no outer card border so it nests cleanly inside a parent wizard. */
     embeddedInWizard?: boolean
 }
@@ -60,7 +65,7 @@ interface BatteryStatus {
  * @param embeddedInWizard When true, drops the outer card chrome and tightens padding for nesting inside a parent wizard.
  * @returns The system checks wizard view.
  */
-const SystemChecksWizard = ({ onAllVisited, embeddedInWizard = false }: Props) => {
+const SystemChecksWizard = ({ onAllVisited, onPermissionsChange, embeddedInWizard = false }: Props) => {
     const { colors } = useTheme()
 
     const [accessibilityStatus, setAccessibilityStatus] = useState<AccessibilityStatus | null>(null)
@@ -74,11 +79,26 @@ const SystemChecksWizard = ({ onAllVisited, embeddedInWizard = false }: Props) =
     const [visited, setVisited] = useState<Set<number>>(() => new Set([0]))
     const recheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const onAllVisitedRef = useRef(onAllVisited)
+    const onPermissionsChangeRef = useRef(onPermissionsChange)
     const allVisitedFiredRef = useRef(false)
 
     useEffect(() => {
         onAllVisitedRef.current = onAllVisited
     }, [onAllVisited])
+    useEffect(() => {
+        onPermissionsChangeRef.current = onPermissionsChange
+    }, [onPermissionsChange])
+
+    // Fire onPermissionsChange whenever any grant flips. Skips the initial polling-pending window
+    // where any of the three statuses is still null so parents don't see a spurious all-false.
+    useEffect(() => {
+        if (accessibilityStatus === null || overlayStatus === null || batteryStatus === null) return
+        onPermissionsChangeRef.current?.({
+            accessibility: !!(accessibilityStatus.enabled && accessibilityStatus.active),
+            overlay: !!overlayStatus.enabled,
+            battery: !!batteryStatus.enabled,
+        })
+    }, [accessibilityStatus, overlayStatus, batteryStatus])
 
     /** Checks with the native module if the Accessibility Service is currently running. */
     const checkAccessibilityStatus = useCallback(() => {

@@ -30,8 +30,20 @@ jest.mock("../../../components/SystemChecksWizard", () => {
     const { Pressable, Text } = require("react-native")
     return {
         __esModule: true,
-        default: ({ onAllVisited }: { onAllVisited: (r: { accessibility: boolean; overlay: boolean; battery: boolean }) => void }) => (
-            <Pressable onPress={() => onAllVisited({ accessibility: true, overlay: true, battery: true })}>
+        default: ({
+            onAllVisited,
+            onPermissionsChange,
+        }: {
+            onAllVisited?: (r: { accessibility: boolean; overlay: boolean; battery: boolean }) => void
+            onPermissionsChange?: (r: { accessibility: boolean; overlay: boolean; battery: boolean }) => void
+        }) => (
+            <Pressable
+                onPress={() => {
+                    const all = { accessibility: true, overlay: true, battery: true }
+                    onPermissionsChange?.(all)
+                    onAllVisited?.(all)
+                }}
+            >
                 <Text>FAKE_VISIT_ALL</Text>
             </Pressable>
         ),
