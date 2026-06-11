@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
-import { StyleSheet, Text, View } from "react-native"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { BackHandler, StyleSheet, Text, View } from "react-native"
 import CustomButton from "../../components/CustomButton"
 import { SystemCheckResults } from "../../components/SystemChecksWizard"
 import { useTheme } from "../../context/ThemeContext"
@@ -8,15 +8,14 @@ import { storageBridge, PickedFolder, MigrationResult } from "../../lib/storageB
 import FolderStep, { CtaState } from "./steps/FolderStep"
 import MigrationStep, { MigrationChoice } from "./steps/MigrationStep"
 import SystemChecksStep from "./steps/SystemChecksStep"
-import DoneStep, { DoneSummary } from "./steps/DoneStep"
 
 /** Props for `FirstRunWizard`. */
 interface Props {
-    /** Called when the user taps Finish on the Done step. Should mark the SQLite flag and unmount. */
+    /** Called when the user taps Finish on the System Checks step. Should mark the SQLite flag and unmount. */
     onComplete: () => Promise<void>
 }
 
-type StepKey = "folder" | "migration" | "systemChecks" | "done"
+type StepKey = "folder" | "migration" | "systemChecks"
 
 const styles = StyleSheet.create({
     root: { flex: 1 },
@@ -25,6 +24,9 @@ const styles = StyleSheet.create({
     progressFill: { height: "100%", borderRadius: 2 },
     body: { flex: 1 },
     footer: { padding: 16 },
+    footerRow: { flexDirection: "row", gap: 12 },
+    backWrap: { flex: 0 },
+    primaryWrap: { flex: 1 },
     saveError: { fontSize: 12, marginBottom: 8, textAlign: "center" },
     accessBanner: { marginHorizontal: 16, marginBottom: 8, padding: 12, borderWidth: 1, borderRadius: 8 },
     accessBannerText: { fontSize: 13, lineHeight: 18 },
@@ -32,8 +34,9 @@ const styles = StyleSheet.create({
 
 /** Top-level first-run wizard. Mounted by `AppWithBootstrap` when `firstRun.completed` is unset.
  *
- * Renders the step counter + progress bar, the active step body, and the fixed footer CTA. Owns
+ * Renders the step counter + progress bar, the active step body, and the fixed footer CTAs. Owns
  * outer step state and the cross-step data (picked folder, migration outcome, permission snapshot).
+ * Supports going back via the footer Back button and the Android hardware Back key.
  *
  * @param props See `Props`.
  * @returns A React node.
@@ -42,9 +45,9 @@ const FirstRunWizard = ({ onComplete }: Props) => {
     const { colors } = useTheme()
     const { scanning, counts, hasLegacyFiles } = useLegacyFileScan()
     const [outerStep, setOuterStep] = useState(0)
-    const [picked, setPicked] = useState<PickedFolder | null>(null)
-    const [migrationOutcome, setMigrationOutcome] = useState<{ choice: MigrationChoice; result: MigrationResult | null } | null>(null)
-    const [systemResults, setSystemResults] = useState<SystemCheckResults | null>(null)
+    const [, setPicked] = useState<PickedFolder | null>(null)
+    const [, setMigrationOutcome] = useState<{ choice: MigrationChoice; result: MigrationResult | null } | null>(null)
+    const [, setSystemResults] = useState<SystemCheckResults | null>(null)
     const [outerCta, setOuterCta] = useState<CtaState | null>(null)
     const [pendingAdvance, setPendingAdvance] = useState(false)
     const [saveError, setSaveError] = useState<string | null>(null)
@@ -53,7 +56,7 @@ const FirstRunWizard = ({ onComplete }: Props) => {
     const steps = useMemo((): StepKey[] => {
         const list: StepKey[] = ["folder"]
         if (hasLegacyFiles) list.push("migration")
-        list.push("systemChecks", "done")
+        list.push("systemChecks")
         return list
     }, [hasLegacyFiles])
 
@@ -74,6 +77,22 @@ const FirstRunWizard = ({ onComplete }: Props) => {
         }
         setOuterStep(prev => Math.min(prev + 1, steps.length - 1))
     }, [steps.length, outerStep])
+
+    const goBack = useCallback(() => {
+        setOuterStep(prev => Math.max(prev - 1, 0))
+    }, [])
+
+    // Intercept the hardware Back button so it walks the wizard backwards instead of dismissing the app.
+    // The wizard is mandatory, so on step 0 we still swallow the press to suppress the default exit.
+    const goBackRef = useRef(goBack)
+    useEffect(() => { goBackRef.current = goBack })
+    useEffect(() => {
+        const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+            if (outerStep > 0) goBackRef.current()
+            return true
+        })
+        return () => sub.remove()
+    }, [outerStep])
 
     const handlePicked = useCallback((folder: PickedFolder | null) => {
         setPicked(folder)
@@ -105,7 +124,7 @@ const FirstRunWizard = ({ onComplete }: Props) => {
         try {
             await onComplete()
         } catch {
-            setSaveError("Couldn't save your setup. Tap Open the app to retry.")
+            setSaveError("Couldn't save your setup. Tap Finish to retry.")
         }
     }, [onComplete])
 
@@ -117,21 +136,7 @@ const FirstRunWizard = ({ onComplete }: Props) => {
                 if (!counts) return null
                 return <MigrationStep legacyCounts={counts} onChoice={handleMigrationChoice} onAdvance={advance} />
             case "systemChecks":
-                return <SystemChecksStep onSnapshot={setSystemResults} onAdvance={advance} onCtaChange={setOuterCta} />
-            case "done": {
-                const summary: DoneSummary = {
-                    folderName: picked?.name ?? "",
-                    migration: migrationOutcome?.result
-                        ? { movedLogs: migrationOutcome.result.movedLogs, movedRecordings: migrationOutcome.result.movedRecordings, mode: migrationOutcome.choice }
-                        : migrationOutcome
-                            ? { movedLogs: 0, movedRecordings: 0, mode: migrationOutcome.choice }
-                            : undefined,
-                    accessibility: systemResults?.accessibility ?? false,
-                    overlay: systemResults?.overlay ?? false,
-                    battery: systemResults?.battery ?? false,
-                }
-                return <DoneStep summary={summary} onFinish={handleFinish} onCtaChange={setOuterCta} />
-            }
+                return <SystemChecksStep onSnapshot={setSystemResults} onAdvance={handleFinish} onCtaChange={setOuterCta} />
         }
     })()
 
@@ -150,9 +155,20 @@ const FirstRunWizard = ({ onComplete }: Props) => {
             {outerCta && (
                 <View style={styles.footer}>
                     {saveError && <Text style={[styles.saveError, { color: colors.error }]}>{saveError}</Text>}
-                    <CustomButton onPress={outerCta.onPress} disabled={!outerCta.enabled || pendingAdvance}>
-                        {pendingAdvance ? "Loading..." : outerCta.label}
-                    </CustomButton>
+                    <View style={styles.footerRow}>
+                        {outerStep > 0 && (
+                            <View style={styles.backWrap}>
+                                <CustomButton variant="ghost" onPress={goBack} disabled={pendingAdvance}>
+                                    Back
+                                </CustomButton>
+                            </View>
+                        )}
+                        <View style={styles.primaryWrap}>
+                            <CustomButton onPress={outerCta.onPress} disabled={!outerCta.enabled || pendingAdvance}>
+                                {pendingAdvance ? "Loading..." : outerCta.label}
+                            </CustomButton>
+                        </View>
+                    </View>
                 </View>
             )}
         </View>

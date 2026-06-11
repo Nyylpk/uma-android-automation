@@ -47,29 +47,28 @@ describe("FirstRunWizard", () => {
         getCurrent.mockReset()
     })
 
-    it("uses 3 steps when no legacy files", async () => {
+    it("uses 2 steps when no legacy files", async () => {
         scan.mockResolvedValue({ logs: 0, recordings: 0 })
+        getCurrent.mockResolvedValue(null)
+        const { findByText } = render(<FirstRunWizard onComplete={jest.fn()} />)
+        expect(await findByText("STEP 1 OF 2")).toBeTruthy()
+    })
+
+    it("uses 3 steps when legacy files are present", async () => {
+        scan.mockResolvedValue({ logs: 5, recordings: 1 })
         getCurrent.mockResolvedValue(null)
         const { findByText } = render(<FirstRunWizard onComplete={jest.fn()} />)
         expect(await findByText("STEP 1 OF 3")).toBeTruthy()
     })
 
-    it("uses 4 steps when legacy files are present", async () => {
-        scan.mockResolvedValue({ logs: 5, recordings: 1 })
-        getCurrent.mockResolvedValue(null)
-        const { findByText } = render(<FirstRunWizard onComplete={jest.fn()} />)
-        expect(await findByText("STEP 1 OF 4")).toBeTruthy()
-    })
-
-    it("fires onComplete exactly once when Finish is tapped", async () => {
+    it("fires onComplete exactly once when Finish is tapped on the system checks step", async () => {
         scan.mockResolvedValue({ logs: 0, recordings: 0 })
         getCurrent.mockResolvedValue({ uri: "content://t", name: "UmaAutomation" })
         const onComplete = jest.fn().mockResolvedValue(undefined)
         const { findByText } = render(<FirstRunWizard onComplete={onComplete} />)
         fireEvent.press(await findByText("Continue"))             // folder -> systemChecks
-        fireEvent.press(await findByText("FAKE_VISIT_ALL"))       // systemChecks visited
-        fireEvent.press(await findByText("Continue"))             // systemChecks -> done
-        fireEvent.press(await findByText("Open the app"))         // done -> markComplete
+        fireEvent.press(await findByText("FAKE_VISIT_ALL"))       // systemChecks visited -> Finish CTA appears
+        fireEvent.press(await findByText("Finish"))               // markComplete
         await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1))
     })
 })
