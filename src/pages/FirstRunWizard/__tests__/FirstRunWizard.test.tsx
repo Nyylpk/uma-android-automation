@@ -66,7 +66,7 @@ describe("FirstRunWizard", () => {
         getCurrent.mockResolvedValue({ uri: "content://t", name: "UmaAutomation" })
         const onComplete = jest.fn().mockResolvedValue(undefined)
         const { findByText } = render(<FirstRunWizard onComplete={onComplete} />)
-        fireEvent.press(await findByText("Continue"))             // folder -> systemChecks
+        fireEvent.press(await findByText("Next"))                 // folder -> systemChecks
         fireEvent.press(await findByText("FAKE_VISIT_ALL"))       // systemChecks visited -> Finish CTA appears
         fireEvent.press(await findByText("Finish"))               // markComplete
         await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1))

@@ -25,8 +25,7 @@ const styles = StyleSheet.create({
     body: { flex: 1 },
     footer: { padding: 16 },
     footerRow: { flexDirection: "row", gap: 12 },
-    backWrap: { flex: 0 },
-    primaryWrap: { flex: 1 },
+    footerButton: { flex: 1 },
     saveError: { fontSize: 12, marginBottom: 8, textAlign: "center" },
     accessBanner: { marginHorizontal: 16, marginBottom: 8, padding: 12, borderWidth: 1, borderRadius: 8 },
     accessBannerText: { fontSize: 13, lineHeight: 18 },
@@ -82,6 +81,12 @@ const FirstRunWizard = ({ onComplete }: Props) => {
         setOuterStep(prev => Math.max(prev - 1, 0))
     }, [])
 
+    // Cancel on step 0 sends the app to the background. The wizard is mandatory before reaching the
+    // main app, so this is the only escape hatch a user has during initial setup.
+    const handleCancel = useCallback(() => {
+        BackHandler.exitApp()
+    }, [])
+
     // Intercept the hardware Back button so it walks the wizard backwards instead of dismissing the app.
     // The wizard is mandatory, so on step 0 we still swallow the press to suppress the default exit.
     const goBackRef = useRef(goBack)
@@ -99,7 +104,7 @@ const FirstRunWizard = ({ onComplete }: Props) => {
         if (folder != null) setAccessError(null)
     }, [])
 
-    // If the user tapped Continue on step 1 while the scan was in flight, advance once the list settles.
+    // If the user tapped Next on step 1 while the scan was in flight, advance once the list settles.
     useEffect(() => {
         if (pendingAdvance && !scanning) {
             setPendingAdvance(false)
@@ -152,25 +157,23 @@ const FirstRunWizard = ({ onComplete }: Props) => {
                 </View>
             )}
             <View style={styles.body}>{stepBody}</View>
-            {outerCta && (
-                <View style={styles.footer}>
-                    {saveError && <Text style={[styles.saveError, { color: colors.error }]}>{saveError}</Text>}
-                    <View style={styles.footerRow}>
-                        {outerStep > 0 && (
-                            <View style={styles.backWrap}>
-                                <CustomButton variant="ghost" onPress={goBack} disabled={pendingAdvance}>
-                                    Back
-                                </CustomButton>
-                            </View>
-                        )}
-                        <View style={styles.primaryWrap}>
+            <View style={styles.footer}>
+                {saveError && <Text style={[styles.saveError, { color: colors.error }]}>{saveError}</Text>}
+                <View style={styles.footerRow}>
+                    <View style={styles.footerButton}>
+                        <CustomButton variant="ghost" onPress={outerStep === 0 ? handleCancel : goBack} disabled={pendingAdvance}>
+                            {outerStep === 0 ? "Cancel" : "Back"}
+                        </CustomButton>
+                    </View>
+                    {outerCta && (
+                        <View style={styles.footerButton}>
                             <CustomButton onPress={outerCta.onPress} disabled={!outerCta.enabled || pendingAdvance}>
                                 {pendingAdvance ? "Loading..." : outerCta.label}
                             </CustomButton>
                         </View>
-                    </View>
+                    )}
                 </View>
-            )}
+            </View>
         </View>
     )
 }

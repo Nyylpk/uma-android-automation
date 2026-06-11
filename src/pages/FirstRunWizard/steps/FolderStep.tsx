@@ -80,8 +80,14 @@ const FolderStep = ({ onPick, onAdvance, onCtaChange }: Props) => {
     }, [])
 
     useEffect(() => {
-        onCtaChangeRef.current(picked ? { label: "Continue", enabled: true, onPress: onAdvance } : null)
+        onCtaChangeRef.current(picked ? { label: "Next", enabled: true, onPress: onAdvance } : null)
     }, [picked, onAdvance])
+
+    // Clear the registered CTA on unmount so the outer wizard footer doesn't render a stale "Next"
+    // while the next step (migration or system checks) is mounting.
+    useEffect(() => {
+        return () => onCtaChangeRef.current(null)
+    }, [])
 
     const handlePick = async () => {
         setError(null)
