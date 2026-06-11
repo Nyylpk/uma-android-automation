@@ -42,8 +42,14 @@ const SystemChecksStep = ({ onSnapshot, onAdvance, onCtaChange }: Props) => {
     }, [])
 
     useEffect(() => {
-        onCtaChangeRef.current(results ? { label: "Finish", enabled: true, onPress: () => onAdvanceRef.current() } : null)
+        onCtaChangeRef.current({ label: "Finish", enabled: results !== null, onPress: () => onAdvanceRef.current() })
     }, [results])
+
+    // Clear the registered CTA on unmount so the outer footer doesn't render a stale "Finish" if the
+    // user navigates back to an earlier step.
+    useEffect(() => {
+        return () => onCtaChangeRef.current(null)
+    }, [])
 
     return (
         <View style={styles.root}>
