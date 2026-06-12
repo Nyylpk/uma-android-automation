@@ -338,7 +338,7 @@ const DebugSettings = () => {
                         {/* //////////////////////////////////////////////////////////////////////////////////////////////////
                             //////////////////////////////////////////////////////////////////////////////////////////////////
                             Screen Recording Settings */}
-                        <Section label="Screen Recording Settings" firstDivider={false}>
+                        <Section label="Screen Recording Settings" firstDivider={false} noDividers={!debug.enableScreenRecording}>
                             <View style={{ padding: SPACING.md, paddingBottom: 0 }}>
                                 <Text style={[TYPE.caption, { color: colors.textMuted }]}>Configure the quality settings for screen recording.</Text>
                             </View>
@@ -353,7 +353,7 @@ const DebugSettings = () => {
                                     right={<Switch checked={debug.enableScreenRecording} onCheckedChange={(checked) => updateDebug({ enableScreenRecording: checked })} />}
                                 />
                             </SearchableItem>
-                            <View style={{ padding: SPACING.md }}>
+                            <View style={{ paddingHorizontal: SPACING.md }}>
                                 <CustomSlider
                                     searchId="recording-bit-rate"
                                     searchCondition={debug.enableScreenRecording}
