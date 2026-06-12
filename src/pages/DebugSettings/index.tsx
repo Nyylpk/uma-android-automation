@@ -493,7 +493,15 @@ const DebugSettings = () => {
                                         onPress={dumpLogcat}
                                         disabled={dumping}
                                         android_ripple={{ color: colors.ripple, foreground: true }}
-                                        style={{ padding: SPACING.sm, backgroundColor: colors.surfaceRaised, borderRadius: RADII.md, flexDirection: "row", alignItems: "center", gap: SPACING.sm, opacity: dumping ? 0.6 : 1 }}
+                                        style={{
+                                            padding: SPACING.sm,
+                                            backgroundColor: colors.surfaceRaised,
+                                            borderRadius: RADII.md,
+                                            flexDirection: "row",
+                                            alignItems: "center",
+                                            gap: SPACING.sm,
+                                            opacity: dumping ? 0.6 : 1,
+                                        }}
                                     >
                                         <Ionicons name="download-outline" size={16} color={colors.brand} />
                                         <Text style={{ ...TYPE.monoLabel, color: colors.brand, flex: 1 }}>{dumping ? "Dumping logcat..." : "Dump logcat (last 6h)"}</Text>

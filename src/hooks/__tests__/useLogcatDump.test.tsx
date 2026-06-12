@@ -37,7 +37,11 @@ describe("useLogcatDump", () => {
 
     it("reports dumping while a dump is in flight and clears it afterwards", async () => {
         let resolveDump: (value: { filename: string; bytes: number; location: string }) => void = () => {}
-        mockBridge.dumpLogcat.mockReturnValue(new Promise((resolve) => { resolveDump = resolve }))
+        mockBridge.dumpLogcat.mockReturnValue(
+            new Promise((resolve) => {
+                resolveDump = resolve
+            })
+        )
         const { result } = renderHook(() => useLogcatDump())
         act(() => {
             void result.current.dump()
@@ -64,7 +68,11 @@ describe("useLogcatDump", () => {
 
     it("ignores a second dump call while one is already in flight", async () => {
         let resolveDump: (value: { filename: string; bytes: number; location: string }) => void = () => {}
-        mockBridge.dumpLogcat.mockReturnValue(new Promise((resolve) => { resolveDump = resolve }))
+        mockBridge.dumpLogcat.mockReturnValue(
+            new Promise((resolve) => {
+                resolveDump = resolve
+            })
+        )
         const { result } = renderHook(() => useLogcatDump())
         act(() => {
             void result.current.dump()

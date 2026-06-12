@@ -55,15 +55,16 @@ class LogcatModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
             }
             val (out, location) = target
 
-            val bytes = out.use { stream ->
-                val process = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-v", "threadtime", "-t", since))
-                try {
-                    process.inputStream.use { input -> input.copyTo(stream) }
-                } finally {
-                    process.errorStream.close()
-                    process.waitFor()
+            val bytes =
+                out.use { stream ->
+                    val process = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-v", "threadtime", "-t", since))
+                    try {
+                        process.inputStream.use { input -> input.copyTo(stream) }
+                    } finally {
+                        process.errorStream.close()
+                        process.waitFor()
+                    }
                 }
-            }
 
             val map: WritableMap = Arguments.createMap()
             map.putString("filename", filename)
