@@ -30,6 +30,7 @@ public class StartPackage implements ReactPackage {
         modules.add(new LLMChatModule(reactContext));
         modules.add(new SmartRaceSolverModule(reactContext));
         modules.add(new StorageBridgeModule(reactContext));
+        modules.add(new LogcatModule(reactContext));
 
         return modules;
     }
