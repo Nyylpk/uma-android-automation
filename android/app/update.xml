@@ -1,13 +1,23 @@
 <AppUpdater>
   <update>
-    <latestVersion>5.7.3</latestVersion>
+    <latestVersion>5.7.4</latestVersion>
     <url>https://github.com/steve1316/uma-android-automation/releases</url>
     <releaseNotes>
-v5.7.3 - Changelog
+v5.7.4 - Changelog
+
+New
+---
+- Add a first-time setup wizard that opens on the first app launch and walks you: picking the folder where the bot stores its files, moving any existing files into it from the old storage location, and granting the accessibility, overlay, and battery permissions. This is to future-proof against future Android versions that may restrict access to the storage location that we have been using since.
+- Add a `Dump logcat (last 6h)` button to the `Debug Settings` page that saves a timestamped `adb_dump_*.txt` log file to your storage folder to help with debugging.
+
+Adjustments
+---
+- Update game data up to `Taiki Shuttle (Camping) 2026-06-10`.
+- Update Automation Library version to `2.5.7` for the new SAF-backed storage implementation.
 
 Fixes
 ---
-- Fix visual bug in the `Smart Race Solver` page where the calendar preview popover was not scrollable on small screens.
+- Minor visual cleanup from the recent UI refresh.
 
     </releaseNotes>
   </update>
