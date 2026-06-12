@@ -1,5 +1,5 @@
 import React from "react"
-import { fireEvent, render, waitFor } from "@testing-library/react-native"
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native"
 import { BackHandler } from "react-native"
 
 jest.mock("../../../lib/storageBridge", () => ({
@@ -66,7 +66,9 @@ const mockStorageBridge = storageBridge as jest.Mocked<typeof storageBridge>
 const mockUseLegacyFileScan = useLegacyFileScan as jest.MockedFunction<typeof useLegacyFileScan>
 
 const grantAll = () => {
-    mockPermissionsChange?.({ accessibility: true, overlay: true, battery: true })
+    act(() => {
+        mockPermissionsChange?.({ accessibility: true, overlay: true, battery: true })
+    })
 }
 
 describe("FirstRunWizard", () => {
