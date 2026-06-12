@@ -21,6 +21,8 @@ import { useModalShellStyles } from "../../components/ui/modal-shell-styles"
 import { TYPE } from "../../lib/type"
 import { SPACING } from "../../lib/spacing"
 import { RADII } from "../../lib/radii"
+import { Snackbar } from "react-native-paper"
+import { useLogcatDump } from "../../hooks/useLogcatDump"
 
 /** Descriptor for a single diagnostic test surfaced in the Debug Tests section. Drives the mutually-exclusive Switch rows. */
 interface DebugTestDescriptor {
@@ -133,6 +135,7 @@ const DebugSettings = () => {
     const { defaultSettings } = useContext(BotMetaContext)
     const scrollViewRef = useRef<ScrollView>(null)
     const modalShellStyles = useModalShellStyles()
+    const { dumping, message: logcatMessage, dump: dumpLogcat, clearMessage: clearLogcatMessage } = useLogcatDump()
 
     /**
      * Handles mutual exclusivity for diagnostic debug tests. When one test is enabled, all others are automatically disabled.
@@ -472,6 +475,40 @@ const DebugSettings = () => {
                                 ))}
                             </View>
                         </View>
+
+                        {/* //////////////////////////////////////////////////////////////////////////////////////////////////
+                            //////////////////////////////////////////////////////////////////////////////////////////////////
+                            Diagnostics */}
+                        <Section label="Diagnostics" firstDivider={false}>
+                            <Text style={styles.sectionDescription}>
+                                {"Saves this app's recent logcat output to a timestamped .txt file at the root of your storage folder. The 6-hour window is capped by the device's log buffer size. To increase it, enable Developer Options (tap Build number 7 times under Settings > About phone), then raise Logger buffer sizes in Developer options."}
+                            </Text>
+                            <SearchableItem
+                                id="dump-logcat"
+                                title="Dump logcat (last 6h)"
+                                description="Saves this app's recent logcat output to a timestamped .txt file at the root of your storage folder."
+                            >
+                                <View style={styles.hostPad}>
+                                    <Pressable
+                                        onPress={dumpLogcat}
+                                        disabled={dumping}
+                                        android_ripple={{ color: colors.ripple, foreground: true }}
+                                        style={{
+                                            padding: SPACING.sm,
+                                            backgroundColor: colors.surfaceRaised,
+                                            borderRadius: RADII.md,
+                                            flexDirection: "row",
+                                            alignItems: "center",
+                                            gap: SPACING.sm,
+                                            opacity: dumping ? 0.6 : 1,
+                                        }}
+                                    >
+                                        <Ionicons name="download-outline" size={16} color={colors.brand} />
+                                        <Text style={{ ...TYPE.monoLabel, color: colors.brand, flex: 1 }}>{dumping ? "Dumping logcat..." : "Dump logcat (last 6h)"}</Text>
+                                    </Pressable>
+                                </View>
+                            </SearchableItem>
+                        </Section>
                     </View>
                 </ScrollView>
             </SearchPageProvider>
@@ -508,6 +545,9 @@ const DebugSettings = () => {
                     ))}
                 </View>
             </SheetModal>
+            <Snackbar visible={logcatMessage !== null} onDismiss={clearLogcatMessage} duration={4000} style={{ backgroundColor: colors.surfaceRaised, borderRadius: 10 }}>
+                {logcatMessage ?? ""}
+            </Snackbar>
         </View>
     )
 }
