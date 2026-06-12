@@ -286,11 +286,11 @@ const FirstRunWizard = ({ onComplete }: Props) => {
                                 <Text style={[styles.hint, { color: colors.textMuted }]}>
                                     Choose a folder somewhere you can open in your file manager. Recent Android versions hide app-private storage from file managers, so the bot needs a spot you control. It will put its logs/ and recordings/ subfolders inside whatever you pick.
                                 </Text>
-                                <CustomButton onPress={handlePick}>Pick a folder</CustomButton>
+                                <CustomButton variant="primary" onPress={handlePick}>Pick a folder</CustomButton>
                                 {pickError && (
                                     <View style={styles.errorBlock}>
                                         <Text style={[styles.error, { color: colors.error }]}>{pickError}</Text>
-                                        <CustomButton onPress={handlePick}>Retry</CustomButton>
+                                        <CustomButton variant="primary" onPress={handlePick}>Retry</CustomButton>
                                     </View>
                                 )}
                             </>
