@@ -57,7 +57,12 @@ class LogcatModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
 
             val bytes = out.use { stream ->
                 val process = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-v", "threadtime", "-t", since))
-                process.inputStream.use { input -> input.copyTo(stream) }
+                try {
+                    process.inputStream.use { input -> input.copyTo(stream) }
+                } finally {
+                    process.errorStream.close()
+                    process.waitFor()
+                }
             }
 
             val map: WritableMap = Arguments.createMap()
@@ -89,6 +94,7 @@ class LogcatModule(reactContext: ReactApplicationContext) : ReactContextBaseJava
                 if (file != null) {
                     val stream = appContext.contentResolver.openOutputStream(file.uri)
                     if (stream != null) return Pair(stream, tree.name ?: "your storage folder")
+                    file.delete()
                 }
             }
         }
