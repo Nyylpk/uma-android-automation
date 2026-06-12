@@ -25,6 +25,8 @@ jest.mock("../../../components/SystemChecksWizard", () => ({
     },
 }))
 
+jest.mock("@react-native-vector-icons/ionicons", () => "Ionicons")
+
 jest.mock("../../../context/ThemeContext", () => ({
     useTheme: () => ({
         colors: {
@@ -243,5 +245,30 @@ describe("FirstRunWizard", () => {
 
         fireEvent.press(await findByText("Continue with partial move"))
         expect(await findByText("Left at old location")).toBeTruthy()
+    })
+
+    it("shows 0 OF 2 on initial mount when no legacy files", async () => {
+        mockStorageBridge.getCurrentFolder.mockResolvedValue(null)
+        const { findByText } = render(<FirstRunWizard onComplete={jest.fn()} />)
+        expect(await findByText("0 OF 2")).toBeTruthy()
+    })
+
+    it("shows 2 OF 2 once folder picked and all permissions granted (no legacy files)", async () => {
+        mockStorageBridge.getCurrentFolder.mockResolvedValue({ uri: "content://test", name: "Test" })
+        const { findByText } = render(<FirstRunWizard onComplete={jest.fn()} />)
+        await waitFor(() => expect(mockStorageBridge.getCurrentFolder).toHaveBeenCalled())
+        grantAll()
+        expect(await findByText("2 OF 2")).toBeTruthy()
+    })
+
+    it("total switches to 3 OF 3 when legacy files are present and all three are complete", async () => {
+        mockUseLegacyFileScan.mockReturnValue({ scanning: false, counts: { logs: 5, recordings: 2 }, hasLegacyFiles: true })
+        mockStorageBridge.getCurrentFolder.mockResolvedValue({ uri: "content://test", name: "Test" })
+        const { findByText } = render(<FirstRunWizard onComplete={jest.fn()} />)
+        await waitFor(() => expect(mockStorageBridge.getCurrentFolder).toHaveBeenCalled())
+        fireEvent.press(await findByText("Leave them"))
+        await waitFor(() => expect(findByText("Left at old location")).resolves.toBeTruthy())
+        grantAll()
+        expect(await findByText("3 OF 3")).toBeTruthy()
     })
 })

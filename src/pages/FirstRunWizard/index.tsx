@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { ActivityIndicator, BackHandler, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
+import Ionicons from "@react-native-vector-icons/ionicons"
 import CustomButton from "../../components/CustomButton"
 import SystemChecksWizard, { SystemCheckResults } from "../../components/SystemChecksWizard"
 import { useTheme } from "../../context/ThemeContext"
@@ -11,14 +12,21 @@ import { TYPE } from "../../lib/type"
 
 const styles = StyleSheet.create({
     root: { flex: 1 },
-    header: { paddingHorizontal: SPACING.md, paddingTop: SPACING.md, paddingBottom: SPACING.sm, borderBottomWidth: 1, alignItems: "center" },
+    header: { paddingHorizontal: SPACING.md, paddingTop: SPACING.md, paddingBottom: SPACING.sm, alignItems: "center" },
     headerText: { ...TYPE.display },
     scrollArea: { flex: 1 },
     scrollContent: { padding: SPACING.md, paddingBottom: SPACING.md },
     accessBanner: { padding: 12, borderWidth: 1, borderRadius: RADII.md, marginBottom: SPACING.md },
     accessBannerText: { fontSize: 13, lineHeight: 18 },
     card: { borderRadius: RADII.lg, borderWidth: 1, overflow: "hidden", marginBottom: SPACING.md },
-    cardLabel: { ...TYPE.monoLabel, fontSize: 11, letterSpacing: 0.6, paddingHorizontal: SPACING.md, paddingTop: SPACING.md, paddingBottom: SPACING.xs },
+    progressRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingVertical: SPACING.md },
+    progressTrack: { flex: 1, height: 4, borderRadius: 2, overflow: "hidden" },
+    progressFill: { height: "100%" },
+    progressLabel: { ...TYPE.monoLabel, fontSize: 11, letterSpacing: 0.6 },
+    cardLabelRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingTop: SPACING.md, paddingBottom: SPACING.xs },
+    cardLabel: { ...TYPE.monoLabel, fontSize: 11, letterSpacing: 0.6 },
+    cardStatusPending: { width: 16, height: 16, borderRadius: 8, borderWidth: 1 },
+    cardStatusComplete: { width: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center" },
     cardBody: { paddingHorizontal: SPACING.md, paddingBottom: SPACING.md },
     headline: { fontSize: 18, fontWeight: "700", marginBottom: SPACING.sm },
     hint: { fontSize: 13, lineHeight: 19, marginBottom: SPACING.md },
@@ -94,6 +102,24 @@ const renderMigrationCard = (
             {busy === choice && <ActivityIndicator size="small" color={colors.primary} />}
         </Pressable>
     )
+}
+
+/** Build the small 16-px status badge shown next to each card label.
+ *
+ * @param complete When true, renders a filled `colors.success` circle with an `Ionicons` checkmark inside.
+ *                 When false, renders an empty circle outlined with `colors.borderHair`.
+ * @param colors Theme palette from `useTheme()`.
+ * @returns A `View` rendering the badge.
+ */
+const renderStatusBadge = (complete: boolean, colors: ReturnType<typeof useTheme>["colors"]) => {
+    if (complete) {
+        return (
+            <View style={[styles.cardStatusComplete, { backgroundColor: colors.success }]}>
+                <Ionicons name="checkmark" size={10} color={colors.background} />
+            </View>
+        )
+    }
+    return <View style={[styles.cardStatusPending, { borderColor: colors.borderHair }]} />
 }
 
 /** First-run wizard rendered as a single scrollable page. Three cards stack inline: Storage folder, Move existing files (only when legacy files
@@ -184,12 +210,13 @@ const FirstRunWizard = ({ onComplete }: Props) => {
         [counts]
     )
 
-    const canFinish = useMemo(() => {
-        if (picked === null) return false
-        if (hasLegacyFiles && migrationChoice === null) return false
-        if (permissionsGranted === null) return false
-        return permissionsGranted.accessibility && permissionsGranted.overlay && permissionsGranted.battery
-    }, [picked, hasLegacyFiles, migrationChoice, permissionsGranted])
+    const folderComplete = picked !== null
+    const migrationComplete = !hasLegacyFiles || migrationChoice !== null
+    const permissionsComplete =
+        permissionsGranted !== null && permissionsGranted.accessibility && permissionsGranted.overlay && permissionsGranted.battery
+    const canFinish = folderComplete && migrationComplete && permissionsComplete
+    const stepsTotal = 2 + (hasLegacyFiles ? 1 : 0)
+    const stepsCompleted = (folderComplete ? 1 : 0) + (hasLegacyFiles && migrationComplete ? 1 : 0) + (permissionsComplete ? 1 : 0)
 
     const handleFinish = useCallback(async () => {
         if (!canFinish) return
@@ -229,6 +256,12 @@ const FirstRunWizard = ({ onComplete }: Props) => {
             <View style={[styles.header, { borderBottomColor: colors.borderHair }]}>
                 <Text style={[styles.headerText, { color: colors.text }]}>First time setup</Text>
             </View>
+            <View style={styles.progressRow}>
+                <View style={[styles.progressTrack, { backgroundColor: colors.surface }]}>
+                    <View style={[styles.progressFill, { width: `${(stepsCompleted / stepsTotal) * 100}%`, backgroundColor: colors.brand }]} />
+                </View>
+                <Text style={[styles.progressLabel, { color: colors.textMuted }]}>{stepsCompleted} OF {stepsTotal}</Text>
+            </View>
             <ScrollView
                 style={styles.scrollArea}
                 contentContainerStyle={styles.scrollContent}
@@ -242,7 +275,10 @@ const FirstRunWizard = ({ onComplete }: Props) => {
                 )}
 
                 <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderHair }]}>
-                    <Text style={[styles.cardLabel, { color: colors.textMuted }]}>STORAGE FOLDER</Text>
+                    <View style={styles.cardLabelRow}>
+                        {renderStatusBadge(folderComplete, colors)}
+                        <Text style={[styles.cardLabel, { color: colors.textMuted }]}>STORAGE FOLDER</Text>
+                    </View>
                     <View style={styles.cardBody}>
                         {picked === null ? (
                             <>
@@ -273,7 +309,10 @@ const FirstRunWizard = ({ onComplete }: Props) => {
 
                 {hasLegacyFiles && counts && (
                     <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderHair }]}>
-                        <Text style={[styles.cardLabel, { color: colors.textMuted }]}>MOVE YOUR EXISTING FILES?</Text>
+                        <View style={styles.cardLabelRow}>
+                            {renderStatusBadge(migrationComplete, colors)}
+                            <Text style={[styles.cardLabel, { color: colors.textMuted }]}>MOVE YOUR EXISTING FILES?</Text>
+                        </View>
                         <View style={styles.cardBody}>
                             {migrationChoice === null ? (
                                 <>
@@ -301,7 +340,10 @@ const FirstRunWizard = ({ onComplete }: Props) => {
                 )}
 
                 <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderHair }]}>
-                    <Text style={[styles.cardLabel, { color: colors.textMuted }]}>SYSTEM PERMISSIONS</Text>
+                    <View style={styles.cardLabelRow}>
+                        {renderStatusBadge(permissionsComplete, colors)}
+                        <Text style={[styles.cardLabel, { color: colors.textMuted }]}>SYSTEM PERMISSIONS</Text>
+                    </View>
                     <SystemChecksWizard onPermissionsChange={setPermissionsGranted} embeddedInWizard />
                 </View>
             </ScrollView>
