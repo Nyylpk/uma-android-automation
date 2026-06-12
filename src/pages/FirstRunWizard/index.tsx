@@ -11,6 +11,8 @@ import { TYPE } from "../../lib/type"
 
 const styles = StyleSheet.create({
     root: { flex: 1 },
+    header: { paddingHorizontal: SPACING.md, paddingTop: SPACING.md, paddingBottom: SPACING.sm, borderBottomWidth: 1, alignItems: "center" },
+    headerText: { ...TYPE.display },
     scrollArea: { flex: 1 },
     scrollContent: { padding: SPACING.md, paddingBottom: SPACING.md },
     accessBanner: { padding: 12, borderWidth: 1, borderRadius: RADII.md, marginBottom: SPACING.md },
@@ -224,6 +226,9 @@ const FirstRunWizard = ({ onComplete }: Props) => {
 
     return (
         <View style={[styles.root, { backgroundColor: colors.background }]}>
+            <View style={[styles.header, { borderBottomColor: colors.borderHair }]}>
+                <Text style={[styles.headerText, { color: colors.text }]}>First time setup</Text>
+            </View>
             <ScrollView
                 style={styles.scrollArea}
                 contentContainerStyle={styles.scrollContent}
