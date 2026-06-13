@@ -10,6 +10,7 @@ import android.util.Log
 import com.steve1316.automation_library.data.SharedData
 import com.steve1316.automation_library.events.JSEvent
 import com.steve1316.automation_library.utils.MessageLog
+import com.steve1316.automation_library.utils.UserStorageManager
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -447,7 +448,7 @@ object LogStreamServer {
      */
     private suspend fun sendDebugImages(session: DefaultWebSocketServerSession) {
         val context = applicationContext ?: return
-        val tempDir = File(context.getExternalFilesDir(null), "temp")
+        val tempDir = File(context.filesDir, "temp")
         if (!tempDir.exists() || !tempDir.isDirectory) {
             Log.w(TAG, "[WARN] sendDebugImages:: Temp directory does not exist or is not a directory: ${tempDir.absolutePath}")
             return
@@ -489,6 +490,47 @@ object LogStreamServer {
 
         // Signal completion of image batch transmission.
         session.send(Frame.Text(JSONObject().apply { put("type", "image_batch_done") }.toString()))
+    }
+
+    /** Metadata for a single saved log file, sourced from either the SAF tree or the legacy logs dir. */
+    private data class LogFileEntry(
+        /** File name including the .txt extension. */
+        val name: String,
+        /** File size in bytes. */
+        val size: Long,
+        /** Last-modified timestamp in epoch milliseconds. */
+        val modified: Long,
+    )
+
+    /**
+     * Lists the completed-session .txt log files. Honors the user-selected SAF folder when one is configured and falls back to the
+     * legacy getExternalFilesDir/logs path otherwise, so the viewer reads from wherever [MessageLog] actually wrote them.
+     *
+     * @param context Context used to resolve the storage location.
+     * @return The log file entries, unsorted.
+     */
+    private fun listLogFiles(context: Context): List<LogFileEntry> {
+        val storage = UserStorageManager.getInstance(context)
+        if (storage.isConfigured()) {
+            return storage.listFiles("logs")
+                .filter { it.isFile && it.name?.lowercase()?.endsWith(".txt") == true }
+                .map { LogFileEntry(it.name ?: "", it.length(), it.lastModified()) }
+        }
+        val logsDir = File(context.getExternalFilesDir(null), "logs")
+        if (!logsDir.exists() || !logsDir.isDirectory) return emptyList()
+        return (logsDir.listFiles { _, name -> name.lowercase().endsWith(".txt") } ?: emptyArray())
+            .map { LogFileEntry(it.name, it.length(), it.lastModified()) }
+    }
+
+    /**
+     * Reads the text content of a single saved log file by name, honoring the SAF folder when configured.
+     *
+     * @param context Context used to resolve the storage location.
+     * @param name The log file name to read.
+     * @return The file content, or null when the file does not exist or could not be read.
+     */
+    private fun readLogFile(context: Context, name: String): String? {
+        return UserStorageManager.getInstance(context).openInputStream("logs", name)?.use { it.bufferedReader().readText() }
     }
 
     /**
@@ -1047,23 +1089,18 @@ object LogStreamServer {
                         // List every completed-session .txt log file in the /logs/ directory, sorted most-recent-first.
                         get("/logs/files") {
                             try {
-                                val logsDir = File(context.getExternalFilesDir(null), "logs")
                                 val filesArray = JSONArray()
                                 var totalSize = 0L
 
-                                if (logsDir.exists() && logsDir.isDirectory) {
-                                    val logFiles = logsDir.listFiles { _, name -> name.lowercase().endsWith(".txt") } ?: emptyArray()
-                                    for (file in logFiles.sortedByDescending { it.lastModified() }) {
-                                        val size = file.length()
-                                        totalSize += size
-                                        filesArray.put(
-                                            JSONObject().apply {
-                                                put("name", file.name)
-                                                put("size", size)
-                                                put("modified", file.lastModified())
-                                            },
-                                        )
-                                    }
+                                for (entry in listLogFiles(context).sortedByDescending { it.modified }) {
+                                    totalSize += entry.size
+                                    filesArray.put(
+                                        JSONObject().apply {
+                                            put("name", entry.name)
+                                            put("size", entry.size)
+                                            put("modified", entry.modified)
+                                        },
+                                    )
                                 }
 
                                 val response =
@@ -1102,23 +1139,16 @@ object LogStreamServer {
                                     return@get
                                 }
 
-                                val logsDir = File(context.getExternalFilesDir(null), "logs")
-                                if (!logsDir.exists() || !logsDir.isDirectory) {
-                                    call.respondText("File not found.", ContentType.Text.Plain, HttpStatusCode.NotFound)
-                                    return@get
-                                }
-
                                 // Whitelist against the actual directory listing - the canonical guarantee against any encoded payload.
-                                val available = logsDir.listFiles { _, name -> name.lowercase().endsWith(".txt") }?.map { it.name }?.toSet() ?: emptySet()
+                                val available = listLogFiles(context).map { it.name }.toSet()
                                 if (raw !in available) {
                                     call.respondText("File not found.", ContentType.Text.Plain, HttpStatusCode.NotFound)
                                     return@get
                                 }
 
-                                val target = File(logsDir, raw)
-                                // Belt-and-suspenders containment check.
-                                if (!target.canonicalPath.startsWith(logsDir.canonicalPath + File.separator)) {
-                                    call.respondText("Invalid filename.", ContentType.Text.Plain, HttpStatusCode.BadRequest)
+                                val content = readLogFile(context, raw)
+                                if (content == null) {
+                                    call.respondText("File not found.", ContentType.Text.Plain, HttpStatusCode.NotFound)
                                     return@get
                                 }
 
@@ -1128,7 +1158,7 @@ object LogStreamServer {
                                 } else {
                                     call.response.header(HttpHeaders.ContentDisposition, "inline")
                                 }
-                                call.respondText(target.readText(), ContentType.Text.Plain)
+                                call.respondText(content, ContentType.Text.Plain)
                             } catch (e: Exception) {
                                 Log.e(TAG, "[ERROR] /logs/files/{filename}:: Failed to serve log file: ${e.message}")
                                 call.respondText(
