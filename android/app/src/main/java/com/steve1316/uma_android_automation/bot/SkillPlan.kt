@@ -77,6 +77,7 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
                             skillBlacklist = skillBlacklist,
                             excludedTypes = excludedTypes,
                             bExcludeUniqueSkills = planData.optBoolean("excludeUniqueSkills", false),
+                            bExcludeDoubleCircleSkills = planData.optBoolean("excludeDoubleCircleSkills", false),
                         )
                 }
                 plansMap
@@ -138,6 +139,9 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
 
     companion object {
         private val TAG: String = "[${MainActivity.loggerTag}]SkillPlan"
+
+        /** The double-circle (double-O) marker found in double-circle skill names. */
+        private const val DOUBLE_CIRCLE_CHAR: Char = '\u25CE'
 
         /**
          * Represents a skill available for purchase in a pure calculation context.
@@ -652,6 +656,10 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
                         continue
                     }
 
+                    if (skillPlanSettings.bExcludeDoubleCircleSkills && entry.skillData.name.contains(DOUBLE_CIRCLE_CHAR)) {
+                        continue
+                    }
+
                     if (!entry.bIsAvailable || entry.screenPrice > remainingSkillPoints) {
                         continue
                     }
@@ -711,6 +719,10 @@ class SkillPlan(private val game: Game, private val campaign: Campaign) {
                 }
 
                 if (isBlacklisted(entry, skillPlanSettings)) {
+                    continue
+                }
+
+                if (skillPlanSettings.bExcludeDoubleCircleSkills && entry.skillData.name.contains(DOUBLE_CIRCLE_CHAR)) {
                     continue
                 }
 
