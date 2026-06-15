@@ -2964,7 +2964,7 @@
 
             /**
              * Renders the Race History calendar from a snapshot pushed by the bot.
-             * Snapshot shape: { currentTurn:int, decisions:{turn->{type,raceKey?,name?,grade?,raceTrack?,terrain?,distanceType?,distanceMeters?,fans?,contributions?}}, results:[{turn,raceKey,name,grade,outcome,...}] }
+             * Snapshot shape: { currentTurn:int, decisions:{turn->{type,raceKey?,name?,grade?,raceTrack?,terrain?,distanceType?,distanceMeters?,fans?,contributions?}}, results:[{turn,raceKey,name,grade,outcome,strategy?,...}] }
              * @param {object|null} snapshot Calendar snapshot JSON, or null to paint the empty grid.
              */
             function renderCalendar(snapshot) {
@@ -3151,6 +3151,7 @@
                     parts.push(dt)
                 }
                 if (typeof src.fans === "number") parts.push(formatNumberWithCommas(src.fans) + " fans")
+                if (src.strategy) parts.push(src.strategy)
 
                 var content = '<div class="tooltip-row"><span class="tooltip-label" style="font-weight:700">' + escapeHtml(src.name || "") + '</span></div>'
                 if (parts.length > 0) {

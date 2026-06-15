@@ -116,11 +116,12 @@ object SmartRaceSolverIntegration {
      * @param raceName Race name (matches [RaceCandidate.name]).
      * @param classYear Class-year prefix at the time of the race.
      * @param turnNumber Turn the loss occurred on.
+     * @param strategy Running style OCR'd from the Race History scrape. Empty for live in-run losses.
      */
-    fun recordRaceLost(raceKey: String, raceName: String, classYear: String, turnNumber: TurnNumber) {
+    fun recordRaceLost(raceKey: String, raceName: String, classYear: String, turnNumber: TurnNumber, strategy: String = "") {
         synchronized(raceLosses) {
             if (raceLosses.none { it.raceKey == raceKey && it.turnNumber == turnNumber }) {
-                raceLosses.add(RaceLossRecord(raceKey, raceName, classYear, turnNumber))
+                raceLosses.add(RaceLossRecord(raceKey, raceName, classYear, turnNumber, strategy))
             }
         }
     }
@@ -134,11 +135,12 @@ object SmartRaceSolverIntegration {
      * @param raceName Race name (matches [RaceCandidate.name]).
      * @param classYear Class-year prefix at the time of the win.
      * @param turnNumber Turn the win occurred on.
+     * @param strategy Running style OCR'd from the Race History scrape. Empty for live in-run wins and preview-assumed wins.
      */
-    fun recordRaceWon(raceKey: String, raceName: String, classYear: String, turnNumber: TurnNumber) {
+    fun recordRaceWon(raceKey: String, raceName: String, classYear: String, turnNumber: TurnNumber, strategy: String = "") {
         synchronized(raceHistory) {
             if (raceHistory.none { it.raceKey == raceKey && it.turnNumber == turnNumber }) {
-                raceHistory.add(RaceWin(raceKey, raceName, classYear, turnNumber))
+                raceHistory.add(RaceWin(raceKey, raceName, classYear, turnNumber, strategy))
             }
         }
     }
@@ -741,9 +743,9 @@ object SmartRaceSolverIntegration {
 
             matched.add(MatchedEntry(candidate, entry.dateString, entry.won, entry.strategy))
             if (entry.won) {
-                recordRaceWon(candidate.key, candidate.name, candidate.classYear, turnNumber)
+                recordRaceWon(candidate.key, candidate.name, candidate.classYear, turnNumber, entry.strategy)
             } else {
-                recordRaceLost(candidate.key, candidate.name, candidate.classYear, turnNumber)
+                recordRaceLost(candidate.key, candidate.name, candidate.classYear, turnNumber, entry.strategy)
             }
         }
 
@@ -1335,10 +1337,10 @@ object SmartRaceSolverIntegration {
 
         val results = JSONArray()
         for (win in winsSnapshot) {
-            results.put(buildResultEntry(win.turnNumber, win.raceKey, win.name, racesByTurn, RaceOutcome.WIN, contributionsByTurn[win.turnNumber]))
+            results.put(buildResultEntry(win.turnNumber, win.raceKey, win.name, racesByTurn, RaceOutcome.WIN, contributionsByTurn[win.turnNumber], win.strategy))
         }
         for (loss in lossesSnapshot) {
-            results.put(buildResultEntry(loss.turnNumber, loss.raceKey, loss.name, racesByTurn, RaceOutcome.LOSE, null))
+            results.put(buildResultEntry(loss.turnNumber, loss.raceKey, loss.name, racesByTurn, RaceOutcome.LOSE, null, loss.strategy))
         }
 
         // Always append a synthetic entry for the in-game Junior Make Debut race. This row is purely a visual breadcrumb in the Remote Log
@@ -1390,7 +1392,8 @@ object SmartRaceSolverIntegration {
      * @param racesByTurn Candidate pool used to resolve race details.
      * @param outcome Win or loss marker.
      * @param contributions Pre-computed epithet contributions for this turn, or null.
-     * @return JSON `{turn, raceKey, name, grade, outcome, raceTrack?, terrain?, distanceType?, distanceMeters?, fans?, contributions?}`.
+     * @param strategy Running style OCR'd from the Race History scrape. Omitted from the JSON when blank.
+     * @return JSON `{turn, raceKey, name, grade, outcome, raceTrack?, terrain?, distanceType?, distanceMeters?, fans?, strategy?, contributions?}`.
      */
     private fun buildResultEntry(
         turn: TurnNumber,
@@ -1399,6 +1402,7 @@ object SmartRaceSolverIntegration {
         racesByTurn: Map<TurnNumber, List<RaceCandidate>>,
         outcome: RaceOutcome,
         contributions: JSONArray?,
+        strategy: String = "",
     ): JSONObject {
         val race = findCandidate(turn, raceKey, raceName, racesByTurn)
         val obj =
@@ -1409,6 +1413,7 @@ object SmartRaceSolverIntegration {
                 .put("grade", race?.grade?.name ?: "")
                 .put("outcome", outcome.name)
         if (race != null) addRaceDetails(obj, race)
+        if (strategy.isNotBlank()) obj.put("strategy", strategy)
         if (contributions != null) obj.put("contributions", contributions)
         return obj
     }
