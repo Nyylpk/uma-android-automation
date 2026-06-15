@@ -494,6 +494,13 @@ const searchConfig: SearchOption[] = [
         page: "SmartRaceSolverSettings",
     },
     {
+        id: "disable-schedule-replan-on-race-loss",
+        title: "Disable Schedule Re-Plan Upon Race Loss",
+        description: "When a race is lost, keep the original schedule instead of re-planning the remaining turns. The loss is still recorded; epithets that depended on the lost race won't be re-routed.",
+        page: "SmartRaceSolverSettings",
+        parentId: "enable-smart-race-solver",
+    },
+    {
         id: "smart-solver-how-it-works",
         title: "How it works",
         description: "Smart Race Solver overview, loss handling, race-history scrape, and notes on epithets without matchers.",
