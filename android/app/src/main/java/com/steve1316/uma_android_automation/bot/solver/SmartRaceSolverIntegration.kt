@@ -713,7 +713,7 @@ object SmartRaceSolverIntegration {
         // Career -> Race History is sorted newest-first, so turns must strictly decrease as
         // we iterate. Any entry that breaks that invariant is OCR garbage from a
         // mid-scroll frame and is safely dropped.
-        data class MatchedEntry(val candidate: RaceCandidate, val dateString: String, val won: Boolean)
+        data class MatchedEntry(val candidate: RaceCandidate, val dateString: String, val won: Boolean, val strategy: String)
         val matched = mutableListOf<MatchedEntry>()
         var lastTurnSeen: TurnNumber = Int.MAX_VALUE
         for (entry in entries) {
@@ -739,7 +739,7 @@ object SmartRaceSolverIntegration {
                     ?: continue
             val candidate = candidates.firstOrNull { it.nameFormatted == matchedFormatted } ?: continue
 
-            matched.add(MatchedEntry(candidate, entry.dateString, entry.won))
+            matched.add(MatchedEntry(candidate, entry.dateString, entry.won, entry.strategy))
             if (entry.won) {
                 recordRaceWon(candidate.key, candidate.name, candidate.classYear, turnNumber)
             } else {
@@ -755,7 +755,7 @@ object SmartRaceSolverIntegration {
         } else {
             for (m in matched) {
                 val outcome = if (m.won) "Won" else "Lost"
-                sb.append("\n  Turn ${m.candidate.turnNumber} (${m.dateString}): $outcome - ${m.candidate.name}")
+                sb.append("\n  Turn ${m.candidate.turnNumber} (${m.dateString}): $outcome - ${m.candidate.name} [${m.strategy.ifBlank { "?" }}]")
             }
         }
         // Append the synthetic Junior Make Debut row to the scrape recap so the operator sees a
