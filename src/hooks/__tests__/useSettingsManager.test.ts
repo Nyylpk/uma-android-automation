@@ -69,11 +69,11 @@ describe("deepMerge", () => {
 
 describe("convertSettingsToBatch", () => {
     it("converts single category with two keys to batch entries", () => {
-        const settings = { general: { scenario: "URA", enableCraneGameAttempt: true } } as any
+        const settings = { general: { scenario: "URA", enableClawMachineAttempt: true } } as any
         const batch = convertSettingsToBatch(settings)
         expect(batch).toHaveLength(2)
         expect(batch).toContainEqual({ category: "general", key: "scenario", value: "URA" })
-        expect(batch).toContainEqual({ category: "general", key: "enableCraneGameAttempt", value: true })
+        expect(batch).toContainEqual({ category: "general", key: "enableClawMachineAttempt", value: true })
     })
 
     it("converts multiple categories", () => {
@@ -169,6 +169,17 @@ describe("applyMigrations", () => {
 
         const { settings: migrated } = applyMigrations(settings)
         expect((migrated as any).ocr).toBeUndefined()
+    })
+
+    it("migrates enableCraneGameAttempt to enableClawMachineAttempt", () => {
+        const settings = {
+            general: { enableCraneGameAttempt: true, enableClawMachineAttempt: false },
+        } as any
+
+        const { settings: migrated, anyMigrated } = applyMigrations(settings)
+        expect(anyMigrated).toBe(true)
+        expect(migrated.general.enableClawMachineAttempt).toBe(true)
+        expect((migrated.general as any).enableCraneGameAttempt).toBeUndefined()
     })
 
     it("migrates stopAtDate string to stopAtDates array", () => {
