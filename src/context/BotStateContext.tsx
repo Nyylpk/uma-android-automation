@@ -72,6 +72,7 @@ export interface Settings {
         // through React state inflated re-renders by ~160 KB and made every toggle re-write the
         // blobs to SQLite via the auto-save effect.
         enableSmartRaceSolver: boolean
+        disableScheduleReplanOnRaceLoss: boolean
         smartRaceSolverCharacterPreset: string
         smartRaceSolverAptitudes: string
         smartRaceSolverTargetEpithets: string
@@ -264,6 +265,7 @@ export const defaultSettings: Settings = {
         juniorYearPerDistanceStrategies: { Short: "Default", Mile: "Default", Medium: "Default", Long: "Default" },
         originalPerDistanceStrategies: { Short: "Default", Mile: "Default", Medium: "Default", Long: "Default" },
         enableSmartRaceSolver: false,
+        disableScheduleReplanOnRaceLoss: false,
         smartRaceSolverCharacterPreset: "Special Week",
         smartRaceSolverAptitudes: JSON.stringify({
             Sprint: "F",

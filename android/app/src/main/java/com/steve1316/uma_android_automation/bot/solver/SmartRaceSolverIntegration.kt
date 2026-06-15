@@ -245,7 +245,10 @@ object SmartRaceSolverIntegration {
         if (!won) {
             recordRaceLost(pending.raceKey, pending.name, pending.classYear, pending.turnNumber)
             MessageLog.i(TAG, "Race \"${pending.name}\" on turn ${pending.turnNumber} did not finish 1st; recorded as a loss.")
-            broadcastCalendarSnapshot()
+            // When the user disables re-planning on a loss, keep the originally locked-in schedule instead of re-solving the remaining turns.
+            val keepSchedule = SettingsHelper.getBooleanSetting("racing", "disableScheduleReplanOnRaceLoss")
+            if (keepSchedule) MessageLog.i(TAG, "Schedule re-plan on loss is disabled; keeping the original plan.")
+            broadcastCalendarSnapshot(reuseSchedule = keepSchedule)
             return
         }
         val historyBefore = synchronized(raceHistory) { raceHistory.toList() }

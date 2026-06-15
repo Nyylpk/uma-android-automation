@@ -48,4 +48,9 @@ describe("buildSettingsBanner", () => {
         expect(banner).toContain("---------- Debug Options ----------")
         expect(banner).toContain("---------- Discord Options ----------")
     })
+
+    it("includes the disable schedule re-plan on race loss line", () => {
+        const banner = buildSettingsBanner(makeStubSettings())
+        expect(banner).toContain("Disable Schedule Re-Plan Upon Race Loss")
+    })
 })
