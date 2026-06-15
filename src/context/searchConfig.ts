@@ -23,9 +23,9 @@ const searchConfig: SearchOption[] = [
         page: "SettingsMain",
     },
     {
-        id: "settings-crane-game-attempt",
-        title: "Enable Crane Game Attempt",
-        description: "Attempt to complete the crane game instead of stopping",
+        id: "settings-claw-machine-attempt",
+        title: "Enable Claw Machine Attempt",
+        description: "Attempt to complete the claw machine instead of stopping",
         page: "SettingsMain",
     },
     {
@@ -639,6 +639,13 @@ const searchConfig: SearchOption[] = [
         page: "Skills",
         parentId: "skill-point-check-plan",
     },
+    {
+        id: "exclude-double-circle-skills-SkillPlanSettingsSkillPointCheck",
+        title: "Skip All Double-O (Circle) Skills",
+        description: "Only buy the single-circle version; skip the double-circle upgrade",
+        page: "Skills",
+        parentId: "skill-point-check-plan",
+    },
 
     // ============================================================
     // Skill Plan Settings — Pre-Finals
@@ -677,6 +684,13 @@ const searchConfig: SearchOption[] = [
         page: "Skills",
         parentId: "enable-skill-plan-preFinals",
     },
+    {
+        id: "exclude-double-circle-skills-SkillPlanSettingsPreFinals",
+        title: "Skip All Double-O (Circle) Skills",
+        description: "Only buy the single-circle version; skip the double-circle upgrade",
+        page: "Skills",
+        parentId: "enable-skill-plan-preFinals",
+    },
 
     // ============================================================
     // Skill Plan Settings — Career Complete
@@ -712,6 +726,13 @@ const searchConfig: SearchOption[] = [
         id: "exclude-unique-skills-SkillPlanSettingsCareerComplete",
         title: "Skip All Unique Skills",
         description: "Exclude inherited unique (legacy) skills",
+        page: "Skills",
+        parentId: "enable-skill-plan-careerComplete",
+    },
+    {
+        id: "exclude-double-circle-skills-SkillPlanSettingsCareerComplete",
+        title: "Skip All Double-O (Circle) Skills",
+        description: "Only buy the single-circle version; skip the double-circle upgrade",
         page: "Skills",
         parentId: "enable-skill-plan-careerComplete",
     },
@@ -1037,6 +1058,12 @@ const searchConfig: SearchOption[] = [
         title: "Start Trackblazer Buy Items Test",
         description:
             "Disables normal bot operations and starts the Trackblazer buy items test. Opens the Shop if on the Main Screen and logs shop contents and purchase intentions without actually buying anything.",
+        page: "DebugSettings",
+    },
+    {
+        id: "dump-logcat",
+        title: "Dump logcat (last 6h)",
+        description: "Saves this app's recent logcat output to a timestamped .txt file at the root of your storage folder.",
         page: "DebugSettings",
     },
     {

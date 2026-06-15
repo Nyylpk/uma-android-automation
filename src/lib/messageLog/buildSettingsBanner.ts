@@ -38,11 +38,12 @@ const formatAdvancedScoringSection = (training: Settings["training"]): string =>
     return `\n\n---------- Advanced Training Scoring ----------\n${overrides.join("\n")}`
 }
 
-const formatExcludedCategories = (plan: { excludeGreenSkills: boolean; excludeRedSkills: boolean; excludeUniqueSkills: boolean }): string => {
+const formatExcludedCategories = (plan: { excludeGreenSkills: boolean; excludeRedSkills: boolean; excludeUniqueSkills: boolean; excludeDoubleCircleSkills: boolean }): string => {
     const parts: string[] = []
     if (plan.excludeGreenSkills) parts.push("Green")
     if (plan.excludeRedSkills) parts.push("Red")
     if (plan.excludeUniqueSkills) parts.push("Unique")
+    if (plan.excludeDoubleCircleSkills) parts.push("Double-O")
     return parts.length === 0 ? "None" : parts.join(", ")
 }
 
@@ -233,7 +234,7 @@ ${longTargetsString}${formatAdvancedScoringSection(settings.training)}
 ✨ Trackblazer Glow Stick Min Fans: ${settings.scenarioOverrides?.trackblazerGlowStickMinFans}
 
 ---------- Misc Options ----------
-🔍 Enable Crane Game Attempt: ${settings.general.enableCraneGameAttempt ? "✅" : "❌"}
+🔍 Enable Claw Machine Attempt: ${settings.general.enableClawMachineAttempt ? "✅" : "❌"}
 🌀 Enable Swipe-Based Scrolling: ${settings.general.enableSwipeBasedScrolling ? "✅" : "❌"}
 🛑 Stop Before Finals: ${settings.general.enableStopBeforeFinals ? "✅" : "❌"}
 🛑 Stop At Date: ${settings.general.enableStopAtDate ? `✅ (${settings.general.stopAtDates.join(", ")})` : "❌"}

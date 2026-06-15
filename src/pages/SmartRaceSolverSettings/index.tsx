@@ -237,6 +237,12 @@ const SmartRaceSolverSettings = () => {
     /** Name of the epithet whose contributing races should be highlighted on the calendar. */
     const [highlightedEpithet, setHighlightedEpithet] = useState<string | null>(null)
 
+    // Measured heights of the popover's pinned header and footer. The popover Content is absolutely positioned with no definite height, so
+    // flexShrink cannot bound the scrollable body on its own. We measure the chrome and cap the body ScrollView with the leftover space so the
+    // footer buttons stay visible while the body scrolls. Only one popover is open at a time, so a single pair of state values is enough.
+    const [popoverHeaderHeight, setPopoverHeaderHeight] = useState(0)
+    const [popoverFooterHeight, setPopoverFooterHeight] = useState(0)
+
     // Schedule preview - computed by the Kotlin solver via the React Native bridge.
     const [preview, setPreview] = useState<SchedulePreview | null>(lastPreviewCache?.preview ?? null)
     const [previewLoading, setPreviewLoading] = useState(false)
@@ -816,7 +822,10 @@ const SmartRaceSolverSettings = () => {
                     borderWidth: 2,
                     borderColor: colors.brand,
                 },
-                popoverAltList: { maxHeight: 220, marginTop: 4 },
+                popoverColumn: { flexShrink: 1 },
+                popoverHeader: { flexShrink: 0 },
+                popoverBodyScroll: { flexShrink: 1, marginTop: 4 },
+                popoverFooter: { flexShrink: 0 },
                 popoverButtonRow: { flexDirection: "row", gap: 8, marginTop: 8 },
                 popoverAltRow: {
                     flexDirection: "row",
@@ -920,58 +929,78 @@ const SmartRaceSolverSettings = () => {
         const isLocked = lockedValue != null
         const alternatives = (eligibleRacesForTurn.get(turn) ?? []).filter((r) => !race || r.name !== race.name)
 
+        // Cap the popover at the screen minus its 60px top/bottom insets, then hand the body whatever the pinned header and footer leave behind.
+        // The 24 accounts for the p-3 (12px each side) padding on PopoverContent. The floor keeps a usable scroll area on tiny screens.
+        const popoverMaxHeight = Math.min(420, Dimensions.get("window").height - 120)
+        const bodyMaxHeight = Math.max(80, popoverMaxHeight - popoverHeaderHeight - popoverFooterHeight - 24)
+
         return (
-            <View>
-                <Text style={styles.popoverTitle}>
-                    {isLocked ? "🔒 " : ""}T{turn} · {fullDateLabel}
-                </Text>
-                {isRace && race ? (
-                    <>
-                        <Text style={styles.popoverMeta}>{entry.name ?? race.name}</Text>
-                        <Text style={styles.popoverMeta}>
-                            {(entry.grade ?? race.grade ?? "").replace("PRE_OP", "Pre-OP")} · {race.raceTrack} · {race.terrain} · {race.distanceType} ({race.distanceMeters}m) ·{" "}
-                            {race.fans.toLocaleString()} fans
-                        </Text>
-                        <Text style={styles.popoverSection}>Progresses these epithets</Text>
-                        {matched.length === 0 ? (
-                            <Text style={styles.popoverEmpty}>None — this race does not match any tracked epithet matcher.</Text>
-                        ) : (
-                            matched.map((ep) => {
-                                const before = preview ? epithetProgress(turn - 1, ep, preview, racesByKey) : null
-                                const after = preview ? epithetProgress(turn, ep, preview, racesByKey) : null
-                                const progLabel = before && after ? `(${before.current}/${before.required} -> ${after.current}/${after.required}) ` : ""
-                                const conditions = race ? conditionLabelsForRaceAndEpithet(race, ep) : []
-                                const tail = conditions.join("; ")
-                                const pending = preview ? pendingPrerequisitesForEpithet(ep, turn, epithetsByName, preview, racesByKey) : []
-                                return (
-                                    <View key={ep.name}>
-                                        <Text style={styles.popoverEpithet}>
-                                            • {progLabel}
-                                            {ep.name}
-                                            {tail ? ` — ${tail}` : ""}
-                                        </Text>
-                                        {pending.map((line) => (
-                                            <Text key={line} style={styles.popoverEpithetPending}>
-                                                {"      "}* Still pending: {line}
+            <View style={styles.popoverColumn}>
+                {/* Header - race information, pinned at the top */}
+                <View
+                    style={styles.popoverHeader}
+                    onLayout={(e) => {
+                        const h = e.nativeEvent.layout.height
+                        setPopoverHeaderHeight((prev) => (Math.abs(prev - h) > 0.5 ? h : prev))
+                    }}
+                >
+                    <Text style={styles.popoverTitle}>
+                        {isLocked ? "🔒 " : ""}T{turn} · {fullDateLabel}
+                    </Text>
+                    {isRace && race ? (
+                        <>
+                            <Text style={styles.popoverMeta}>{entry.name ?? race.name}</Text>
+                            <Text style={styles.popoverMeta}>
+                                {(entry.grade ?? race.grade ?? "").replace("PRE_OP", "Pre-OP")} · {race.raceTrack} · {race.terrain} · {race.distanceType} ({race.distanceMeters}m) ·{" "}
+                                {race.fans.toLocaleString()} fans
+                            </Text>
+                        </>
+                    ) : (
+                        <Text style={styles.popoverMeta}>{entry?.type === "Rest" ? "Rest" : "No race scheduled — solver chose Train."}</Text>
+                    )}
+                </View>
+
+                {/* Body - epithet progression and eligible races, the only scrollable region */}
+                <ScrollView style={[styles.popoverBodyScroll, { maxHeight: bodyMaxHeight }]} showsVerticalScrollIndicator nestedScrollEnabled>
+                    {isRace && race && (
+                        <>
+                            <Text style={styles.popoverSection}>Progresses these epithets</Text>
+                            {matched.length === 0 ? (
+                                <Text style={styles.popoverEmpty}>None — this race does not match any tracked epithet matcher.</Text>
+                            ) : (
+                                matched.map((ep) => {
+                                    const before = preview ? epithetProgress(turn - 1, ep, preview, racesByKey) : null
+                                    const after = preview ? epithetProgress(turn, ep, preview, racesByKey) : null
+                                    const progLabel = before && after ? `(${before.current}/${before.required} -> ${after.current}/${after.required}) ` : ""
+                                    const conditions = race ? conditionLabelsForRaceAndEpithet(race, ep) : []
+                                    const tail = conditions.join("; ")
+                                    const pending = preview ? pendingPrerequisitesForEpithet(ep, turn, epithetsByName, preview, racesByKey) : []
+                                    return (
+                                        <View key={ep.name}>
+                                            <Text style={styles.popoverEpithet}>
+                                                • {progLabel}
+                                                {ep.name}
+                                                {tail ? ` — ${tail}` : ""}
                                             </Text>
-                                        ))}
-                                    </View>
-                                )
-                            })
-                        )}
-                    </>
-                ) : (
-                    <Text style={styles.popoverMeta}>{entry?.type === "Rest" ? "Rest" : "No race scheduled — solver chose Train."}</Text>
-                )}
+                                            {pending.map((line) => (
+                                                <Text key={line} style={styles.popoverEpithetPending}>
+                                                    {"      "}* Still pending: {line}
+                                                </Text>
+                                            ))}
+                                        </View>
+                                    )
+                                })
+                            )}
+                        </>
+                    )}
 
-                <Divider style={{ marginTop: 16 }} />
+                    <Divider style={{ marginTop: 16 }} />
 
-                <Text style={styles.popoverSection}>Switch to an eligible race</Text>
-                {alternatives.length === 0 ? (
-                    <Text style={styles.popoverEmpty}>No other eligible races on this turn.</Text>
-                ) : (
-                    <ScrollView style={styles.popoverAltList} nestedScrollEnabled>
-                        {alternatives.map((alt) => {
+                    <Text style={styles.popoverSection}>Switch to an eligible race</Text>
+                    {alternatives.length === 0 ? (
+                        <Text style={styles.popoverEmpty}>No other eligible races on this turn.</Text>
+                    ) : (
+                        alternatives.map((alt) => {
                             const altColor = GRADE_COLORS[alt.grade] ?? colors.brand
                             return (
                                 <Pressable
@@ -991,21 +1020,30 @@ const SmartRaceSolverSettings = () => {
                                     </View>
                                 </Pressable>
                             )
-                        })}
-                    </ScrollView>
-                )}
-
-                <View style={styles.popoverButtonRow}>
-                    {isRace && (
-                        <CustomButton variant="destructive" size="sm" onPress={() => lockTurnToTrain(turn)}>
-                            Delete
-                        </CustomButton>
+                        })
                     )}
-                    <CustomButton variant={isLocked ? "secondary" : "default"} size="sm" onPress={() => toggleLockForTurn(turn, isLocked, isRace ? (race?.name ?? entry?.name ?? null) : null)}>
-                        {isLocked ? "Unlock" : "Lock"}
-                    </CustomButton>
+                </ScrollView>
+
+                {/* Footer - action buttons, pinned at the bottom so they are always reachable */}
+                <View
+                    style={styles.popoverFooter}
+                    onLayout={(e) => {
+                        const h = e.nativeEvent.layout.height
+                        setPopoverFooterHeight((prev) => (Math.abs(prev - h) > 0.5 ? h : prev))
+                    }}
+                >
+                    <View style={styles.popoverButtonRow}>
+                        {isRace && (
+                            <CustomButton variant="destructive" size="sm" onPress={() => lockTurnToTrain(turn)}>
+                                Delete
+                            </CustomButton>
+                        )}
+                        <CustomButton variant={isLocked ? "secondary" : "default"} size="sm" onPress={() => toggleLockForTurn(turn, isLocked, isRace ? (race?.name ?? entry?.name ?? null) : null)}>
+                            {isLocked ? "Unlock" : "Lock"}
+                        </CustomButton>
+                    </View>
+                    <Text style={styles.popoverHint}>Changes take effect after tapping Recalculate.</Text>
                 </View>
-                <Text style={styles.popoverHint}>Changes take effect after tapping Recalculate.</Text>
             </View>
         )
     }
@@ -1068,9 +1106,10 @@ const SmartRaceSolverSettings = () => {
                         align="center"
                         insets={{ top: 60, bottom: 60, left: 12, right: 12 }}
                         className="p-3"
-                        style={{ width: Math.min(320, Dimensions.get("window").width - 24), maxHeight: Math.min(360, Dimensions.get("window").height - 200) }}
+                        scrollable
+                        style={{ width: Math.min(320, Dimensions.get("window").width - 24), maxHeight: Math.min(420, Dimensions.get("window").height - 120) }}
                     >
-                        <ScrollView showsVerticalScrollIndicator={false}>{renderPopoverBody(turn, entry)}</ScrollView>
+                        {renderPopoverBody(turn, entry)}
                     </PopoverContent>
                 </Popover>
                 <Text style={styles.calendarDateLabel}>

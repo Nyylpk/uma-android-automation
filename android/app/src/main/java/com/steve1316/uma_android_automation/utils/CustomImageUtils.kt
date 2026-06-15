@@ -67,10 +67,10 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
     override var debugMode: Boolean = SettingsHelper.getBooleanSetting("debug", "enableDebugMode")
 
     /** Template matching confidence threshold. */
-    override var confidence: Double = SettingsHelper.getStringSetting("debug", "templateMatchConfidence").toDouble()
+    override var confidence: Double = SettingsHelper.getDoubleSetting("debug", "templateMatchConfidence", 0.8)
 
     /** Custom scale factor for template matching. */
-    override var customScale: Double = SettingsHelper.getStringSetting("debug", "templateMatchCustomScale").toDouble()
+    override var customScale: Double = SettingsHelper.getDoubleSetting("debug", "templateMatchCustomScale", 1.0)
 
     /** Maximum allowed value for a single stat. */
     private val manualStatCap: Int = SettingsHelper.getIntSetting("training", "manualStatCap")

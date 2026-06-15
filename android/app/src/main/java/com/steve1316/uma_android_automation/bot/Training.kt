@@ -96,19 +96,19 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
     private val scenario = game.scenario
 
     /** The current stat prioritization settings. */
-    private val statPrioritizationRaw: List<StatName> = SettingsHelper.getStringArraySetting("training", "statPrioritization").map { StatName.fromName(it)!! }
+    private val statPrioritizationRaw: List<StatName> = SettingsHelper.getStringArraySetting("training", "statPrioritization").mapNotNull { StatName.fromName(it) }
 
     /** The final stat prioritization list. */
     internal val statPrioritization: List<StatName> = statPrioritizationRaw.ifEmpty { StatName.entries }
 
     /** The raw stat prioritization list for in-game event choices, sourced from user settings. */
-    private val eventChoiceStatPriorityRaw: List<StatName> = SettingsHelper.getStringArraySetting("training", "eventChoiceStatPriority").map { StatName.fromName(it)!! }
+    private val eventChoiceStatPriorityRaw: List<StatName> = SettingsHelper.getStringArraySetting("training", "eventChoiceStatPriority").mapNotNull { StatName.fromName(it) }
 
     /** The final stat prioritization list applied to event choice scoring. Falls back to [statPrioritization] if unset. */
     internal val eventChoiceStatPriority: List<StatName> = eventChoiceStatPriorityRaw.ifEmpty { statPrioritization }
 
     /** The raw stat prioritization list for Summer Training, sourced from user settings. */
-    private val summerTrainingStatPriorityRaw: List<StatName> = SettingsHelper.getStringArraySetting("training", "summerTrainingStatPriority").map { StatName.fromName(it)!! }
+    private val summerTrainingStatPriorityRaw: List<StatName> = SettingsHelper.getStringArraySetting("training", "summerTrainingStatPriority").mapNotNull { StatName.fromName(it) }
 
     /** The final stat prioritization list applied during Summer Training. Falls back to [statPrioritization] if unset. */
     internal val summerTrainingStatPriority: List<StatName> = summerTrainingStatPriorityRaw.ifEmpty { statPrioritization }
