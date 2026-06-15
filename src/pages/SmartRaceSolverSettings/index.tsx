@@ -1235,8 +1235,8 @@ const SmartRaceSolverSettings = () => {
                                         </SubTopic>
                                         <SubTopic title="What happens when you lose a race">
                                             A loss is recorded against that turn and the solver immediately re-plans the remaining turns. Epithets that depended on the lost race may shift to
-                                            alternative paths or drop out entirely, so later races / trainings can change to keep the rest of the run on the highest-scoring track still available.
-                                            Turn on "Disable Schedule Re-Plan Upon Race Loss" to keep the original schedule after a loss instead of re-planning.
+                                            alternative paths or drop out entirely, so later races / trainings can change to keep the rest of the run on the highest-scoring track still available. Turn
+                                            on "Disable Schedule Re-Plan Upon Race Loss" to keep the original schedule after a loss instead of re-planning.
                                         </SubTopic>
                                         <SubTopic title="Race History scrape">
                                             On bot start (and only when the career is past the pre-debut turns), the bot opens the in-game Career → Race History dialog and scrapes every past race
