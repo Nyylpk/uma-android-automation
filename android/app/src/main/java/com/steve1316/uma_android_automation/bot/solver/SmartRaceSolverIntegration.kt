@@ -768,7 +768,8 @@ object SmartRaceSolverIntegration {
         // duplicate trailing line later in [runStartupHooks].
         val debutDate = scrapedDebutEntry?.dateString ?: "Junior Year Late Jun"
         val debutOutcome = if (scrapedDebutEntry?.won == false) "Lost" else "Won"
-        sb.append("\n  Turn $MAKE_DEBUT_DISPLAY_TURN ($debutDate): $debutOutcome - Make Debut (Does not affect epithets)")
+        val debutStrategy = scrapedDebutEntry?.strategy?.ifBlank { "?" } ?: "?"
+        sb.append("\n  Turn $MAKE_DEBUT_DISPLAY_TURN ($debutDate): $debutOutcome - Make Debut [$debutStrategy] (Does not affect epithets)")
         debutDisplayLogged.set(true)
         MessageLog.i(TAG, sb.toString())
         return true
@@ -1372,6 +1373,8 @@ object SmartRaceSolverIntegration {
         // parts row alongside the grade and fan count. Skipped when the scrape was bypassed or
         // the row was missing (pre-debut runs).
         scrapedDebut?.nameFormatted?.takeIf { it.isNotBlank() }?.let { syntheticEntry.put("raceTrack", it) }
+        // Carry the OCR-scraped running style through so the Make Debut tooltip shows it after the fan count, matching every other race cell.
+        scrapedDebut?.strategy?.takeIf { it.isNotBlank() }?.let { syntheticEntry.put("strategy", it) }
         results.put(syntheticEntry)
 
         return JSONObject()
