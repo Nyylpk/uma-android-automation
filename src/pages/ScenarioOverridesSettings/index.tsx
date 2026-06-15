@@ -417,7 +417,7 @@ const ScenarioOverridesSettings = () => {
                                             min={0}
                                             max={50}
                                             step={1}
-                                            label="Skip Items During Bad Mood Below Stat Gain"
+                                            label="Skip Items During Bad Mood Below Main Stat Gain"
                                             labelUnit=""
                                             showValue={true}
                                             showLabels={true}
@@ -435,7 +435,7 @@ const ScenarioOverridesSettings = () => {
                                             min={0}
                                             max={100}
                                             step={1}
-                                            label="Skip Empowering Megaphone Below Stat Gain"
+                                            label="Skip Empowering Megaphone Below Main Stat Gain"
                                             labelUnit=""
                                             showValue={true}
                                             showLabels={true}
@@ -453,7 +453,7 @@ const ScenarioOverridesSettings = () => {
                                             min={0}
                                             max={100}
                                             step={1}
-                                            label="Skip Motivating Megaphone Below Stat Gain"
+                                            label="Skip Motivating Megaphone Below Main Stat Gain"
                                             labelUnit=""
                                             showValue={true}
                                             showLabels={true}
@@ -471,7 +471,7 @@ const ScenarioOverridesSettings = () => {
                                             min={0}
                                             max={100}
                                             step={1}
-                                            label="Skip Coaching Megaphone Below Stat Gain"
+                                            label="Skip Coaching Megaphone Below Main Stat Gain"
                                             labelUnit=""
                                             showValue={true}
                                             showLabels={true}
@@ -492,7 +492,7 @@ const ScenarioOverridesSettings = () => {
                                             min={20}
                                             max={100}
                                             step={5}
-                                            label="Skip Risky Charm Training Below Stat Gain"
+                                            label="Skip Risky Charm Training Below Main Stat Gain"
                                             labelUnit=""
                                             showValue={true}
                                             showLabels={true}
