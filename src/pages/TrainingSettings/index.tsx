@@ -19,6 +19,7 @@ import { SearchPageProvider } from "../../context/SearchPageContext"
 import SearchableItem from "../../components/SearchableItem"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
 import { shallowArrayEqual } from "../../lib/utils"
+import { computePrioritySync } from "../../lib/training/syncPriorities"
 import WarningContainer from "../../components/WarningContainer"
 import { Row } from "../../components/ui/row"
 import { Section } from "../../components/ui/section"
@@ -64,6 +65,13 @@ const TrainingSettings = () => {
     }, [])
     const [snackbarVisible, setSnackbarVisible] = useState(false)
     const [snackbarMessage, setSnackbarMessage] = useState("")
+    const [snackbarAction, setSnackbarAction] = useState<{ label: string; onPress: () => void } | null>(null)
+    // Show the page snackbar with a message and an optional action. Defaults to a "Close" action that just dismisses.
+    const showSnackbar = useCallback((message: string, action?: { label: string; onPress: () => void }) => {
+        setSnackbarMessage(message)
+        setSnackbarAction(action ?? null)
+        setSnackbarVisible(true)
+    }, [])
     const [scoringSandboxOpen, setScoringSandboxOpen] = useState(false)
     const [advancedExpanded, setAdvancedExpanded] = useState(false)
 
@@ -78,6 +86,30 @@ const TrainingSettings = () => {
         training?.summerTrainingStatPriority !== undefined ? training.summerTrainingStatPriority : defaultSettings.training.summerTrainingStatPriority
     )
     const [blacklistItems, setBlacklistItems] = useState<string[]>(() => (training?.trainingBlacklist !== undefined ? training.trainingBlacklist : defaultSettings.training.trainingBlacklist))
+    /**
+     * Copy the main stat prioritization order onto the Event Choice and Summer Training lists.
+     * Shows an Undo snackbar when something changed, or an "Already in sync" message when both targets already match.
+     */
+    const handleSyncPriorities = useCallback(() => {
+        const { changed, eventChoice, summer } = computePrioritySync(statPrioritizationItems, eventChoiceStatPriorityItems, summerTrainingStatPriorityItems)
+        if (!changed) {
+            showSnackbar("Already in sync")
+            return
+        }
+        const prevEventChoice = eventChoiceStatPriorityItems
+        const prevSummer = summerTrainingStatPriorityItems
+        setEventChoiceStatPriorityItems(eventChoice)
+        setSummerTrainingStatPriorityItems(summer)
+        showSnackbar("Synced Event Choice & Summer to Prioritization", {
+            label: "Undo",
+            onPress: () => {
+                setEventChoiceStatPriorityItems(prevEventChoice)
+                setSummerTrainingStatPriorityItems(prevSummer)
+                // Dismiss the snackbar right after undoing the lists.
+                setSnackbarVisible(false)
+            },
+        })
+    }, [statPrioritizationItems, eventChoiceStatPriorityItems, summerTrainingStatPriorityItems, showSnackbar])
     // Use a ref to track if the initial mount sync has been done to avoid redundant updates.
     const isMounted = useRef(false)
 
@@ -329,6 +361,19 @@ const TrainingSettings = () => {
                     paddingVertical: 2,
                 },
                 selectorChipText: { ...TYPE.caption, color: colors.brand, fontWeight: "600" as const },
+                syncPill: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 5,
+                    backgroundColor: colors.brandSubtle,
+                    borderWidth: 1,
+                    borderColor: colors.brandBorder,
+                    borderRadius: RADII.pill,
+                    overflow: "hidden",
+                    paddingHorizontal: SPACING.sm,
+                    paddingVertical: 4,
+                },
+                syncPillText: { ...TYPE.caption, color: colors.brand, fontWeight: "600" as const },
                 sliderShell: { padding: SPACING.md },
                 metaText: { ...TYPE.caption, color: colors.textMuted, paddingHorizontal: SPACING.md, paddingTop: SPACING.xs, paddingBottom: SPACING.md },
                 groupHeader: { padding: SPACING.md, paddingBottom: 0 },
@@ -515,19 +560,31 @@ const TrainingSettings = () => {
                                 currentTrainingStatTargetSettings={trainingStatTargetSettings}
                                 onOverwriteSettings={handleOverwriteSettings}
                                 onNoChangesDetected={() => {
-                                    setSnackbarMessage("Current Training settings are already the same.")
-                                    setSnackbarVisible(true)
+                                    showSnackbar("Current Training settings are already the same.")
                                 }}
                                 onError={(message) => {
-                                    setSnackbarMessage(message)
-                                    setSnackbarVisible(true)
+                                    showSnackbar(message)
                                 }}
                             />
                         </SearchableItem>
 
                         {showHeavySections && (
                             <>
-                                <Section label="Priorities">
+                                <Section
+                                    label="Priorities"
+                                    labelRight={
+                                        <Pressable
+                                            style={styles.syncPill}
+                                            onPress={handleSyncPriorities}
+                                            android_ripple={{ color: colors.ripple, foreground: true }}
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Sync Priorities"
+                                        >
+                                            <Ionicons name="sync" size={13} color={colors.brand} />
+                                            <Text style={styles.syncPillText}>Sync Priorities</Text>
+                                        </Pressable>
+                                    }
+                                >
                                     {renderStatSelector(
                                         "Blacklist",
                                         blacklistItems,
@@ -1188,16 +1245,11 @@ const TrainingSettings = () => {
             <Snackbar
                 visible={snackbarVisible}
                 onDismiss={() => setSnackbarVisible(false)}
-                action={{
-                    label: "Close",
-                    onPress: () => {
-                        setSnackbarVisible(false)
-                    },
-                }}
-                style={{ backgroundColor: "red", borderRadius: 10 }}
+                action={{ ...(snackbarAction ?? { label: "Close", onPress: () => setSnackbarVisible(false) }), textColor: "#000" }}
+                style={{ backgroundColor: colors.success, borderRadius: 10 }}
                 duration={4000}
             >
-                {snackbarMessage}
+                <Text style={{ color: "#000" }}>{snackbarMessage}</Text>
             </Snackbar>
         </View>
     )
