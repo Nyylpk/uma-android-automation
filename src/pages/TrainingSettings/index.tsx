@@ -64,6 +64,13 @@ const TrainingSettings = () => {
     }, [])
     const [snackbarVisible, setSnackbarVisible] = useState(false)
     const [snackbarMessage, setSnackbarMessage] = useState("")
+    const [snackbarAction, setSnackbarAction] = useState<{ label: string; onPress: () => void } | null>(null)
+    // Show the page snackbar with a message and an optional action. Defaults to a "Close" action that just dismisses.
+    const showSnackbar = useCallback((message: string, action?: { label: string; onPress: () => void }) => {
+        setSnackbarMessage(message)
+        setSnackbarAction(action ?? null)
+        setSnackbarVisible(true)
+    }, [])
     const [scoringSandboxOpen, setScoringSandboxOpen] = useState(false)
     const [advancedExpanded, setAdvancedExpanded] = useState(false)
 
@@ -515,12 +522,10 @@ const TrainingSettings = () => {
                                 currentTrainingStatTargetSettings={trainingStatTargetSettings}
                                 onOverwriteSettings={handleOverwriteSettings}
                                 onNoChangesDetected={() => {
-                                    setSnackbarMessage("Current Training settings are already the same.")
-                                    setSnackbarVisible(true)
+                                    showSnackbar("Current Training settings are already the same.")
                                 }}
                                 onError={(message) => {
-                                    setSnackbarMessage(message)
-                                    setSnackbarVisible(true)
+                                    showSnackbar(message)
                                 }}
                             />
                         </SearchableItem>
@@ -1188,12 +1193,7 @@ const TrainingSettings = () => {
             <Snackbar
                 visible={snackbarVisible}
                 onDismiss={() => setSnackbarVisible(false)}
-                action={{
-                    label: "Close",
-                    onPress: () => {
-                        setSnackbarVisible(false)
-                    },
-                }}
+                action={snackbarAction ?? { label: "Close", onPress: () => setSnackbarVisible(false) }}
                 style={{ backgroundColor: "red", borderRadius: 10 }}
                 duration={4000}
             >
