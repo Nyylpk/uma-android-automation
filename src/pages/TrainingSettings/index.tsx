@@ -1246,7 +1246,7 @@ const TrainingSettings = () => {
                 visible={snackbarVisible}
                 onDismiss={() => setSnackbarVisible(false)}
                 action={snackbarAction ?? { label: "Close", onPress: () => setSnackbarVisible(false) }}
-                style={{ backgroundColor: "red", borderRadius: 10 }}
+                style={{ backgroundColor: colors.success, borderRadius: 10 }}
                 duration={4000}
             >
                 {snackbarMessage}
