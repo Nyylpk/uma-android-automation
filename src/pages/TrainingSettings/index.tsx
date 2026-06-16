@@ -1245,11 +1245,11 @@ const TrainingSettings = () => {
             <Snackbar
                 visible={snackbarVisible}
                 onDismiss={() => setSnackbarVisible(false)}
-                action={snackbarAction ?? { label: "Close", onPress: () => setSnackbarVisible(false) }}
+                action={{ ...(snackbarAction ?? { label: "Close", onPress: () => setSnackbarVisible(false) }), textColor: "#000" }}
                 style={{ backgroundColor: colors.success, borderRadius: 10 }}
                 duration={4000}
             >
-                {snackbarMessage}
+                <Text style={{ color: "#000" }}>{snackbarMessage}</Text>
             </Snackbar>
         </View>
     )
