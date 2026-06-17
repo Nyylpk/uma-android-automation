@@ -1,26 +1,18 @@
 <AppUpdater>
   <update>
-    <latestVersion>5.7.5</latestVersion>
+    <latestVersion>5.7.6</latestVersion>
     <url>https://github.com/steve1316/uma-android-automation/releases</url>
     <releaseNotes>
-v5.7.5 - Changelog
+v5.7.6 - Changelog
 
 New
 ---
-- Add a `Skip Double-O (Circle) Skills` per-plan toggle that only buys the single-circle version of a skill and skips the more expensive double-circle upgrade in the auto-strategy. Double-circle skills you add to the plan yourself are still bought.
-- Add a `Disable Schedule Re-Plan Upon Race Loss` option in the `Smart Race Solver` page to prevent the solver from re-planning the schedule when a race is lost. Defaults to off.
-
-Adjustments
----
-- The `Running Style`, `Track Distance`, and `Track Surface` skill preferences now restrict auto-purchased skills across all spending strategies instead of only some of them.
-- Rename the `Crane Game` setting to `Claw Machine`.
-- Improved the `Remote Log Viewer` by allowing the `Compact` button to collapse/re-collapse the logs and racing style for each race will now be shown in the Race History's popover tooltips.
+- Add a `Sync Priorities` button to the `Training Settings` page that will sync the priorities of the `Event Choice Prioritization` and `Summer Training Prioritization` settings with their parent `Prioritization` setting.
+- Add per-character mandatory races to the Smart Race Solver automatically to lock off those days to avoid the Solver scheduling races on those days by accident.
 
 Fixes
 ---
-- Fix the `Remote Log Viewer` `Log Files` and `Debug Images` tabs showing nothing after the recent storage redesign.
-- Fix a rare crash on startup caused by reading empty template-match and stat-priority settings.
-- Fix a visual bug where the race history tooltip in the `Remote Log Viewer` could extend beyond the screen edge.
+- Fix section dividers having the wrong margins.
 
     </releaseNotes>
   </update>
