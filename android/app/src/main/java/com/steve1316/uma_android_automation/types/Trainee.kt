@@ -155,8 +155,8 @@ class Trainee {
     /** The trainee's current pool of skill points. */
     var skillPoints: Int = 120
 
-    /** The trainee's current total fan count. */
-    var fans: Int = 1
+    /** The trainee's current total fan count. Starts at 0 until the first fan-count OCR reading. */
+    var fans: Int = 0
 
     /** The trainee's current [Mood] level. */
     var mood: Mood = Mood.NORMAL
