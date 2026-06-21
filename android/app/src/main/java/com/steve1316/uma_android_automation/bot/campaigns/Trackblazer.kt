@@ -10,6 +10,7 @@ import com.steve1316.uma_android_automation.bot.DialogHandlerResult
 import com.steve1316.uma_android_automation.bot.Game
 import com.steve1316.uma_android_automation.bot.MainScreenAction
 import com.steve1316.uma_android_automation.bot.Racing
+import com.steve1316.uma_android_automation.bot.RunAnalytics
 import com.steve1316.uma_android_automation.bot.SelectionSource
 import com.steve1316.uma_android_automation.bot.Training
 import com.steve1316.uma_android_automation.bot.solver.SmartRaceSolverIntegration
@@ -1427,6 +1428,7 @@ class Trackblazer(game: Game) : Campaign(game) {
         // Emit the Decision Report after the override's TRAIN path completes. The non-TRAIN paths delegate to super.executeAction which
         // emits there - the hasEmitted guard on DecisionTracer makes the second call here a no-op for those branches.
         if (result && action != MainScreenAction.NONE) {
+            RunAnalytics.recordTurn(trainee, decisionTracer, action)
             decisionTracer.emit()
         }
 

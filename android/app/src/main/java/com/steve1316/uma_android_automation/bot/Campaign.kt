@@ -1704,6 +1704,9 @@ abstract class Campaign(game: Game) : Task(game) {
         // Print the trainee info after all turn-start updates and potential fan count updates.
         trainee.logInfo()
 
+        // Surface analytics right after the trainee scan, before the scenario item/shop pass, so a restart shows the resumed run promptly.
+        RunAnalytics.onTurnStart(trainee, date)
+
         // Scenario-specific main screen entry hook (e.g. for item usage).
         onMainScreenEntry()
 
@@ -1968,6 +1971,7 @@ abstract class Campaign(game: Game) : Task(game) {
             training.handleTraining(StatName.WIT)
             bForcedWitTraining = false
             bHasCheckedDateThisTurn = false
+            RunAnalytics.recordTurn(trainee, decisionTracer, action)
             decisionTracer.emit()
             return true
         }
@@ -2006,6 +2010,7 @@ abstract class Campaign(game: Game) : Task(game) {
                 return false
             }
         }
+        RunAnalytics.recordTurn(trainee, decisionTracer, action)
         decisionTracer.emit()
         return true
     }

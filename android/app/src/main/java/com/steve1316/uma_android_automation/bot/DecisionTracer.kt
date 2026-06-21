@@ -20,6 +20,9 @@ class DecisionTracer {
     /** Header for the current turn's Decision Report block (e.g. "Turn 25 (CLASSIC EARLY JANUARY)"). */
     private var turnLabel: String = ""
 
+    /** Current game date captured by `startTurn`, exposed via `currentTurnDate()` for run analytics. Null until the first turn opens. */
+    private var turnDate: GameDate? = null
+
     /** Snapshot of trainee and campaign state captured by `startTurn`. */
     private var stateSnapshot: StateSnapshot? = null
 
@@ -203,6 +206,7 @@ class DecisionTracer {
         extraState: Map<String, String> = emptyMap(),
     ) {
         turnLabel = formatTurnLabel(date)
+        turnDate = date
         stateSnapshot =
             StateSnapshot(
                 energy = trainee.energy,
@@ -225,6 +229,20 @@ class DecisionTracer {
         MessageLog.i(TAG, formatReport())
         hasEmitted = true
     }
+
+    /**
+     * The game date captured for the current turn by `startTurn`, or null before the first turn opens.
+     *
+     * @return The current turn's date, or null.
+     */
+    fun currentTurnDate(): GameDate? = turnDate
+
+    /**
+     * The most recent training selection recorded this turn, or null when none was recorded.
+     *
+     * @return The last `TrainingSelection` event, or null.
+     */
+    fun lastTrainingSelection(): DecisionEvent.TrainingSelection? = events.filterIsInstance<DecisionEvent.TrainingSelection>().lastOrNull()
 
     // //////////////////////////////////////////////////////////////////////////////////////////////////
     // //////////////////////////////////////////////////////////////////////////////////////////////////

@@ -11,6 +11,7 @@ import com.steve1316.automation_library.data.SharedData
 import com.steve1316.automation_library.events.JSEvent
 import com.steve1316.automation_library.utils.MessageLog
 import com.steve1316.automation_library.utils.UserStorageManager
+import com.steve1316.uma_android_automation.bot.RunAnalytics
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -151,6 +152,11 @@ object LogStreamServer {
      *  waiting for any other signal. Null until the first run reports a value. */
     @Volatile private var latestSmartRaceSolverEnabled: Boolean? = null
 
+    /** Latest run-analytics snapshot pushed by `RunAnalytics` at each turn boundary and at run
+     *  end. Replayed to each new client after the log history flush so the Analytics tab paints
+     *  immediately on connect. Null until the first snapshot arrives this run. */
+    @Volatile private var latestAnalyticsSnapshot: String? = null
+
     /**
      * Represents a parsed log entry for structured transmission.
      *
@@ -226,6 +232,14 @@ object LogStreamServer {
          * @property enabled True when SRS is enabled for the current run.
          */
         data class BroadcastSmartRaceSolverState(val enabled: Boolean) : LogAction()
+
+        /**
+         * Broadcasts a run-analytics snapshot to all connected clients. Distinct from [Broadcast]
+         * so analytics payloads never end up in the log replay buffer.
+         *
+         * @property json Pre-serialized analytics snapshot JSON sent verbatim to clients with an `ANALYTICS:` prefix.
+         */
+        data class BroadcastAnalytics(val json: String) : LogAction()
     }
 
     // //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -377,6 +391,8 @@ object LogStreamServer {
                     val text = frame.readText()
                     if (text == "CMD:REFRESH_IMAGES") {
                         sendDebugImages(session)
+                    } else if (text == "CMD:RESET_ANALYTICS") {
+                        applicationContext?.let { RunAnalytics.discardHistory(it) }
                     }
                 }
             }
@@ -430,6 +446,16 @@ object LogStreamServer {
                     session.send(Frame.Text("SRS_STATE:$enabled"))
                 } catch (e: Exception) {
                     Log.w(TAG, "[WARN] handleNewClientAction:: Failed to replay SRS state: ${e.message}")
+                }
+            }
+
+            // Replay the most recent run-analytics snapshot (if any) so the Analytics tab paints
+            // immediately on a mid-run browser refresh without waiting for the next turn.
+            latestAnalyticsSnapshot?.let { snapshot ->
+                try {
+                    session.send(Frame.Text("ANALYTICS:$snapshot"))
+                } catch (e: Exception) {
+                    Log.w(TAG, "[WARN] handleNewClientAction:: Failed to replay analytics snapshot: ${e.message}")
                 }
             }
 
@@ -842,6 +868,9 @@ object LogStreamServer {
         // Drop the cached SRS-enabled flag so the next run's Racing init is the source of truth.
         latestSmartRaceSolverEnabled = null
 
+        // Drop the cached analytics snapshot so the new run starts with no replay.
+        latestAnalyticsSnapshot = null
+
         // Ensure we are unmuted for the new run.
         isMuted = false
 
@@ -935,6 +964,20 @@ object LogStreamServer {
     }
 
     /**
+     * Pushes a run-analytics snapshot to all connected clients and caches it for replay to
+     * clients that connect later. Called by `RunAnalytics` at each turn boundary and at run end.
+     *
+     * @param json Pre-serialized analytics snapshot JSON.
+     */
+    fun broadcastAnalyticsSnapshot(json: String) {
+        latestAnalyticsSnapshot = json
+        if (!isRunning) return
+        serverScope?.launch {
+            actionChannel?.send(LogAction.BroadcastAnalytics(json))
+        }
+    }
+
+    /**
      * Sends the Smart Race Solver state to all currently connected clients with the `SRS_STATE:`
      * framing prefix. Payload is the lowercase boolean (`true` or `false`).
      *
@@ -943,6 +986,24 @@ object LogStreamServer {
     private suspend fun handleSmartRaceSolverStateBroadcast(enabled: Boolean) {
         if (clients.isEmpty()) return
         val frame = "SRS_STATE:$enabled"
+        for (client in clients) {
+            try {
+                client.send(Frame.Text(frame))
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    /**
+     * Sends a run-analytics snapshot to all currently connected clients with the `ANALYTICS:`
+     * framing prefix the viewer uses to route the payload to its Analytics tab. Skipped silently
+     * when no clients are connected.
+     *
+     * @param json The pre-serialized analytics snapshot JSON.
+     */
+    private suspend fun handleAnalyticsBroadcast(json: String) {
+        if (clients.isEmpty()) return
+        val frame = "ANALYTICS:$json"
         for (client in clients) {
             try {
                 client.send(Frame.Text(frame))
@@ -1033,6 +1094,10 @@ object LogStreamServer {
 
                             is LogAction.BroadcastSmartRaceSolverState -> {
                                 handleSmartRaceSolverStateBroadcast(action.enabled)
+                            }
+
+                            is LogAction.BroadcastAnalytics -> {
+                                handleAnalyticsBroadcast(action.json)
                             }
                         }
                     }
