@@ -59,9 +59,38 @@ export const Section = ({ label, children, collapsible = false, defaultOpen = tr
         )
 
     const cardStyle = bare ? undefined : { backgroundColor: colors.surface, borderRadius: RADII.lg, borderWidth: 1, borderColor: colors.borderHair, overflow: "hidden" as const }
+    const hairline = <View style={{ height: 1, backgroundColor: colors.borderHair, marginHorizontal: SPACING.lg }} />
+
+    const childRows = items.map((child, idx) => {
+        const isLastChild = idx === items.length - 1
+        let showDivider = !isLastChild && !noDividers
+        if (idx === 0 && !firstDivider) showDivider = false
+        if (idx === items.length - 2 && !lastDivider) showDivider = false
+        return (
+            <View key={idx}>
+                {child}
+                {showDivider ? hairline : null}
+            </View>
+        )
+    })
+
+    // Collapsible (non-bare) sections keep the label inside the card as an always-present header band, so the collapsed state is just the
+    // expanded card with its body hidden. This keeps the two states visually consistent and the card stays visible against the dark page bg.
+    if (collapsible && !bare) {
+        return (
+            <View style={[{ marginTop: SPACING.sm, marginBottom: open ? SPACING.lg : SPACING.sm }, style]}>
+                <View style={cardStyle}>
+                    <Pressable onPress={toggle} android_ripple={{ color: colors.ripple, foreground: false }}>
+                        <SectionLabel label={label} right={headerRight} style={{ marginBottom: 0, paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg }} />
+                    </Pressable>
+                    {open ? childRows : null}
+                </View>
+            </View>
+        )
+    }
 
     return (
-        <View style={[{ marginTop: SPACING.sm, marginBottom: bare ? 0 : collapsible && !open ? SPACING.xs : SPACING.lg }, style]}>
+        <View style={[{ marginTop: SPACING.sm, marginBottom: bare ? 0 : SPACING.lg }, style]}>
             {collapsible ? (
                 <Pressable onPress={toggle} android_ripple={{ color: colors.ripple, foreground: false }} hitSlop={6}>
                     <SectionLabel label={label} right={headerRight} />
@@ -69,22 +98,7 @@ export const Section = ({ label, children, collapsible = false, defaultOpen = tr
             ) : (
                 <SectionLabel label={label} right={headerRight} />
             )}
-            {open ? (
-                <View style={cardStyle}>
-                    {items.map((child, idx) => {
-                        const isLastChild = idx === items.length - 1
-                        let showDivider = !isLastChild && !noDividers
-                        if (idx === 0 && !firstDivider) showDivider = false
-                        if (idx === items.length - 2 && !lastDivider) showDivider = false
-                        return (
-                            <View key={idx}>
-                                {child}
-                                {showDivider ? <View style={{ height: 1, backgroundColor: colors.borderHair, marginHorizontal: SPACING.lg }} /> : null}
-                            </View>
-                        )
-                    })}
-                </View>
-            ) : null}
+            {open ? <View style={cardStyle}>{childRows}</View> : null}
         </View>
     )
 }
