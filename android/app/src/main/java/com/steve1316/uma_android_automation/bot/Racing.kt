@@ -2104,6 +2104,7 @@ class Racing(private val game: Game, private val campaign: Campaign) {
 
         if (plannedKey != null) {
             MessageLog.i(TAG, "[RACE] Smart Race Solver wants \"$plannedKey\" for turn ${campaign.date.day} — scanning until matched.")
+            val sourceBitmap = game.imageUtils.getSourceBitmap()
             for (location in doublePredictionLocations) {
                 val raceName = game.imageUtils.extractRaceName(location)
                 val raceDataList = lookupRaceInDatabase(campaign.date.day, raceName)
@@ -2116,6 +2117,19 @@ class Racing(private val game: Game, private val campaign: Campaign) {
                 }
                 val match = raceDataList.firstOrNull { SmartRaceSolverIntegration.isRaceKeyMatch(it, plannedKey) }
                 if (match != null) {
+                    // Two races can share this row's track string (e.g. Oaks vs Derby). Confirm the planned race by its OCR'd fan count before tapping.
+                    if (raceDataList.size > 1) {
+                        val rowFans = game.imageUtils.determineExtraRaceFans(location, sourceBitmap, forceRacing = true).fans
+                        if (!SmartRaceSolverIntegration.isCorrectCollisionRow(match.fans, rowFans)) {
+                            MessageLog.i(TAG, "[RACE] Same-track sibling at this row (fans=$rowFans != planned ${match.fans}). Continuing scan for \"${match.name}\".")
+                            continue
+                        }
+                        if (rowFans == -1) {
+                            MessageLog.w(TAG, "[WARN] processSmartRacing:: Same-track collision but fan OCR failed; tapping scanned row for \"${match.name}\".")
+                        } else {
+                            MessageLog.i(TAG, "[RACE] Same-track collision resolved by fans=$rowFans for \"${match.name}\".")
+                        }
+                    }
                     MessageLog.v(TAG, "[RACE] Smart Race Solver selected \"${match.name}\". Selecting it.")
                     SmartRaceSolverIntegration.markPendingRace(
                         raceKey = match.name,

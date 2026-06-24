@@ -545,6 +545,35 @@ class Trackblazer(game: Game) : Campaign(game) {
         }
 
     /**
+     * Decides whether to tap [race]'s scanned row, disambiguating same-track siblings by fan count. Only the solver-matched race needs this.
+     * When two races on a turn share one track string (e.g. Japanese Oaks and Tokyo Yushun are both "Tokyo Turf 2400m"), the planned race's name
+     * can attach to the wrong physical row, so the row is accepted only when its OCR'd fan count matches the planned race.
+     * A failed OCR accepts the row so behavior never regresses below the prior tap-the-scanned-row logic.
+     *
+     * @param detectedName The row's OCR'd track string, for logging.
+     * @param race The solver-matched race being considered at this row.
+     * @param matches All database races resolved from [detectedName]. A single match means there is no collision to resolve.
+     * @param location On-screen location of this row's double-star prediction.
+     * @param sb The analysis buffer that records skipped siblings.
+     * @param sourceBitmap Optional current screenshot to crop from. Captured on demand when omitted.
+     * @return True when this row should be tapped for [race].
+     */
+    private fun shouldTapSolverRow(detectedName: String, race: Racing.RaceData, matches: List<Racing.RaceData>, location: Point, sb: StringBuilder, sourceBitmap: Bitmap? = null): Boolean {
+        if (matches.size <= 1) return true
+        val rowFans = game.imageUtils.determineExtraRaceFans(location, sourceBitmap ?: game.imageUtils.getSourceBitmap(), forceRacing = true).fans
+        if (SmartRaceSolverIntegration.isCorrectCollisionRow(race.fans, rowFans)) {
+            if (rowFans == -1) {
+                MessageLog.w(TAG, "[WARN] findSuitableRace:: Same-track collision on \"$detectedName\"; fan OCR failed, tapping scanned row for \"${race.name}\".")
+            } else {
+                MessageLog.i(TAG, "[RACE] Same-track collision on \"$detectedName\" resolved by fans=$rowFans for \"${race.name}\".")
+            }
+            return true
+        }
+        sb.appendLine("\n- Skipped same-track sibling \"${race.name}\" (planned fans=${race.fans}, row fans=$rowFans).")
+        return false
+    }
+
+    /**
      * Searches the race list for a suitable Trackblazer race based on double-star predictions and grade criteria.
      *
      * Junior Year: G1/G2/G3 with double predictions. Classic/Senior: Priority racing, but if consecutive race count >= 3, only G1/G2/G3.
@@ -649,7 +678,7 @@ class Trackblazer(game: Game) : Campaign(game) {
                             allSuitableRaces.add(candidate)
                             val suffix = if (solverMatched) " [Smart Race Solver override]" else ""
                             sb.appendLine("\n- Found Suitable Race: \"${race.name}\" (${race.grade}) Rival: $rivalFound$suffix")
-                            if (solverMatched) {
+                            if (solverMatched && shouldTapSolverRow(detectedName, race, matches, screenPoint, sb)) {
                                 solverMatchedCandidate = candidate
                             }
                         } else {
@@ -714,7 +743,7 @@ class Trackblazer(game: Game) : Campaign(game) {
                     if (isSuitable) {
                         val candidate = Candidate(location, race, detectedName, rivalFound)
                         allSuitableRaces.add(candidate)
-                        if (solverMatched) {
+                        if (solverMatched && shouldTapSolverRow(detectedName, race, matches, location, sb, sourceBitmap)) {
                             solverMatchedCandidate = candidate
                         }
                     }
