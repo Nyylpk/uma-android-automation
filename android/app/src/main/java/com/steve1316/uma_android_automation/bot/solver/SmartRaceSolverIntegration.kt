@@ -570,6 +570,17 @@ object SmartRaceSolverIntegration {
     fun isRaceKeyMatch(raceData: RaceData, raceKey: String): Boolean = raceData.name == raceKey || raceData.name == raceNameFromKey(raceKey)
 
     /**
+     * Decides whether a scanned race row is the planned race when two races on a turn share the same on-screen track string.
+     * Such siblings (e.g. Japanese Oaks and Tokyo Yushun are both "Tokyo Turf 2400m") differ in fan count, so the row's OCR'd fan count is the tie-breaker.
+     * A failed OCR ([ocrFans] == -1) accepts the row so behavior never regresses below the prior tap-the-scanned-row logic.
+     *
+     * @param plannedFans Fan count of the solver-planned race from the database.
+     * @param ocrFans Fan count OCR'd from the scanned row, or -1 if the OCR failed.
+     * @return True when the scanned row is (or is assumed to be) the planned race.
+     */
+    fun isCorrectCollisionRow(plannedFans: Int, ocrFans: Int): Boolean = ocrFans == -1 || ocrFans == plannedFans
+
+    /**
      * Computes a preview schedule from the user-supplied [configJson], without consulting any
      * runtime race history. Used by the settings UI to render a calendar preview of what the
      * solver would do if a fresh run started today with the current configuration.
