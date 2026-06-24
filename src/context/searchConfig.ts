@@ -501,6 +501,13 @@ const searchConfig: SearchOption[] = [
         parentId: "enable-smart-race-solver",
     },
     {
+        id: "smart-solver-max-races",
+        title: "Maximum Extra Races",
+        description: "Caps how many optional races the solver schedules across the whole career. Mandatory career races always run and don't count toward this. 0 = no limit.",
+        page: "SmartRaceSolverSettings",
+        parentId: "enable-smart-race-solver",
+    },
+    {
         id: "smart-solver-how-it-works",
         title: "How it works",
         description: "Smart Race Solver overview, loss handling, race-history scrape, and notes on epithets without matchers.",
