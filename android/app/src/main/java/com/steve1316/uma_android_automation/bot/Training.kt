@@ -1012,15 +1012,62 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
             // This ensures skill hints are detected even if some trainings are blacklisted.
             if (!test && enablePrioritizeSkillHints) {
                 MessageLog.v(TAG, "[TRAINING] Skill hint prioritization is enabled. Scanning for skill hints before training analysis...")
-                val skillHintLocations: ArrayList<Point> = IconStatSkillHint.findAll(game.imageUtils, region = game.imageUtils.regionBottomHalf)
+                val hintSourceBitmap = game.imageUtils.getSourceBitmap()
+                val skillHintLocations: ArrayList<Point> = IconStatSkillHint.findAll(game.imageUtils, sourceBitmap = hintSourceBitmap, region = game.imageUtils.regionBottomHalf)
                 if (skillHintLocations.isNotEmpty()) {
-                    MessageLog.i(TAG, "[TRAINING] Found ${skillHintLocations.size} skill hint(s) on the training screen. Tapping on the first skill hint location and skipping training analysis.")
                     val firstHint = skillHintLocations.first()
 
-                    game.tap(firstHint.x, firstHint.y, IconStatSkillHint.template.path, taps = 3)
-                    game.wait(1.0)
-                    MessageLog.v(TAG, "[TRAINING] Process to execute skill hint training completed.")
-                    return
+                    // Map the hint icon to the nearest training button to learn which stat it belongs to.
+                    val hintStat: StatName? =
+                        trainingButtons.entries
+                            .mapNotNull { (statName, button) ->
+                                val buttonLocation = button.findImageWithBitmap(game.imageUtils, hintSourceBitmap, region = game.imageUtils.regionBottomHalf) ?: return@mapNotNull null
+                                val dx = buttonLocation.x - firstHint.x
+                                val dy = buttonLocation.y - firstHint.y
+                                statName to (dx * dx + dy * dy)
+                            }
+                            .minByOrNull { it.second }
+                            ?.first
+
+                    if (hintStat == null) {
+                        MessageLog.w(
+                            TAG,
+                            "[WARN] analyzeTrainings:: Found ${skillHintLocations.size} skill hint(s) but could not map any to a training button. Falling back to normal training analysis.",
+                        )
+                    } else if (!goToStat(hintStat)) {
+                        MessageLog.w(
+                            TAG,
+                            "[WARN] analyzeTrainings:: Found a skill hint on $hintStat training but could not navigate to it to read its failure chance. Falling back to normal training analysis.",
+                        )
+                    } else {
+                        // Read the hinted training's failure chance before committing to it.
+                        val hintFailureChance: Int = game.imageUtils.findTrainingFailureChance(tries = 3)
+                        val effectiveFailureChance = if (enableRiskyTraining) riskyTrainingMaxFailureChance else maximumFailureChance
+                        val bypassThreshold = isFinals || ignoreFailureChance
+                        if (hintFailureChance == -1) {
+                            MessageLog.w(
+                                TAG,
+                                "[WARN] analyzeTrainings:: Could not read the failure chance for the hinted $hintStat training. Falling back to normal training analysis instead of tapping the hint blindly.",
+                            )
+                        } else if (bypassThreshold || hintFailureChance <= effectiveFailureChance) {
+                            val reason =
+                                if (bypassThreshold) {
+                                    "the failure chance check is bypassed (${if (isFinals) "Finals" else "Good-Luck Charm active"})"
+                                } else {
+                                    "its failure chance ($hintFailureChance%) is within the threshold ($effectiveFailureChance%)"
+                                }
+                            MessageLog.i(TAG, "[TRAINING] Tapping skill hint on $hintStat training because $reason. Skipping further training analysis.")
+                            game.tap(firstHint.x, firstHint.y, IconStatSkillHint.template.path, taps = 3)
+                            game.wait(1.0)
+                            MessageLog.v(TAG, "[TRAINING] Process to execute skill hint training completed.")
+                            return
+                        } else {
+                            MessageLog.i(
+                                TAG,
+                                "[TRAINING] Not tapping skill hint on $hintStat training because its failure chance ($hintFailureChance%) exceeds the threshold ($effectiveFailureChance%). Falling back to normal training analysis to pick a safer training.",
+                            )
+                        }
+                    }
                 } else {
                     MessageLog.i(TAG, "[TRAINING] No skill hints found. Proceeding with normal training analysis.")
                 }
