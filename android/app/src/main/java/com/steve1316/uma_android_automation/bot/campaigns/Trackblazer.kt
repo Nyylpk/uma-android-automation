@@ -950,7 +950,11 @@ class Trackblazer(game: Game) : Campaign(game) {
     }
 
     override fun shouldRetryRace(dialog: DialogInterface, args: Map<String, Any>): Boolean {
-        if (racing.lastRaceGrade != null && racing.retryEligibleGrades.contains(racing.lastRaceGrade) && racing.raceRetries >= 0) {
+        if (racing.lastRaceGrade != null &&
+            racing.retryEligibleGrades.contains(racing.lastRaceGrade) &&
+            racing.raceRetries > 0 &&
+            racing.retriesThisRace < racing.maxRetriesPerRace
+        ) {
             if (racing.lastRaceIsRival && !racing.bRetriedCurrentRace) {
                 MessageLog.i(TAG, "[TRACKBLAZER] ${racing.lastRaceGrade} Rival Race retry button is available. Retrying once.")
                 racing.bRetriedCurrentRace = true
@@ -959,6 +963,7 @@ class Trackblazer(game: Game) : Campaign(game) {
             }
 
             racing.raceRetries--
+            racing.retriesThisRace++
             if (dialog.ok(game.imageUtils)) {
                 game.wait(1.0)
             }

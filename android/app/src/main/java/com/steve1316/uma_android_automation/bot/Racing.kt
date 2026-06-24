@@ -155,6 +155,9 @@ class Racing(private val game: Game, private val campaign: Campaign) {
     /** Tracks if the current race has already been retried. */
     var bRetriedCurrentRace: Boolean = false
 
+    /** Retries used on the current race. Shared by the button-based and dialog-based retry paths so both honor the per-race limit. */
+    var retriesThisRace: Int = 0
+
     /** Whether to stop the bot when a mandatory race is detected. */
     internal val enableStopOnMandatoryRace: Boolean = SettingsHelper.getBooleanSetting("racing", "enableStopOnMandatoryRaces")
 
@@ -186,7 +189,7 @@ class Racing(private val game: Game, private val campaign: Campaign) {
     var bHasSetTemporaryRunningStyle: Boolean = false
 
     /** The maximum number of retries allowed per race, provided by the campaign. */
-    private val maxRetriesPerRace: Int = campaign.getMaxRetriesPerRace()
+    internal val maxRetriesPerRace: Int = campaign.getMaxRetriesPerRace()
 
     /** The list of race grades that are eligible for retries, provided by the campaign. */
     internal val retryEligibleGrades: List<RaceGrade> = campaign.getRetryEligibleGrades()
@@ -1037,7 +1040,7 @@ class Racing(private val game: Game, private val campaign: Campaign) {
 
         // Flag used to prevent us from attempting to select a running style after we've already successfully selected a running style once.
         var bDidSelectRaceStrategy = false
-        var retriesThisRace = 0
+        retriesThisRace = 0
 
         // Safety counter to prevent infinite loop.
         var loopCount = 0
