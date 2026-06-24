@@ -45,6 +45,7 @@ import characterPresetsData from "../../data/characterPresets.json"
 import PageHeader from "../../components/PageHeader"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
 import SearchableItem from "../../components/SearchableItem"
+import CustomSlider from "../../components/CustomSlider"
 import { useNavigation, useFocusEffect } from "@react-navigation/native"
 import { AptitudeRow, EpithetChip } from "./components/Helpers"
 import { GlassFab } from "../../components/ui/glass-fab"
@@ -127,6 +128,7 @@ const SmartRaceSolverSettings = () => {
         smartRaceSolverTargetEpithets,
         smartRaceSolverForcedEpithets,
         smartRaceSolverManualLocks,
+        smartRaceSolverMaxRaces,
         smartRaceSolverWeights,
     } = racingSettings
 
@@ -471,6 +473,7 @@ const SmartRaceSolverSettings = () => {
         forcedEpithets,
         manualLocks,
         weights,
+        maxRaces: smartRaceSolverMaxRaces,
         // Only ship the bundled JSON the first time; Kotlin caches it after that.
         racesDataJson: bridgeDataPrimed ? undefined : RACES_DATA_JSON,
         epithetsDataJson: bridgeDataPrimed ? undefined : EPITHETS_DATA_JSON,
@@ -490,8 +493,9 @@ const SmartRaceSolverSettings = () => {
                 forcedEpithets,
                 manualLocks,
                 weights,
+                maxRaces: smartRaceSolverMaxRaces,
             }),
-        [general?.scenario, smartRaceSolverCharacterPreset, aptitudes, targetEpithets, forcedEpithets, manualLocks, weights]
+        [general?.scenario, smartRaceSolverCharacterPreset, aptitudes, targetEpithets, forcedEpithets, manualLocks, weights, smartRaceSolverMaxRaces]
     )
 
     /**
@@ -1254,6 +1258,27 @@ const SmartRaceSolverSettings = () => {
                                     right={<Switch checked={disableScheduleReplanOnRaceLoss} onCheckedChange={(checked) => updateRacingSetting("disableScheduleReplanOnRaceLoss", checked)} />}
                                 />
                             </SearchableItem>
+
+                            {enableSmartRaceSolver && (
+                                <View style={[sectionsDisabledStyle, { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm }]}>
+                                    <CustomSlider
+                                        searchId="smart-solver-max-races"
+                                        searchCondition={enableSmartRaceSolver}
+                                        parentId="enable-smart-race-solver"
+                                        value={smartRaceSolverMaxRaces}
+                                        placeholder={defaultSettings.racing.smartRaceSolverMaxRaces}
+                                        onValueChange={(value) => updateRacingSetting("smartRaceSolverMaxRaces", value)}
+                                        onSlidingComplete={(value) => updateRacingSetting("smartRaceSolverMaxRaces", value)}
+                                        min={0}
+                                        max={40}
+                                        step={1}
+                                        label="Maximum Extra Races"
+                                        description="Caps how many optional races the solver schedules across the whole career. Mandatory career races always run and don't count toward this. 0 = no limit."
+                                        labelUnit=""
+                                        showValue={true}
+                                    />
+                                </View>
+                            )}
 
                             <SearchableItem
                                 id="smart-solver-how-it-works"

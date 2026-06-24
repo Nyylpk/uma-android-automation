@@ -47,6 +47,8 @@ export interface SolverConfigSnapshot {
         /** When true, races during the Classic / Senior summer training camps are not blocked. */
         allowSummerRacing: boolean
     }
+    /** Maximum number of optional races the solver may schedule. Mandatory races always run and do not count. 0 (or less) means no limit. */
+    maxRaces: number
     /** Bundled races.json passed inline so the bridge does not depend on SettingsHelper persistence having reached SQLite by the time the preview fires. */
     racesDataJson?: string
     /** Bundled epithets.json passed inline for the same reason as `racesDataJson`. */
