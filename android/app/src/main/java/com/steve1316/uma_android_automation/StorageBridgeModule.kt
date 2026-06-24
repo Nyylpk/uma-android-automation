@@ -71,11 +71,21 @@ class StorageBridgeModule(reactContext: ReactApplicationContext) :
             promise.reject("PICKER_BUSY", "A folder picker is already in progress.")
             return
         }
+        if (appContext.currentActivity == null) {
+            promise.reject("NO_ACTIVITY", "There is no foreground activity to host the folder picker.")
+            return
+        }
         try {
             val intent =
                 Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
                 }
+            // Some devices (cloud phones, heavily-stripped images) ship without a DocumentsUI to handle this intent.
+            // Launching anyway silently no-ops and leaves the promise pending forever, so reject up front instead.
+            if (intent.resolveActivity(appContext.packageManager) == null) {
+                promise.reject("NO_PICKER", "This device has no document picker available.")
+                return
+            }
             pendingPickPromise = promise
             appContext.startActivityForResult(intent, REQUEST_CODE_PICK_FOLDER, null)
         } catch (e: Exception) {
