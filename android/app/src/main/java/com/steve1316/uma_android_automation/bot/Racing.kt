@@ -1028,9 +1028,10 @@ class Racing(private val game: Game, private val campaign: Campaign) {
     /**
      * Executes the race with retry logic.
      *
+     * @param isMandatory True if this is a mandatory race, which always retries until 1st place whenever possible.
      * @return True if the bot completed the race; otherwise false.
      */
-    fun runRaceWithRetries(): Boolean {
+    fun runRaceWithRetries(isMandatory: Boolean = false): Boolean {
         MessageLog.i(TAG, "[RACE] Proceeding to handle the race...")
         game.wait(0.5, skipWaitingForLoading = true)
 
@@ -1183,6 +1184,16 @@ class Racing(private val game: Game, private val campaign: Campaign) {
                         game.wait(3.0)
                         retriesThisRace++
                         raceRetries--
+                    }
+                }
+
+                // Mandatory races always retry until 1st place whenever possible.
+                isMandatory &&
+                    ButtonTryAgainAlt.checkDisabled(game.imageUtils, sourceBitmap = bitmap) == false &&
+                    !LabelCongratulations.check(game.imageUtils, sourceBitmap = bitmap) -> {
+                    MessageLog.i(TAG, "[RACE] Mandatory race finished below 1st place. Retrying for the win...")
+                    if (ButtonTryAgainAlt.click(game.imageUtils, sourceBitmap = bitmap)) {
+                        game.wait(3.0)
                     }
                 }
 
@@ -1684,7 +1695,7 @@ class Racing(private val game: Game, private val campaign: Campaign) {
         game.waitForLoading()
 
         // Skip the race if possible, otherwise run it manually.
-        runRaceWithRetries()
+        runRaceWithRetries(isMandatory = true)
         finalizeRaceResults()
 
         MessageLog.v(TAG, "[RACE] Racing process for Mandatory Race is completed. Grade: ${lastRaceGrade ?: "Mandatory"}")
