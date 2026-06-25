@@ -508,6 +508,27 @@ const searchConfig: SearchOption[] = [
         parentId: "enable-smart-race-solver",
     },
     {
+        id: "smart-solver-max-consecutive-races",
+        title: "Maximum Consecutive Races",
+        description: "Caps how many races the solver schedules in back-to-back turns. Late-December turns are exempt so a chain may run into year-end. 0 = no limit.",
+        page: "SmartRaceSolverSettings",
+        parentId: "enable-smart-race-solver",
+    },
+    {
+        id: "smart-solver-include-op",
+        title: "Include OP / Pre-OP Races",
+        description: "Lets the solver also consider OP and Pre-OP races, not just G1/G2/G3. Useful for weaker characters whose only eligible races are OP/Pre-OP.",
+        page: "SmartRaceSolverSettings",
+        parentId: "enable-smart-race-solver",
+    },
+    {
+        id: "smart-solver-allow-summer",
+        title: "Allow Racing During Summer",
+        description: "Lets the solver schedule races during the Classic/Senior summer training-camp turns, which are blocked by default.",
+        page: "SmartRaceSolverSettings",
+        parentId: "enable-smart-race-solver",
+    },
+    {
         id: "smart-solver-how-it-works",
         title: "How it works",
         description: "Smart Race Solver overview, loss handling, race-history scrape, and notes on epithets without matchers.",

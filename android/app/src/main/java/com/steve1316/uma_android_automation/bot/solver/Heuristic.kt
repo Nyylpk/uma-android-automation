@@ -109,7 +109,12 @@ object Heuristic {
             } else {
                 beam.decisions.count { (t, d) -> d is Decision.RaceDecision && state.lockedDecisions[t] !is Decision.RaceDecision }
             }
-        if (cap == null || optionalRacesSoFar < cap) {
+        // Hard cap on back-to-back races: skip race candidates once the chain would exceed maxConsecutiveRaces, unless the
+        // landing turn is a Late-Dec free turn (where the cap is waived so a chain may run into year-end).
+        val consecutiveCap = state.maxConsecutiveRaces
+        val consecutiveCapBlocks =
+            consecutiveCap != null && beam.consecutiveRaces + 1 > consecutiveCap && turn !in ScoringFunctions.LATE_DEC_FREE_TURNS
+        if ((cap == null || optionalRacesSoFar < cap) && !consecutiveCapBlocks) {
             for (race in racesHere) {
                 children += applyDecision(beam, turn, Decision.RaceDecision(race.key), state)
             }

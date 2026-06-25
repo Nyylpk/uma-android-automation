@@ -152,17 +152,17 @@ object ScoringFunctions {
     }
 
     /**
-     * Turns where landing the third+ consecutive race incurs zero conditioning penalty. These
-     * are the Late-December halves at the end of each class year - Junior Dec-2 (turn 23),
-     * Classic Dec-2 (47), and Senior Dec-2 (71). Mirrors the reference solver's `LATE_DEC_WINDOWS`.
+     * Turns where landing the third+ consecutive race incurs zero conditioning penalty, and where the consecutive-race
+     * hard cap is waived. These are the Late-December halves (last turn) of each class year - Junior (24), Classic (48),
+     * and Senior (72). Shared by the soft penalty, the MILP objective, and the consecutive-race hard cap.
      */
-    private val LATE_DEC_FREE_TURNS: Set<TurnNumber> = setOf(23, 47, 71)
+    val LATE_DEC_FREE_TURNS: Set<TurnNumber> = setOf(24, 48, 72)
 
     /**
      * Penalty applied when scheduling a third (or later) consecutive race. The reference
      * solver penalises the *start* of a 3-race chain. We apply it on every additional race
      * past the second to keep beams deterministic and incremental. Returns zero on Late-Dec
-     * windows (turns 23, 47, 71) to match the reference's end-of-year exemption.
+     * turns (24, 48, 72) to match the reference's end-of-year exemption.
      *
      * @param consecutiveRaceCount Number of consecutive races including the current one.
      * @param turn Turn the third+ race lands on. Checked against [LATE_DEC_FREE_TURNS].
