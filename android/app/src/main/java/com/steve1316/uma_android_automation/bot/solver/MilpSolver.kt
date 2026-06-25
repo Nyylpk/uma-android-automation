@@ -24,10 +24,6 @@ import org.ojalgo.optimisation.Variable
  * sum of r-variables and a history-derived constant.
  */
 object MilpSolver {
-    /** End-of-year halves (Junior/Classic/Senior Late Dec). The 3-race conditioning penalty is
-     *  waived on these turns to match the reference solver's exemption. */
-    private val LATE_DEC_FREE_TURNS: Set<TurnNumber> = setOf(24, 48, 72)
-
     /** Classic + Senior summer race-blocked turns (Early Jul -> Late Aug). */
     private val CLASSIC_SENIOR_SUMMER_TURNS: Set<TurnNumber> = setOf(37, 38, 39, 40, 61, 62, 63, 64)
 
@@ -113,6 +109,7 @@ object MilpSolver {
             wireSummerHardBlock()
             wireManualLocks()
             wireMaxRaces()
+            wireConsecutiveRaceHardCap()
             wireConsecutiveRaceIndicators()
             wireEpithetMatchers()
             wireDependsOn()
@@ -183,6 +180,21 @@ object MilpSolver {
                 }
             val expr = model.newExpression("max_races").upper((cap + lockedRaceTurns).toDouble())
             for ((_, v) in xVars) expr.set(v, 1.0)
+        }
+
+        /**
+         * Hard cap on consecutive races. For every window of (cap + 1) turns ending at turn t, sum(x[t-cap..t]) <= cap, so
+         * no chain exceeds [SolverState.maxConsecutiveRaces]. The window whose landing turn is a Late-Dec free turn is
+         * skipped so a chain may run into year-end, matching the soft penalty's exemption. No-op when the cap is null.
+         */
+        private fun wireConsecutiveRaceHardCap() {
+            val cap = state.maxConsecutiveRaces?.takeIf { it >= 1 } ?: return
+            for (t in turns) {
+                if (t - cap < turns.first) continue
+                if (t in ScoringFunctions.LATE_DEC_FREE_TURNS) continue
+                val expr = model.newExpression("consec_cap_$t").upper(cap.toDouble())
+                for (i in (t - cap)..t) expr.set(xVars[i]!!, 1.0)
+            }
         }
 
         /**
@@ -289,7 +301,7 @@ object MilpSolver {
                 v.weight(ScoringFunctions.epithetContribution(epithet, state.weights))
             }
             for ((t, v) in zVars) {
-                if (t in LATE_DEC_FREE_TURNS) continue
+                if (t in ScoringFunctions.LATE_DEC_FREE_TURNS) continue
                 v.weight(-state.weights.consecutiveRacePenalty)
             }
         }

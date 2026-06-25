@@ -633,6 +633,7 @@ object SmartRaceSolverIntegration {
                 lockedDecisions = applied.lockedDecisions,
                 weights = parseWeightsObj(config.optJSONObject("weights")),
                 maxRaces = config.optInt("maxRaces", -1).takeIf { it > 0 },
+                maxConsecutiveRaces = config.optInt("maxConsecutiveRaces", 3).takeIf { it > 0 },
             )
 
         val schedule = SmartRaceSolver.solve(state)
@@ -678,6 +679,7 @@ object SmartRaceSolverIntegration {
             lockedDecisions = applied.lockedDecisions,
             weights = readWeights(),
             maxRaces = readMaxRaces(),
+            maxConsecutiveRaces = readMaxConsecutiveRaces(),
         )
     }
 
@@ -920,6 +922,14 @@ object SmartRaceSolverIntegration {
      * @return The cap as a positive Int, or null when the solver should plan races without an upper bound.
      */
     private fun readMaxRaces(): Int? = SettingsHelper.getIntSetting("racing", "smartRaceSolverMaxRaces", -1).takeIf { it > 0 }
+
+    /**
+     * Reads the user's maximum consecutive-races cap. Defaults to 3 when unset so the cap is active out of the box.
+     * Returns null (no limit) only when the user explicitly sets 0 or a negative value.
+     *
+     * @return The cap as a positive Int, or null when consecutive races should be unbounded.
+     */
+    private fun readMaxConsecutiveRaces(): Int? = SettingsHelper.getIntSetting("racing", "smartRaceSolverMaxConsecutiveRaces", 3).takeIf { it > 0 }
 
     /**
      * Parses a weights JSON object. Each field falls back to the corresponding [Weights] default when missing.

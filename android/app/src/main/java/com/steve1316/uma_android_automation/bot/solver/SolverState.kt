@@ -200,6 +200,7 @@ data class RaceLossRecord(
  * @property summerBlockTurns No-race turns. Defaults to [DEFAULT_SUMMER_BLOCKS].
  * @property weights Active scoring weights.
  * @property maxRaces Maximum number of optional races the solver may schedule, or null for no limit. Locked/mandatory races always run and do not count toward this cap.
+ * @property maxConsecutiveRaces Maximum races allowed in back-to-back turns, or null for no limit. Late-December turns (24, 48, 72) are exempt so a chain may run into year-end.
  */
 data class SolverState(
     val currentTurn: TurnNumber,
@@ -217,6 +218,7 @@ data class SolverState(
     val summerBlockTurns: Set<TurnNumber> = DEFAULT_SUMMER_BLOCKS,
     val weights: Weights = Weights(),
     val maxRaces: Int? = null,
+    val maxConsecutiveRaces: Int? = null,
 ) {
     val epithetsByName: Map<String, Epithet> by lazy { epithets.associateBy { it.name } }
 
