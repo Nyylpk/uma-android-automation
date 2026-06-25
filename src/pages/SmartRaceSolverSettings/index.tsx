@@ -1249,62 +1249,6 @@ const SmartRaceSolverSettings = () => {
                             </SearchableItem>
 
                             <SearchableItem
-                                id="disable-schedule-replan-on-race-loss"
-                                condition={enableSmartRaceSolver}
-                                parentId="enable-smart-race-solver"
-                                title="Disable Schedule Re-Plan Upon Race Loss"
-                                description="When a race is lost, keep the original schedule instead of re-planning the remaining turns. The loss is still recorded; epithets that depended on the lost race won't be re-routed."
-                            >
-                                <Row
-                                    title="Disable Schedule Re-Plan Upon Race Loss"
-                                    description="When a race is lost, keep the original schedule instead of re-planning the remaining turns. The loss is still recorded; epithets that depended on the lost race won't be re-routed."
-                                    right={<Switch checked={disableScheduleReplanOnRaceLoss} onCheckedChange={(checked) => updateRacingSetting("disableScheduleReplanOnRaceLoss", checked)} />}
-                                />
-                            </SearchableItem>
-
-                            {enableSmartRaceSolver && (
-                                <View style={[sectionsDisabledStyle, { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm }]}>
-                                    <CustomSlider
-                                        searchId="smart-solver-max-races"
-                                        searchCondition={enableSmartRaceSolver}
-                                        parentId="enable-smart-race-solver"
-                                        value={smartRaceSolverMaxRaces}
-                                        placeholder={defaultSettings.racing.smartRaceSolverMaxRaces}
-                                        onValueChange={(value) => updateRacingSetting("smartRaceSolverMaxRaces", value)}
-                                        onSlidingComplete={(value) => updateRacingSetting("smartRaceSolverMaxRaces", value)}
-                                        min={0}
-                                        max={40}
-                                        step={1}
-                                        label="Maximum Extra Races"
-                                        description="Caps how many optional races the solver schedules across the whole career. Mandatory career races always run and don't count toward this. 0 = no limit."
-                                        labelUnit=""
-                                        showValue={true}
-                                    />
-                                </View>
-                            )}
-
-                            {enableSmartRaceSolver && (
-                                <View style={[sectionsDisabledStyle, { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm }]}>
-                                    <CustomSlider
-                                        searchId="smart-solver-max-consecutive-races"
-                                        searchCondition={enableSmartRaceSolver}
-                                        parentId="enable-smart-race-solver"
-                                        value={smartRaceSolverMaxConsecutiveRaces}
-                                        placeholder={defaultSettings.racing.smartRaceSolverMaxConsecutiveRaces}
-                                        onValueChange={(value) => updateRacingSetting("smartRaceSolverMaxConsecutiveRaces", value)}
-                                        onSlidingComplete={(value) => updateRacingSetting("smartRaceSolverMaxConsecutiveRaces", value)}
-                                        min={0}
-                                        max={10}
-                                        step={1}
-                                        label="Maximum Consecutive Races"
-                                        description="Caps how many races the solver schedules in back-to-back turns. Late-December turns are exempt so a chain may run into year-end. 0 = no limit."
-                                        labelUnit=""
-                                        showValue={true}
-                                    />
-                                </View>
-                            )}
-
-                            <SearchableItem
                                 id="smart-solver-how-it-works"
                                 condition={enableSmartRaceSolver}
                                 parentId="enable-smart-race-solver"
@@ -1339,6 +1283,90 @@ const SmartRaceSolverSettings = () => {
                                 </View>
                             </SearchableItem>
                         </Section>
+
+                        {enableSmartRaceSolver && (
+                            <Section label="General" collapsible defaultOpen={true}>
+                                <SearchableItem
+                                    id="disable-schedule-replan-on-race-loss"
+                                    condition={enableSmartRaceSolver}
+                                    parentId="enable-smart-race-solver"
+                                    title="Disable Schedule Re-Plan Upon Race Loss"
+                                    description="When a race is lost, keep the original schedule instead of re-planning the remaining turns. The loss is still recorded; epithets that depended on the lost race won't be re-routed."
+                                >
+                                    <Row
+                                        title="Disable Schedule Re-Plan Upon Race Loss"
+                                        description="When a race is lost, keep the original schedule instead of re-planning the remaining turns. The loss is still recorded; epithets that depended on the lost race won't be re-routed."
+                                        right={<Switch checked={disableScheduleReplanOnRaceLoss} onCheckedChange={(checked) => updateRacingSetting("disableScheduleReplanOnRaceLoss", checked)} />}
+                                    />
+                                </SearchableItem>
+
+                                <View style={{ paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm }}>
+                                    <CustomSlider
+                                        searchId="smart-solver-max-races"
+                                        searchCondition={enableSmartRaceSolver}
+                                        parentId="enable-smart-race-solver"
+                                        value={smartRaceSolverMaxRaces}
+                                        placeholder={defaultSettings.racing.smartRaceSolverMaxRaces}
+                                        onValueChange={(value) => updateRacingSetting("smartRaceSolverMaxRaces", value)}
+                                        onSlidingComplete={(value) => updateRacingSetting("smartRaceSolverMaxRaces", value)}
+                                        min={0}
+                                        max={40}
+                                        step={1}
+                                        label="Maximum Extra Races"
+                                        description="Caps how many optional races the solver schedules across the whole career. Mandatory career races always run and don't count toward this. 0 = no limit."
+                                        labelUnit=""
+                                        showValue={true}
+                                    />
+                                </View>
+
+                                <View style={{ paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm }}>
+                                    <CustomSlider
+                                        searchId="smart-solver-max-consecutive-races"
+                                        searchCondition={enableSmartRaceSolver}
+                                        parentId="enable-smart-race-solver"
+                                        value={smartRaceSolverMaxConsecutiveRaces}
+                                        placeholder={defaultSettings.racing.smartRaceSolverMaxConsecutiveRaces}
+                                        onValueChange={(value) => updateRacingSetting("smartRaceSolverMaxConsecutiveRaces", value)}
+                                        onSlidingComplete={(value) => updateRacingSetting("smartRaceSolverMaxConsecutiveRaces", value)}
+                                        min={0}
+                                        max={10}
+                                        step={1}
+                                        label="Maximum Consecutive Races"
+                                        description="Caps how many races the solver schedules in back-to-back turns. Late-December turns are exempt so a chain may run into year-end. 0 = no limit."
+                                        labelUnit=""
+                                        showValue={true}
+                                    />
+                                </View>
+
+                                <SearchableItem
+                                    id="smart-solver-include-op"
+                                    condition={enableSmartRaceSolver}
+                                    parentId="enable-smart-race-solver"
+                                    title="Include OP / Pre-OP races"
+                                    description="By default the solver picks only G1/G2/G3 races. Enable this to also consider OP and Pre-OP races, useful for weaker characters whose only eligible races are OP/Pre-OP."
+                                >
+                                    <Row
+                                        title="Include OP / Pre-OP races"
+                                        description="By default the solver picks only G1/G2/G3 races. Enable this to also consider OP and Pre-OP races. Useful for weaker characters (e.g. Haru Urara) who can't qualify for many graded races; OP races contribute much less to stats but at least give the solver something to schedule."
+                                        right={<Switch checked={weights.includeOpAndPreOp} onCheckedChange={(checked) => updateWeight("includeOpAndPreOp", checked)} />}
+                                    />
+                                </SearchableItem>
+
+                                <SearchableItem
+                                    id="smart-solver-allow-summer"
+                                    condition={enableSmartRaceSolver}
+                                    parentId="enable-smart-race-solver"
+                                    title="Allow racing during Summer (Classic / Senior)"
+                                    description="By default the Summer training camp turns (Early Jul to Late Aug) in Classic and Senior years are blocked from racing. Enable this to let the solver schedule races in those turns."
+                                >
+                                    <Row
+                                        title="Allow racing during Summer (Classic / Senior)"
+                                        description="By default the Summer training camp turns (Early Jul → Late Aug) in Classic and Senior years are blocked from racing. Enable this to let the solver schedule races in those 4 turns each year - useful when a key epithet race lands in summer."
+                                        right={<Switch checked={weights.allowSummerRacing} onCheckedChange={(checked) => updateWeight("allowSummerRacing", checked)} />}
+                                    />
+                                </SearchableItem>
+                            </Section>
+                        )}
 
                         {enableSmartRaceSolver && showHeavySections && (
                             <>
@@ -1426,10 +1454,7 @@ const SmartRaceSolverSettings = () => {
                                             {renderAptitudeRow("Dirt", "Dirt")}
                                         </View>
                                     </SearchableItem>
-                                </Section>
 
-                                {/* Aptitude threshold */}
-                                <Section label="Aptitude Threshold">
                                     <SearchableItem
                                         id="smart-solver-aptitude-threshold"
                                         condition={enableSmartRaceSolver}
@@ -1438,6 +1463,7 @@ const SmartRaceSolverSettings = () => {
                                         description="Minimum aptitude (distance AND surface) required for a race to be eligible."
                                     >
                                         <View style={[sectionsDisabledStyle, { padding: SPACING.md }]}>
+                                            <Text style={{ ...TYPE.body, color: colors.text, fontWeight: "600", marginBottom: SPACING.xs }}>Aptitude Threshold</Text>
                                             <Text style={styles.description}>Minimum aptitude (distance AND surface) required for a race to be eligible.</Text>
                                             <View style={styles.aptButtons}>
                                                 {APTITUDE_RANKS.map((rank) => {
@@ -1453,29 +1479,6 @@ const SmartRaceSolverSettings = () => {
                                                         </Pressable>
                                                     )
                                                 })}
-                                            </View>
-
-                                            <Divider style={{ marginVertical: 16 }} />
-
-                                            <View style={{ flexDirection: "row", alignItems: "center", padding: SPACING.md, gap: SPACING.md }}>
-                                                <View style={{ flex: 1 }}>
-                                                    <Text style={[TYPE.body, { color: colors.text, fontWeight: "600" as const }]}>Include OP / Pre-OP races</Text>
-                                                    <Text style={[TYPE.caption, { color: colors.textMuted, marginTop: 2 }]}>
-                                                        By default the solver picks only G1/G2/G3 races. Enable this to also consider OP and Pre-OP races. Useful for weaker characters (e.g. Haru
-                                                        Urara) who can't qualify for many graded races; OP races contribute much less to stats but at least give the solver something to schedule.
-                                                    </Text>
-                                                </View>
-                                                <Switch checked={weights.includeOpAndPreOp} onCheckedChange={(checked) => updateWeight("includeOpAndPreOp", checked)} />
-                                            </View>
-                                            <View style={{ flexDirection: "row", alignItems: "center", padding: SPACING.md, gap: SPACING.md }}>
-                                                <View style={{ flex: 1 }}>
-                                                    <Text style={[TYPE.body, { color: colors.text, fontWeight: "600" as const }]}>Allow racing during Summer (Classic / Senior)</Text>
-                                                    <Text style={[TYPE.caption, { color: colors.textMuted, marginTop: 2 }]}>
-                                                        By default the Summer training camp turns (Early Jul → Late Aug) in Classic and Senior years are blocked from racing. Enable this to let the
-                                                        solver schedule races in those 4 turns each year - useful when a key epithet race lands in summer.
-                                                    </Text>
-                                                </View>
-                                                <Switch checked={weights.allowSummerRacing} onCheckedChange={(checked) => updateWeight("allowSummerRacing", checked)} />
                                             </View>
                                         </View>
                                     </SearchableItem>
