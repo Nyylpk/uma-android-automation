@@ -508,6 +508,13 @@ const searchConfig: SearchOption[] = [
         parentId: "enable-smart-race-solver",
     },
     {
+        id: "smart-solver-max-consecutive-races",
+        title: "Maximum Consecutive Races",
+        description: "Caps how many races the solver schedules in back-to-back turns. Late-December turns are exempt so a chain may run into year-end. 0 = no limit.",
+        page: "SmartRaceSolverSettings",
+        parentId: "enable-smart-race-solver",
+    },
+    {
         id: "smart-solver-how-it-works",
         title: "How it works",
         description: "Smart Race Solver overview, loss handling, race-history scrape, and notes on epithets without matchers.",

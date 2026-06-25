@@ -129,6 +129,7 @@ const SmartRaceSolverSettings = () => {
         smartRaceSolverForcedEpithets,
         smartRaceSolverManualLocks,
         smartRaceSolverMaxRaces,
+        smartRaceSolverMaxConsecutiveRaces,
         smartRaceSolverWeights,
     } = racingSettings
 
@@ -474,6 +475,7 @@ const SmartRaceSolverSettings = () => {
         manualLocks,
         weights,
         maxRaces: smartRaceSolverMaxRaces,
+        maxConsecutiveRaces: smartRaceSolverMaxConsecutiveRaces,
         // Only ship the bundled JSON the first time; Kotlin caches it after that.
         racesDataJson: bridgeDataPrimed ? undefined : RACES_DATA_JSON,
         epithetsDataJson: bridgeDataPrimed ? undefined : EPITHETS_DATA_JSON,
@@ -494,8 +496,9 @@ const SmartRaceSolverSettings = () => {
                 manualLocks,
                 weights,
                 maxRaces: smartRaceSolverMaxRaces,
+                maxConsecutiveRaces: smartRaceSolverMaxConsecutiveRaces,
             }),
-        [general?.scenario, smartRaceSolverCharacterPreset, aptitudes, targetEpithets, forcedEpithets, manualLocks, weights, smartRaceSolverMaxRaces]
+        [general?.scenario, smartRaceSolverCharacterPreset, aptitudes, targetEpithets, forcedEpithets, manualLocks, weights, smartRaceSolverMaxRaces, smartRaceSolverMaxConsecutiveRaces]
     )
 
     /**
@@ -1274,6 +1277,27 @@ const SmartRaceSolverSettings = () => {
                                         step={1}
                                         label="Maximum Extra Races"
                                         description="Caps how many optional races the solver schedules across the whole career. Mandatory career races always run and don't count toward this. 0 = no limit."
+                                        labelUnit=""
+                                        showValue={true}
+                                    />
+                                </View>
+                            )}
+
+                            {enableSmartRaceSolver && (
+                                <View style={[sectionsDisabledStyle, { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm }]}>
+                                    <CustomSlider
+                                        searchId="smart-solver-max-consecutive-races"
+                                        searchCondition={enableSmartRaceSolver}
+                                        parentId="enable-smart-race-solver"
+                                        value={smartRaceSolverMaxConsecutiveRaces}
+                                        placeholder={defaultSettings.racing.smartRaceSolverMaxConsecutiveRaces}
+                                        onValueChange={(value) => updateRacingSetting("smartRaceSolverMaxConsecutiveRaces", value)}
+                                        onSlidingComplete={(value) => updateRacingSetting("smartRaceSolverMaxConsecutiveRaces", value)}
+                                        min={0}
+                                        max={10}
+                                        step={1}
+                                        label="Maximum Consecutive Races"
+                                        description="Caps how many races the solver schedules in back-to-back turns. Late-December turns are exempt so a chain may run into year-end. 0 = no limit."
                                         labelUnit=""
                                         showValue={true}
                                     />

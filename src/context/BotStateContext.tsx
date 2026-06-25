@@ -79,6 +79,7 @@ export interface Settings {
         smartRaceSolverForcedEpithets: string
         smartRaceSolverManualLocks: string
         smartRaceSolverMaxRaces: number
+        smartRaceSolverMaxConsecutiveRaces: number
         smartRaceSolverWeights: string
     }
 
@@ -283,6 +284,7 @@ export const defaultSettings: Settings = {
         smartRaceSolverForcedEpithets: "[]",
         smartRaceSolverManualLocks: "{}",
         smartRaceSolverMaxRaces: 0,
+        smartRaceSolverMaxConsecutiveRaces: 3,
         smartRaceSolverWeights: JSON.stringify({
             raceValue: 1.0,
             epithetValue: 1.0,

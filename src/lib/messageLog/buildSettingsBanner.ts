@@ -176,6 +176,7 @@ ${longTargetsString}${formatAdvancedScoringSection(settings.training)}
 🤖 Enable Smart Race Solver: ${settings.racing.enableSmartRaceSolver ? "✅" : "❌"}
 🚫 Disable Schedule Re-Plan Upon Race Loss: ${settings.racing.disableScheduleReplanOnRaceLoss ? "✅" : "❌"}
 🏁 Solver Max Extra Races: ${settings.racing.smartRaceSolverMaxRaces > 0 ? settings.racing.smartRaceSolverMaxRaces : "No limit"}
+⛓️ Solver Max Consecutive Races: ${settings.racing.smartRaceSolverMaxConsecutiveRaces > 0 ? settings.racing.smartRaceSolverMaxConsecutiveRaces : "No limit"}
 🎭 Solver Character Preset: ${settings.racing.smartRaceSolverCharacterPreset || "(none)"}
 🐎 Solver Aptitudes: Spr ${smartRaceSolverAptitudesObj.Sprint ?? "?"}, Mile ${smartRaceSolverAptitudesObj.Mile ?? "?"}, Med ${smartRaceSolverAptitudesObj.Medium ?? "?"}, Lng ${smartRaceSolverAptitudesObj.Long ?? "?"}, Trf ${smartRaceSolverAptitudesObj.Turf ?? "?"}, Drt ${smartRaceSolverAptitudesObj.Dirt ?? "?"}
 🎯 Solver Optimize Mode: ${smartRaceSolverOptimizeMode}
