@@ -243,6 +243,8 @@
                 color: var(--accent-blue);
             }
 
+            /* ////////////////////////////////////////////////////////////////////////////////////////////////// */
+            /* ////////////////////////////////////////////////////////////////////////////////////////////////// */
             /* Modal Styles */
             .modal {
                 display: none;
@@ -1120,7 +1122,7 @@
                 z-index: 10000;
                 box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
                 max-width: 250px;
-                /* Cap height so a tall tooltip (many epithet rows) can never exceed the viewport. The 30px matches the 15px viewport padding used when positioning. */
+                /* Cap height so a tall tooltip never exceeds the viewport (30px = 2x the 15px positioning padding). */
                 max-height: calc(100vh - 30px);
                 overflow-y: auto;
             }
@@ -1257,16 +1259,10 @@
                 }
             }
 
-            /* Race History Calendar (Smart Race Solver). Sits as the rightmost flex child of
-               .dashboard, taking the empty space that .dashboard-info used to absorb via flex:1.
-               max-height matches the dashboard's natural row height so the calendar never
-               stretches the row; overflow scrolls internally. Visuals mirror the React Native
-               Smart Race Solver Settings page; keep palette and sizes in sync. */
-            /* Position-absolute body trick: the section is just the header in normal flow
-               (so it never grows the dashboard row beyond what aptitude / conditions /
-               dashboard-info already make it), then align-self: stretch expands the section
-               to the row's full height and the absolutely-positioned body fills the remaining
-               space below the header with internal scrolling. */
+            /* Race History Calendar (Smart Race Solver). Rightmost dashboard flex child. max-height matches the row so it
+               never stretches it and overflow scrolls internally. Mirrors the React Native SRS Settings page - keep palette and sizes in sync. */
+            /* Position-absolute body trick: the section is only the header in normal flow so it never grows the dashboard row,
+               then align-self: stretch expands it to full height and the absolute body fills the rest with internal scrolling. */
             .race-history-section {
                 position: relative;
                 padding: 8px 10px;
@@ -1279,12 +1275,9 @@
                 overflow: hidden;
             }
 
-            /* Hide the panel's content when the Smart Race Solver is disabled. Uses
-               `visibility: hidden` rather than `display: none` so the section keeps occupying its
-               flex slot - that way the other dashboard tiles (aptitudes, conditions, info) do not
-               shift across the row. Kotlin pushes the SRS_STATE message via LogStreamServer at run
-               start; the section keeps this class as its initial state so the empty grid never
-               flashes before the first message arrives. */
+            /* Hide the panel when the Smart Race Solver is disabled. Uses visibility: hidden, not display: none, so the section
+               keeps its flex slot and the other dashboard tiles do not shift. Kotlin pushes SRS_STATE via LogStreamServer at run
+               start. This class stays the initial state so the empty grid never flashes before the first message arrives. */
             .race-history-section.srs-disabled {
                 visibility: hidden;
             }
@@ -1680,9 +1673,9 @@
                     padding: 12px;
                 }
             }
-            /* ==============================================
-               Analytics Tab
-               ============================================== */
+            /* ////////////////////////////////////////////////////////////////////////////////////////////////// */
+            /* ////////////////////////////////////////////////////////////////////////////////////////////////// */
+            /* Analytics Tab */
             #analyticsView {
                 background: var(--bg-primary);
             }
@@ -1732,6 +1725,8 @@
                 to { opacity: 1; transform: none; }
             }
 
+            /* ////////////////////////////////////////////////////////////////////////////////////////////////// */
+            /* ////////////////////////////////////////////////////////////////////////////////////////////////// */
             /* Hero */
             .analytic-card.analytic-hero-card {
                 position: relative;
@@ -1794,6 +1789,8 @@
                 border-color: var(--log-error);
             }
 
+            /* ////////////////////////////////////////////////////////////////////////////////////////////////// */
+            /* ////////////////////////////////////////////////////////////////////////////////////////////////// */
             /* Sections + cards */
             .analytic-section { display: flex; flex-direction: column; gap: 14px; }
             .analytic-section-title {
@@ -2441,9 +2438,9 @@
         </footer>
 
         <script>
-            // ==============================================
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
             // Tooltip UI
-            // ==============================================
             const tooltip = document.createElement("div")
             tooltip.id = "tooltip"
             tooltip.className = "custom-tooltip"
@@ -2471,25 +2468,35 @@
             }
 
             /**
+             * Builds one breakdown row. A row with no value shows only its label.
+             * @param {{label: string, value?: string|number}} r Row to render.
+             * @returns {string} HTML string for a single tooltip row.
+             */
+            function tooltipRow(r) {
+                const value = r.value != null ? `<span class="tooltip-value">${r.value}</span>` : ""
+                return `<div class="tooltip-row"><span class="tooltip-label">${r.label}</span>${value}</div>`
+            }
+
+            /**
+             * Wraps breakdown rows in the tooltip's flex column.
+             * @param {Array<{label: string, value?: string|number}>} rows Rows to render.
+             * @returns {string} HTML string for the tooltip body.
+             */
+            function tooltipBreakdown(rows) {
+                return `<div style="display: flex; flex-direction: column; gap: 4px;">${rows.map(tooltipRow).join("")}</div>`
+            }
+
+            /**
              * Shows a specific tooltip for the training action counter.
              */
             function showTrainingTooltip(event) {
-                let content = '<div style="display: flex; flex-direction: column; gap: 4px;">'
                 const stats = ["Speed", "Stamina", "Power", "Guts", "Wit"]
-
-                stats.forEach(stat => {
-                    const count = trainingBreakdown[stat] || 0
+                const rows = stats.map((stat) => {
                     const level = trainingLevels[stat]
                     const levelText = level != null ? ` <span style="opacity: 0.7;">(Lvl ${level})</span>` : ""
-                    content += `
-                        <div class="tooltip-row">
-                            <span class="tooltip-label">${stat}</span>
-                            <span class="tooltip-value">${count}${levelText}</span>
-                        </div>`
+                    return { label: stat, value: `${trainingBreakdown[stat] || 0}${levelText}` }
                 })
-
-                content += "</div>"
-                showTooltip(event, "Training Breakdown", content)
+                showTooltip(event, "Training Breakdown", tooltipBreakdown(rows))
             }
 
             /**
@@ -2497,96 +2504,47 @@
              */
             function showSimpleTooltip(event, title) {
                 const count = event.currentTarget.querySelector(".stat-value").textContent
-                const content = `
-                    <div class="tooltip-row">
-                        <span class="tooltip-label">Total actions</span>
-                        <span class="tooltip-value">${count}</span>
-                    </div>`
-                showTooltip(event, title, content)
+                showTooltip(event, title, tooltipRow({ label: "Total actions", value: count }))
             }
 
             /**
              * Shows a specific tooltip for the race action counter.
              */
             function showRaceTooltip(event) {
-                let content = '<div style="display: flex; flex-direction: column; gap: 4px;">'
                 const grades = ["Finale", "G1", "G2", "G3", "OP", "Pre-OP", "Maiden", "Mandatory", "Standalone"]
-                
-                let found = false
-                grades.forEach(grade => {
+                const rows = []
+                grades.forEach((grade) => {
                     const count = raceBreakdown[grade] || 0
-                    if (count > 0) {
-                        found = true
-                        content += `
-                            <div class="tooltip-row">
-                                <span class="tooltip-label">${grade}</span>
-                                <span class="tooltip-value">${count}</span>
-                            </div>`
-                    }
+                    if (count > 0) rows.push({ label: grade, value: count })
                 })
-                
-                // Show "Other" if there are any unrecognized grades.
+
+                // Aggregate any unrecognized grades into a single "Other" row.
                 let otherCount = 0
                 for (const [grade, count] of Object.entries(raceBreakdown)) {
-                    if (!grades.includes(grade) && count > 0) {
-                        otherCount += count
-                    }
+                    if (!grades.includes(grade) && count > 0) otherCount += count
                 }
-                if (otherCount > 0) {
-                    found = true
-                    content += `
-                        <div class="tooltip-row">
-                            <span class="tooltip-label">Other</span>
-                            <span class="tooltip-value">${otherCount}</span>
-                        </div>`
-                }
-                
-                if (!found) {
-                    content += '<div class="tooltip-row"><span class="tooltip-label">No races yet</span></div>'
-                }
-                
-                content += "</div>"
-                showTooltip(event, "Race Grade Breakdown", content)
+                if (otherCount > 0) rows.push({ label: "Other", value: otherCount })
+
+                if (rows.length === 0) rows.push({ label: "No races yet" })
+                showTooltip(event, "Race Grade Breakdown", tooltipBreakdown(rows))
             }
 
             /**
              * Shows a specific tooltip for the mood recovery action counter.
              */
             function showMoodTooltip(event) {
-                let content = '<div style="display: flex; flex-direction: column; gap: 4px;">'
                 const types = ["Recreation", "Date", "Summer"]
-                
-                types.forEach(type => {
-                    const count = moodBreakdown[type] || 0
-                    content += `
-                        <div class="tooltip-row">
-                            <span class="tooltip-label">${type}</span>
-                            <span class="tooltip-value">${count}</span>
-                        </div>`
-                })
-                
-                content += "</div>"
-                showTooltip(event, "Mood Recovery Breakdown", content)
+                const rows = types.map((type) => ({ label: type, value: moodBreakdown[type] || 0 }))
+                showTooltip(event, "Mood Recovery Breakdown", tooltipBreakdown(rows))
             }
 
             /**
              * Shows a specific tooltip for the energy recovery action counter.
              */
             function showEnergyTooltip(event) {
-                let content = '<div style="display: flex; flex-direction: column; gap: 4px;">'
                 const types = ["Rest", "Date", "Summer"]
-                
-                types.forEach(type => {
-                    const count = energyBreakdown[type] || 0
-                    content += `
-                        <div class="tooltip-row">
-                            <span class="tooltip-label">${type}</span>
-                            <span class="tooltip-value">${count}</span>
-                        </div>`
-                })
-                
-                content += "</div>"
-                showTooltip(event, "Energy Recovery Breakdown", content)
+                const rows = types.map((type) => ({ label: type, value: energyBreakdown[type] || 0 }))
+                showTooltip(event, "Energy Recovery Breakdown", tooltipBreakdown(rows))
             }
 
             /**
@@ -2624,9 +2582,9 @@
                 }
             })
 
-            // ==============================================
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
             // State
-            // ==============================================
             let ws = null
             let autoScroll = true
             let messageCount = 0
@@ -2695,9 +2653,9 @@
                 }
             }
 
-            // ==============================================
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
             // WebSocket Connection
-            // ==============================================
 
             /**
              * Initializes the WebSocket connection and sets up event handlers.
@@ -2724,9 +2682,7 @@
                     reconnectAttempts = 0
                     footerInfo.textContent = "Connected to " + location.host
 
-                    // Clear the display on a fresh connection. This removes logs from
-                    // a previous run, and prevents duplicate logs from being appended
-                    // when the server resyncs the history buffer over this new connection.
+                    // Clear the display on a fresh connection so logs from a previous run do not duplicate when history resyncs.
                     clearDisplay()
                 }
 
@@ -2760,8 +2716,7 @@
                             console.error("Error parsing calendar snapshot:", e)
                         }
                     } else if (event.data.startsWith("SRS_STATE:")) {
-                        // Smart Race Solver enabled flag pushed by Racing.kt at run start. Toggles
-                        // the .srs-disabled class on the panel so it disappears when SRS is off.
+                        // Smart Race Solver enabled flag pushed by Racing.kt at run start. Toggles the .srs-disabled panel class.
                         setSmartRaceSolverEnabled(event.data.substring(10) === "true")
                     } else if (event.data.startsWith("ANALYTICS:")) {
                         // Run-analytics snapshot pushed by RunAnalytics at each turn boundary and at run end.
@@ -2839,9 +2794,9 @@
                 statusText.textContent = customText || status.charAt(0).toUpperCase() + status.slice(1)
             }
 
-            // ==============================================
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
             // Log Entry Creation
-            // ==============================================
 
             /**
              * Updates an existing log entry with a new timestamp and repetition count.
@@ -3098,9 +3053,9 @@
                 return div.innerHTML
             }
 
-            // ==============================================
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
             // Toolbar Actions
-            // ==============================================
 
             /**
              * Re-renders the entire log from allMessages, applying or removing condensation based on the current isCondensing flag. Used by
@@ -3326,9 +3281,9 @@
                 }
             }
 
-            // ==============================================
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
             // Race History Calendar (Smart Race Solver)
-            // ==============================================
             // Constants and helpers ported from src/lib/solver/constants.ts.
             // Keep these in sync with that file: GRADE_COLORS, MONTH_LABELS,
             // YEAR_LABELS, RACE_NAME_ABBREVIATIONS, turnDateLabel, shortenRaceName.
@@ -3603,9 +3558,7 @@
                 var yearOffset = (turn - 1) % 24
                 var yearName = turn <= 24 ? "Junior" : turn <= 48 ? "Classic" : "Senior"
                 var dateLabel = calTurnDateLabel(yearOffset)
-                // Use the same middle dot (U+00B7) the React Native Smart Race Solver
-                // popover uses as a visual separator. Kept as a literal character so the
-                // tooltip layout matches the original calendar exactly.
+                // Middle dot (U+00B7) separator matching the React Native Smart Race Solver popover.
                 var sep = " · "
                 var title = "T" + turn + sep + yearName + " " + dateLabel
 
@@ -3664,9 +3617,9 @@
                 showTooltip(event, title, content)
             }
 
-            // ==============================================
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
             // Font Size Adjustment
-            // ==============================================
 
             /**
              * Increments or decrements the font size.
@@ -3709,9 +3662,9 @@
                 updateFontSize(currentFontSize)
             }
 
-            // ==============================================
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
             // Search Input Handler
-            // ==============================================
 
             // Listen for input changes in the search field to filter logs in real-time.
             searchInput.addEventListener("input", function () {
@@ -3729,9 +3682,9 @@
                 searchInput.focus()
             })
 
-            // ==============================================
-            // Scroll Detection — Show/hide scroll-to-bottom
-            // ==============================================
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
+            // Scroll Detection - Show/hide scroll-to-bottom
 
             // Listen for font size change.
             fontSizeInput.addEventListener("input", function () {
@@ -3759,9 +3712,9 @@
                 }
             })
 
-            // ==============================================
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
             // Dashboard & UI Helpers
-            // ==============================================
 
             /**
              * Processes logs for special dashboard updates.
@@ -3860,40 +3813,8 @@
                 const trainee = parsed.trainee
                 if (!trainee) return
 
-                const category = trainee.category
-                const data = trainee.data
-
-                if (stateTarget) {
-                    if (category === "Name") {
-                        stateTarget.name = data.trim()
-                    } else if (category === "Mood") {
-                        stateTarget.mood = data.trim()
-                    } else if (category === "Positive Statuses") {
-                        stateTarget.positiveStatuses = data.split(", ").map((s) => s.trim())
-                    } else if (category === "Negative Statuses") {
-                        stateTarget.negativeStatuses = data.split(", ").map((s) => s.trim())
-                    } else if (category === "Energy") {
-                        stateTarget.energy = data.trim()
-                    } else if (category === "Fans") {
-                        stateTarget.fans = data.trim()
-                    } else if (category === "Skill Points") {
-                        stateTarget.skillPoints = data.trim()
-                    } else if (category === "Stats") {
-                        const stats = data.split(", ")
-                        stats.forEach((s) => {
-                            const [key, val] = s.split("=")
-                            stateTarget.stats[key] = val
-                        })
-                    } else {
-                        const apts = data.split(", ")
-                        apts.forEach((a) => {
-                            const [name, grade] = a.split("=")
-                            stateTarget.apts[name] = grade
-                        })
-                    }
-                } else {
-                    updateDashboard(category, data)
-                }
+                // updateDashboard already routes both the stateTarget and live-DOM paths for every category.
+                updateDashboard(trainee.category, trainee.data, stateTarget)
             }
 
             /**
@@ -4251,9 +4172,9 @@
                     })
             }
 
-            // ==============================================
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
             // Tab Switching & Image Logic
-            // ==============================================
 
             /**
              * Switches between different view tabs.
@@ -4407,9 +4328,9 @@
                 }
             })
 
-            // ==============================================
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
+            // //////////////////////////////////////////////////////////////////////////////////////////////////
             // Log Files Tab
-            // ==============================================
 
             const LOG_FILE_PREVIEW_BYTE_LIMIT = 5 * 1024 * 1024
             // Cache the latest /logs/files response so the row click handlers can read each file's size
@@ -4827,6 +4748,21 @@
                 })
             }
 
+            /** Build a filled area-line dataset shared by the failure, fans, and skill-point charts. */
+            function analyticAreaLineDataset(opts) {
+                var ds = { label: opts.label, data: [], borderColor: opts.color, backgroundColor: analyticAreaGradient(opts.gradFrom, opts.gradTo), borderWidth: 2.5, tension: 0.3, fill: true }
+                if (opts.spanGaps) ds.spanGaps = true
+                Object.assign(ds, { pointRadius: 2.2, pointHoverRadius: 5, pointBorderColor: "rgba(255,255,255,0.9)", pointBorderWidth: 1, pointHitRadius: 12 })
+                return ds
+            }
+
+            /** Build the per-stat line datasets (stat growth / composition / cumulative gains), merged with chart-specific styling. */
+            function analyticStatLineDatasets(extra) {
+                return ANALYTIC_STAT_ORDER.map(function (s) {
+                    return Object.assign({ label: ANALYTIC_STAT_LABELS[s], data: [], borderColor: ANALYTIC_STAT_COLORS[s], backgroundColor: ANALYTIC_STAT_COLORS[s] }, extra)
+                })
+            }
+
             /** Create every analytics Chart instance once with empty data and themed options. Later updates reuse these via .update(). */
             function initAnalyticsCharts() {
                 if (typeof Chart === "undefined") {
@@ -4837,7 +4773,6 @@
                 analyticRegisterBarValueLabels()
                 analyticRegisterDoughnutCenter()
                 var textSec = analyticCssVar("--text-secondary") || "#8888a0"
-                var gridColor = "rgba(120, 120, 150, 0.12)"
                 Chart.defaults.color = textSec
                 Chart.defaults.font.family = analyticCssVar("--font-sans") || "Inter, sans-serif"
                 Chart.defaults.font.size = 11
@@ -4858,21 +4793,19 @@
                 // Never animate color properties, or a resize/hover tween throws "this._fn is not a function" and blanks the charts.
                 Chart.defaults.animations.colors = false
 
-                var linAxis = { grid: { color: gridColor }, ticks: { maxTicksLimit: 6 }, border: { display: false }, grace: "8%" }
-                var catAxis = { grid: { display: false }, ticks: { maxTicksLimit: 12 }, border: { display: false } }
                 var statColors = ANALYTIC_STAT_ORDER.map(function (s) { return ANALYTIC_STAT_COLORS[s] })
                 var statLabels = ANALYTIC_STAT_ORDER.map(function (s) { return ANALYTIC_STAT_LABELS[s] })
 
                 analyticsCharts.radar = new Chart(document.getElementById("analyticRadar"), {
                     type: "radar",
                     data: { labels: statLabels, datasets: [{ label: "Stats", data: [0, 0, 0, 0, 0], fill: true, backgroundColor: "rgba(108, 140, 255, 0.16)", borderColor: analyticCssVar("--accent-blue") || "#6c8cff", borderWidth: 2, pointBackgroundColor: statColors, pointBorderColor: analyticCssVar("--bg-primary") || "#0a0a0f", pointRadius: 4, pointHoverRadius: 6 }] },
-                    options: { plugins: { legend: { display: false } }, scales: { r: { angleLines: { color: gridColor }, grid: { color: gridColor }, pointLabels: { color: textSec, font: { size: 11, weight: "600" }, callback: function (label, i) { var s = ANALYTIC_STAT_ORDER[i]; var v = (window.__analyticStats && window.__analyticStats[s]) || 0; return ANALYTIC_STAT_LABELS[s] + " " + v } }, ticks: { display: false, backdropColor: "transparent" }, beginAtZero: true } } }
+                    options: { plugins: { legend: { display: false } }, scales: { r: { angleLines: { color: ANALYTIC_GRID_COLOR }, grid: { color: ANALYTIC_GRID_COLOR }, pointLabels: { color: textSec, font: { size: 11, weight: "600" }, callback: function (label, i) { var s = ANALYTIC_STAT_ORDER[i]; var v = (window.__analyticStats && window.__analyticStats[s]) || 0; return ANALYTIC_STAT_LABELS[s] + " " + v } }, ticks: { display: false, backdropColor: "transparent" }, beginAtZero: true } } }
                 })
 
                 analyticsCharts.statGrowth = new Chart(document.getElementById("analyticStatGrowth"), {
                     type: "line",
-                    data: { labels: [], datasets: ANALYTIC_STAT_ORDER.map(function (s) { return { label: ANALYTIC_STAT_LABELS[s], data: [], borderColor: ANALYTIC_STAT_COLORS[s], backgroundColor: ANALYTIC_STAT_COLORS[s], borderWidth: 2.5, tension: 0.3, pointRadius: 2.2, pointHoverRadius: 5, pointBorderColor: "rgba(255,255,255,0.9)", pointBorderWidth: 1, pointHitRadius: 12 } }) },
-                    options: { interaction: { mode: "index", intersect: false }, plugins: { legend: { position: "bottom" }, analyticCrosshair: true, tooltip: { callbacks: { title: analyticTooltipTurnTitle } } }, scales: { x: catAxis, y: linAxis } }
+                    data: { labels: [], datasets: analyticStatLineDatasets({ borderWidth: 2.5, tension: 0.3, pointRadius: 2.2, pointHoverRadius: 5, pointBorderColor: "rgba(255,255,255,0.9)", pointBorderWidth: 1, pointHitRadius: 12 }) },
+                    options: { interaction: { mode: "index", intersect: false }, plugins: { legend: { position: "bottom" }, analyticCrosshair: true, tooltip: { callbacks: { title: analyticTooltipTurnTitle } } }, scales: analyticTimeSeriesScales() }
                 })
 
                 analyticsCharts.trainingDist = new Chart(document.getElementById("analyticTrainingDist"), {
@@ -4884,13 +4817,13 @@
                 analyticsCharts.statGains = new Chart(document.getElementById("analyticStatGains"), {
                     type: "bar",
                     data: { labels: statLabels, datasets: [{ data: [0, 0, 0, 0, 0], backgroundColor: statColors, borderRadius: 6, borderSkipped: false }] },
-                    options: { plugins: { legend: { display: false }, analyticBarValueLabels: true }, scales: { x: catAxis, y: linAxis } }
+                    options: { plugins: { legend: { display: false }, analyticBarValueLabels: true }, scales: analyticTimeSeriesScales() }
                 })
 
                 analyticsCharts.failure = new Chart(document.getElementById("analyticFailure"), {
                     type: "line",
-                    data: { labels: [], datasets: [{ label: "Failure %", data: [], borderColor: analyticCssVar("--log-warn") || "#f59e0b", backgroundColor: analyticAreaGradient("rgba(245,158,11,0.40)", "rgba(245,158,11,0.02)"), borderWidth: 2.5, tension: 0.3, fill: true, spanGaps: true, pointRadius: 2.2, pointHoverRadius: 5, pointBorderColor: "rgba(255,255,255,0.9)", pointBorderWidth: 1, pointHitRadius: 12 }] },
-                    options: { interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false }, analyticCrosshair: true, tooltip: { callbacks: { title: analyticTooltipTurnTitle } } }, scales: { x: catAxis, y: { grid: { color: gridColor }, border: { display: false }, suggestedMin: 0, suggestedMax: 100, ticks: { callback: function (v) { return v + "%" }, maxTicksLimit: 6 } } } }
+                    data: { labels: [], datasets: [analyticAreaLineDataset({ label: "Failure %", color: analyticCssVar("--log-warn") || "#f59e0b", gradFrom: "rgba(245,158,11,0.40)", gradTo: "rgba(245,158,11,0.02)", spanGaps: true })] },
+                    options: { interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false }, analyticCrosshair: true, tooltip: { callbacks: { title: analyticTooltipTurnTitle } } }, scales: { x: analyticCatAxis(), y: { grid: { color: ANALYTIC_GRID_COLOR }, border: { display: false }, suggestedMin: 0, suggestedMax: 100, ticks: { callback: function (v) { return v + "%" }, maxTicksLimit: 6 } } } }
                 })
 
                 analyticsCharts.winRate = new Chart(document.getElementById("analyticWinRate"), {
@@ -4902,19 +4835,19 @@
                 analyticsCharts.racesByGrade = new Chart(document.getElementById("analyticRacesByGrade"), {
                     type: "bar",
                     data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderRadius: 6, borderSkipped: false }] },
-                    options: { plugins: { legend: { display: false }, analyticBarValueLabels: true }, scales: { x: catAxis, y: { grid: { color: gridColor }, border: { display: false }, ticks: { precision: 0, maxTicksLimit: 5 } } } }
+                    options: { plugins: { legend: { display: false }, analyticBarValueLabels: true }, scales: { x: analyticCatAxis(), y: { grid: { color: ANALYTIC_GRID_COLOR }, border: { display: false }, ticks: { precision: 0, maxTicksLimit: 5 } } } }
                 })
 
                 analyticsCharts.fans = new Chart(document.getElementById("analyticFans"), {
                     type: "line",
-                    data: { labels: [], datasets: [{ label: "Fans", data: [], borderColor: analyticCssVar("--accent-purple") || "#9b6dff", backgroundColor: analyticAreaGradient("rgba(155,109,255,0.45)", "rgba(155,109,255,0.02)"), borderWidth: 2.5, tension: 0.3, fill: true, pointRadius: 2.2, pointHoverRadius: 5, pointBorderColor: "rgba(255,255,255,0.9)", pointBorderWidth: 1, pointHitRadius: 12 }] },
-                    options: { interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false }, analyticCrosshair: true, tooltip: { callbacks: { title: analyticTooltipTurnTitle } } }, scales: { x: catAxis, y: { grid: { color: gridColor }, border: { display: false }, ticks: { callback: function (v) { return analyticAbbrevNum(v) }, maxTicksLimit: 6 } } } }
+                    data: { labels: [], datasets: [analyticAreaLineDataset({ label: "Fans", color: analyticCssVar("--accent-purple") || "#9b6dff", gradFrom: "rgba(155,109,255,0.45)", gradTo: "rgba(155,109,255,0.02)" })] },
+                    options: { interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false }, analyticCrosshair: true, tooltip: { callbacks: { title: analyticTooltipTurnTitle } } }, scales: { x: analyticCatAxis(), y: { grid: { color: ANALYTIC_GRID_COLOR }, border: { display: false }, ticks: { callback: function (v) { return analyticAbbrevNum(v) }, maxTicksLimit: 6 } } } }
                 })
 
                 analyticsCharts.actionMix = new Chart(document.getElementById("analyticActionMix"), {
                     type: "bar",
                     data: { labels: [], datasets: ANALYTIC_ACTION_DEFS.map(function (d) { return { label: d.label, data: [], backgroundColor: analyticCssVar(d.cssVar) || d.fallback, borderRadius: 4, borderSkipped: false, stack: "actions" } }) },
-                    options: { interaction: { mode: "nearest", intersect: false }, plugins: { legend: { position: "bottom" } }, scales: { x: { stacked: true, grid: { display: false }, border: { display: false } }, y: { stacked: true, grid: { color: gridColor }, border: { display: false }, ticks: { precision: 0, maxTicksLimit: 6 } } } }
+                    options: { interaction: { mode: "nearest", intersect: false }, plugins: { legend: { position: "bottom" } }, scales: { x: { stacked: true, grid: { display: false }, border: { display: false } }, y: { stacked: true, grid: { color: ANALYTIC_GRID_COLOR }, border: { display: false }, ticks: { precision: 0, maxTicksLimit: 6 } } } }
                 })
 
                 analyticsCharts.energyMood = new Chart(document.getElementById("analyticEnergyMood"), {
@@ -4930,8 +4863,8 @@
                         interaction: { mode: "index", intersect: false },
                         plugins: { legend: { position: "bottom" }, analyticCrosshair: true, tooltip: { callbacks: { title: analyticTooltipTurnTitle, label: function (ctx) { return ctx.dataset.label === "Mood" ? "Mood: " + analyticTitleCase(ANALYTIC_MOOD_ORDER[ctx.raw] || "-") : "Energy: " + ctx.raw + "%" } } } },
                         scales: {
-                            x: catAxis,
-                            y: { position: "left", grid: { color: gridColor }, border: { display: false }, suggestedMin: 0, suggestedMax: 100 },
+                            x: analyticCatAxis(),
+                            y: { position: "left", grid: { color: ANALYTIC_GRID_COLOR }, border: { display: false }, suggestedMin: 0, suggestedMax: 100 },
                             y1: { position: "right", min: 0, max: 4, grid: { display: false }, border: { display: false }, ticks: { stepSize: 1, callback: function (v) { return analyticTitleCase(ANALYTIC_MOOD_ORDER[v] || "") } } }
                         }
                     }
@@ -4939,19 +4872,19 @@
 
                 analyticsCharts.statComp = new Chart(document.getElementById("analyticStatComp"), {
                     type: "line",
-                    data: { labels: [], datasets: ANALYTIC_STAT_ORDER.map(function (s) { return { label: ANALYTIC_STAT_LABELS[s], data: [], borderColor: ANALYTIC_STAT_COLORS[s], backgroundColor: ANALYTIC_STAT_COLORS[s], borderWidth: 0, tension: 0.3, fill: true, pointRadius: 0 } }) },
+                    data: { labels: [], datasets: analyticStatLineDatasets({ borderWidth: 0, tension: 0.3, fill: true, pointRadius: 0 }) },
                     options: { interaction: { mode: "index", intersect: false }, plugins: { legend: { position: "bottom" }, analyticCrosshair: true, tooltip: { callbacks: { title: analyticTooltipTurnTitle, label: function (ctx) { return ctx.dataset.label + ": " + ctx.raw + "%" } } } }, scales: { x: analyticCatAxis(), y: { stacked: true, min: 0, max: 100, grid: { color: ANALYTIC_GRID_COLOR }, border: { display: false }, ticks: { callback: function (v) { return v + "%" }, maxTicksLimit: 6 } } } }
                 })
 
                 analyticsCharts.skillPts = new Chart(document.getElementById("analyticSkillPts"), {
                     type: "line",
-                    data: { labels: [], datasets: [{ label: "Skill Pts", data: [], borderColor: analyticCssVar("--accent-blue") || "#6c8cff", backgroundColor: analyticAreaGradient("rgba(108,140,255,0.40)", "rgba(108,140,255,0.02)"), borderWidth: 2.5, tension: 0.3, fill: true, pointRadius: 2.2, pointHoverRadius: 5, pointBorderColor: "rgba(255,255,255,0.9)", pointBorderWidth: 1, pointHitRadius: 12 }] },
+                    data: { labels: [], datasets: [analyticAreaLineDataset({ label: "Skill Pts", color: analyticCssVar("--accent-blue") || "#6c8cff", gradFrom: "rgba(108,140,255,0.40)", gradTo: "rgba(108,140,255,0.02)" })] },
                     options: { interaction: { mode: "index", intersect: false }, plugins: { legend: { display: false }, analyticCrosshair: true, tooltip: { callbacks: { title: analyticTooltipTurnTitle } } }, scales: { x: analyticCatAxis(), y: Object.assign(analyticLinAxis(), { min: 0 }) } }
                 })
 
                 analyticsCharts.cumGains = new Chart(document.getElementById("analyticCumGains"), {
                     type: "line",
-                    data: { labels: [], datasets: ANALYTIC_STAT_ORDER.map(function (s) { return { label: ANALYTIC_STAT_LABELS[s], data: [], borderColor: ANALYTIC_STAT_COLORS[s], backgroundColor: ANALYTIC_STAT_COLORS[s], borderWidth: 0, tension: 0.3, fill: true, pointRadius: 0 } }) },
+                    data: { labels: [], datasets: analyticStatLineDatasets({ borderWidth: 0, tension: 0.3, fill: true, pointRadius: 0 }) },
                     options: { interaction: { mode: "index", intersect: false }, plugins: { legend: { position: "bottom" }, analyticCrosshair: true, tooltip: { callbacks: { title: analyticTooltipTurnTitle } } }, scales: { x: analyticCatAxis(), y: { stacked: true, grid: { color: ANALYTIC_GRID_COLOR }, border: { display: false }, ticks: { maxTicksLimit: 6 } } } }
                 })
 
@@ -5044,6 +4977,13 @@
                 var totals = snap.totals || {}
                 var perTurn = snap.perTurn || []
                 var turnLabels = perTurn.map(function (p) { return p.turn })
+                // Set a single-series line chart from per-turn data, reusing the shared turn labels.
+                var setSeries = function (key, mapper) {
+                    analyticUpdateChart(key, function (c) {
+                        c.data.labels = turnLabels
+                        c.data.datasets[0].data = perTurn.map(mapper)
+                    })
+                }
                 window.__analyticTurnDates = perTurn.map(function (p) { return p.date })
 
                 // Hero.
@@ -5091,10 +5031,7 @@
                 analyticUpdateChart("statGains", function (c) { c.data.datasets[0].data = ANALYTIC_STAT_ORDER.map(function (s) { return gByStat[s] || 0 }) })
 
                 // Failure chance over time.
-                analyticUpdateChart("failure", function (c) {
-                    c.data.labels = turnLabels
-                    c.data.datasets[0].data = perTurn.map(function (p) { return p.training && typeof p.training.failureChance === "number" ? p.training.failureChance : null })
-                })
+                setSeries("failure", function (p) { return p.training && typeof p.training.failureChance === "number" ? p.training.failureChance : null })
 
                 // Win-rate gauge.
                 analyticUpdateChart("winRate", function (c) {
@@ -5117,10 +5054,7 @@
                 })
 
                 // Fans over time.
-                analyticUpdateChart("fans", function (c) {
-                    c.data.labels = turnLabels
-                    c.data.datasets[0].data = perTurn.map(function (p) { return p.fans || 0 })
-                })
+                setSeries("fans", function (p) { return p.fans || 0 })
 
                 // Action mix by year (always show all three years). Mutate datasets in place so Chart.js reliably repaints.
                 analyticUpdateChart("actionMix", function (c) {
@@ -5142,10 +5076,7 @@
                 })
 
                 // Skill points over time.
-                analyticUpdateChart("skillPts", function (c) {
-                    c.data.labels = turnLabels
-                    c.data.datasets[0].data = perTurn.map(function (p) { return p.skillPoints || 0 })
-                })
+                setSeries("skillPts", function (p) { return p.skillPoints || 0 })
 
                 // Cumulative stat gains (running sum of per-turn training gains, per stat).
                 var running = { speed: 0, stamina: 0, power: 0, guts: 0, wit: 0 }
@@ -5414,7 +5345,7 @@
                 var titleEl = row ? row.querySelector("span") : null
                 var title = (titleEl ? titleEl.textContent : id).trim()
                 var name = (latestAnalyticsSnapshot && latestAnalyticsSnapshot.trainee && latestAnalyticsSnapshot.trainee.name) || "run"
-                // Mirror the saved log file naming, with a .csv extension: "<TraineeName>_<Chart-Title>_<yyyy-MM-dd HH_mm_ss>.csv" (trainee spaces -> underscores, chart spaces -> hyphens).
+                // Mirror the saved-log naming with a .csv extension: "<Trainee>_<Chart-Title>_<timestamp>.csv" (trainee spaces -> _, chart spaces -> -).
                 var who = name.replace(/ /g, "_")
                 var chartSlug = title.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "")
                 analyticDownloadCsv(who + "_" + chartSlug + "_" + analyticLogTimestamp() + ".csv", analyticChartCsvRows(chart, id))
