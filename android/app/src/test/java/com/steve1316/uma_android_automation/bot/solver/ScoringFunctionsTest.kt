@@ -118,18 +118,18 @@ class ScoringFunctionsTest {
 
     @Test
     fun consecutivePenaltyIsWaivedOnLateDecTurns() {
-        // Late-Dec turns (23, 47, 71) end the year and don't carry conditioning penalty.
-        assertEquals(0.0, ScoringFunctions.consecutiveRacePenalty(3, 23, w), 1e-9)
-        assertEquals(0.0, ScoringFunctions.consecutiveRacePenalty(5, 47, w), 1e-9)
-        assertEquals(0.0, ScoringFunctions.consecutiveRacePenalty(4, 71, w), 1e-9)
+        // Late-Dec turns (24, 48, 72) end the year and don't carry conditioning penalty.
+        assertEquals(0.0, ScoringFunctions.consecutiveRacePenalty(3, 24, w), 1e-9)
+        assertEquals(0.0, ScoringFunctions.consecutiveRacePenalty(5, 48, w), 1e-9)
+        assertEquals(0.0, ScoringFunctions.consecutiveRacePenalty(4, 72, w), 1e-9)
     }
 
     @Test
     fun summerBlockPenaltyAppliesOnlyInSummerTurns() {
         val st = state()
-        // Default summer blocks include 12, 13, 14 (Junior summer).
-        assertEquals(w.summerPenalty, ScoringFunctions.summerBlockPenalty(13, st), 1e-9)
-        assertEquals(0.0, ScoringFunctions.summerBlockPenalty(20, st), 1e-9)
+        // Summer camp is Classic/Senior only (37-40, 61-64); Junior year has no summer.
+        assertEquals(w.summerPenalty, ScoringFunctions.summerBlockPenalty(37, st), 1e-9)
+        assertEquals(0.0, ScoringFunctions.summerBlockPenalty(13, st), 1e-9)
     }
 
     @Test

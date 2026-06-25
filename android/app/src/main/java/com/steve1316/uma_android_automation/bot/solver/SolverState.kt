@@ -222,22 +222,19 @@ data class SolverState(
 
     companion object {
         /**
-         * Default summer training blocks (no-race turns). Junior: Early Jul -> Early Aug.
-         * Classic and Senior: Early Jul -> Late Aug. Mirrors the reference solver's constant.
+         * Default summer training blocks (no-race turns), as 1-based turn numbers. Summer camp runs Early Jul -> Late Aug
+         * in Classic (37-40) and Senior (61-64) only. Junior year has no summer camp.
          */
         val DEFAULT_SUMMER_BLOCKS: Set<TurnNumber> =
             setOf(
-                12,
-                13,
-                14,
-                36,
                 37,
                 38,
                 39,
-                60,
+                40,
                 61,
                 62,
                 63,
+                64,
             )
     }
 }
