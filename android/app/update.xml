@@ -1,17 +1,28 @@
 <AppUpdater>
   <update>
-    <latestVersion>5.7.7</latestVersion>
+    <latestVersion>5.8.0</latestVersion>
     <url>https://github.com/steve1316/uma-android-automation/releases</url>
     <releaseNotes>
-v5.7.7 - Changelog
+v5.8.0 - Changelog
 
 New
 ---
-- Add per-tier megaphone stat thresholds to `Scenario Overrides Settings` page for Trackblazer.
+- Add an analytics dashboard to the `Remote Log Viewer` that charts various statistics from the run.
+- Add a `Maximum Extra Races` slider to the `Smart Race Solver` page that caps how many extra races the solver can schedule beyond the mandatory ones.
+- Add a `Maximum Consecutive Races` cap to the `Smart Race Solver` page to control the solver from scheduling too many races in a row.
+- Add an internal storage fallback to the first-run setup so it can proceed when no document picker is available.
 
 Adjustments
 ---
-- Update game data up to `Air Shakur 2026-06-17`.
+- Update Automation Library version to `2.5.8` to fix a rare concurrency crash with Tesseract OCR.
+- Reorganize the `Smart Race Solver` settings into a `General` section.
+- Make the `Scenario Overrides Settings` sections collapsible.
+
+Fixes
+---
+- Fix the `Smart Race Solver` tapping the wrong same-track race by telling them apart by fan count.
+- Fix mandatory races like the Debut Race not being retried whenever possible.
+- Fix `Prioritize Skill Hints` executing trainings without properly checking the failure chance.
 
     </releaseNotes>
   </update>
