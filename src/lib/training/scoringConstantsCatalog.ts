@@ -30,6 +30,26 @@ export interface ScoringConstantEntry {
 
 const D = DEFAULT_TRAINING_SCORING_CONSTANTS
 
+/** Per-bucket label and description for the 7 ratio multipliers, in ascending completion-percent order. */
+const RATIO_BUCKETS: ReadonlyArray<{ label: string; description: string }> = [
+    { label: "Multiplier: <15%", description: "Applied to a stat that is below 15% of its target. Highest tier because the stat is farthest from its goal." },
+    { label: "Multiplier: 15-30%", description: "Applied to a stat between 15% and 30% of its target." },
+    { label: "Multiplier: 30-45%", description: "Applied to a stat between 30% and 45% of its target." },
+    { label: "Multiplier: 45-60%", description: "Applied to a stat between 45% and 60% of its target." },
+    { label: "Multiplier: 60-75%", description: "Applied to a stat between 60% and 75% of its target." },
+    { label: "Multiplier: 75-90%", description: "Applied to a stat between 75% and 90% of its target." },
+    { label: "Multiplier: 90%+", description: "Applied to a stat at or above 90% of its target. Lowest tier because the stat is at or past its goal." },
+]
+
+/** Stat display name plus its `StatName` key for the 5 main-stat thresholds, in canonical stat order. */
+const MAIN_STAT_ROWS: ReadonlyArray<{ name: string; stat: StatName }> = [
+    { name: "Speed", stat: StatName.SPEED },
+    { name: "Stamina", stat: StatName.STAMINA },
+    { name: "Power", stat: StatName.POWER },
+    { name: "Guts", stat: StatName.GUTS },
+    { name: "Wit", stat: StatName.WIT },
+]
+
 /** Catalog driving the Advanced section's slider rows. Order within each group is the rendered order. */
 export const SCORING_CONSTANTS_CATALOG: ReadonlyArray<ScoringConstantEntry> = [
     // Priority group
@@ -45,83 +65,19 @@ export const SCORING_CONSTANTS_CATALOG: ReadonlyArray<ScoringConstantEntry> = [
     },
 
     // Ratio group: 7 user-tunable multipliers (one per completion-percent bucket; bucket boundaries are fixed at 15/30/45/60/75/90)
-    {
-        key: "ratioMultiplier1",
-        label: "Multiplier: <15%",
-        description: "Applied to a stat that is below 15% of its target. Highest tier because the stat is farthest from its goal.",
-        group: "ratio",
-        defaultValue: D.ratioMultipliers[0],
-        min: 0,
-        max: 10,
-        step: 0.1,
-        monotonicGroup: "ratio-multipliers",
-    },
-    {
-        key: "ratioMultiplier2",
-        label: "Multiplier: 15-30%",
-        description: "Applied to a stat between 15% and 30% of its target.",
-        group: "ratio",
-        defaultValue: D.ratioMultipliers[1],
-        min: 0,
-        max: 10,
-        step: 0.1,
-        monotonicGroup: "ratio-multipliers",
-    },
-    {
-        key: "ratioMultiplier3",
-        label: "Multiplier: 30-45%",
-        description: "Applied to a stat between 30% and 45% of its target.",
-        group: "ratio",
-        defaultValue: D.ratioMultipliers[2],
-        min: 0,
-        max: 10,
-        step: 0.1,
-        monotonicGroup: "ratio-multipliers",
-    },
-    {
-        key: "ratioMultiplier4",
-        label: "Multiplier: 45-60%",
-        description: "Applied to a stat between 45% and 60% of its target.",
-        group: "ratio",
-        defaultValue: D.ratioMultipliers[3],
-        min: 0,
-        max: 10,
-        step: 0.1,
-        monotonicGroup: "ratio-multipliers",
-    },
-    {
-        key: "ratioMultiplier5",
-        label: "Multiplier: 60-75%",
-        description: "Applied to a stat between 60% and 75% of its target.",
-        group: "ratio",
-        defaultValue: D.ratioMultipliers[4],
-        min: 0,
-        max: 10,
-        step: 0.1,
-        monotonicGroup: "ratio-multipliers",
-    },
-    {
-        key: "ratioMultiplier6",
-        label: "Multiplier: 75-90%",
-        description: "Applied to a stat between 75% and 90% of its target.",
-        group: "ratio",
-        defaultValue: D.ratioMultipliers[5],
-        min: 0,
-        max: 10,
-        step: 0.1,
-        monotonicGroup: "ratio-multipliers",
-    },
-    {
-        key: "ratioMultiplier7",
-        label: "Multiplier: 90%+",
-        description: "Applied to a stat at or above 90% of its target. Lowest tier because the stat is at or past its goal.",
-        group: "ratio",
-        defaultValue: D.ratioMultipliers[6],
-        min: 0,
-        max: 10,
-        step: 0.1,
-        monotonicGroup: "ratio-multipliers",
-    },
+    ...RATIO_BUCKETS.map(
+        (bucket, index): ScoringConstantEntry => ({
+            key: `ratioMultiplier${index + 1}`,
+            label: bucket.label,
+            description: bucket.description,
+            group: "ratio",
+            defaultValue: D.ratioMultipliers[index],
+            min: 0,
+            max: 10,
+            step: 0.1,
+            monotonicGroup: "ratio-multipliers",
+        })
+    ),
 
     // Weight group (composition of the final score)
     {
@@ -156,56 +112,18 @@ export const SCORING_CONSTANTS_CATALOG: ReadonlyArray<ScoringConstantEntry> = [
     },
 
     // Bonuses group
-    {
-        key: "mainStatThresholdSpeed",
-        label: "Main-stat threshold (Speed)",
-        description: "Minimum Speed gain that triggers the main-stat bonus on Speed training.",
-        group: "bonuses",
-        defaultValue: D.mainStatThresholds[StatName.SPEED],
-        min: 5,
-        max: 60,
-        step: 1,
-    },
-    {
-        key: "mainStatThresholdStamina",
-        label: "Main-stat threshold (Stamina)",
-        description: "Minimum Stamina gain that triggers the main-stat bonus on Stamina training.",
-        group: "bonuses",
-        defaultValue: D.mainStatThresholds[StatName.STAMINA],
-        min: 5,
-        max: 60,
-        step: 1,
-    },
-    {
-        key: "mainStatThresholdPower",
-        label: "Main-stat threshold (Power)",
-        description: "Minimum Power gain that triggers the main-stat bonus on Power training.",
-        group: "bonuses",
-        defaultValue: D.mainStatThresholds[StatName.POWER],
-        min: 5,
-        max: 60,
-        step: 1,
-    },
-    {
-        key: "mainStatThresholdGuts",
-        label: "Main-stat threshold (Guts)",
-        description: "Minimum Guts gain that triggers the main-stat bonus on Guts training.",
-        group: "bonuses",
-        defaultValue: D.mainStatThresholds[StatName.GUTS],
-        min: 5,
-        max: 60,
-        step: 1,
-    },
-    {
-        key: "mainStatThresholdWit",
-        label: "Main-stat threshold (Wit)",
-        description: "Minimum Wit gain that triggers the main-stat bonus on Wit training.",
-        group: "bonuses",
-        defaultValue: D.mainStatThresholds[StatName.WIT],
-        min: 5,
-        max: 60,
-        step: 1,
-    },
+    ...MAIN_STAT_ROWS.map(
+        ({ name, stat }): ScoringConstantEntry => ({
+            key: `mainStatThreshold${name}`,
+            label: `Main-stat threshold (${name})`,
+            description: `Minimum ${name} gain that triggers the main-stat bonus on ${name} training.`,
+            group: "bonuses",
+            defaultValue: D.mainStatThresholds[stat],
+            min: 5,
+            max: 60,
+            step: 1,
+        })
+    ),
     {
         key: "mainStatBonusMagnitude",
         label: "Main-stat bonus magnitude",

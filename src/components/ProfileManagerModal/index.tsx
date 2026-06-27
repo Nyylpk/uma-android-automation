@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet } from "react-native"
 import { useTheme } from "../../context/ThemeContext"
 import { GlassModal } from "../ui/glass-modal"
 import { SheetModal } from "../ui/sheet-modal"
+import { useModalShellStyles } from "../ui/modal-shell-styles"
 import { useProfileManager } from "../../hooks/useProfileManager"
 import { Settings } from "../../context/BotStateContext"
 import Ionicons from "@react-native-vector-icons/ionicons"
@@ -60,6 +61,7 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
     activeProfileName,
 }) => {
     const { colors } = useTheme()
+    const shell = useModalShellStyles()
     const { profiles, currentProfileName, updateProfile, deleteProfile, loadProfiles, compareWithProfile } = useProfileManager(onError)
     const activeName = activeProfileName ?? currentProfileName ?? null
     const [profileName, setProfileName] = useState("")
@@ -73,21 +75,8 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
     const styles = useMemo(
         () =>
             StyleSheet.create({
-                titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
                 titleBlock: { gap: 2 },
-                title: { ...TYPE.monoLabel, color: colors.text, fontSize: 13, letterSpacing: 1.5 },
                 count: { ...TYPE.monoLabel, color: colors.textMuted, fontSize: 10 },
-                closeChip: {
-                    width: 36,
-                    height: 36,
-                    borderRadius: 8,
-                    overflow: "hidden",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: colors.surfaceRaised,
-                    borderWidth: 1,
-                    borderColor: colors.borderHair,
-                },
                 cardList: { gap: SPACING.sm },
                 card: {
                     padding: SPACING.md,
@@ -331,12 +320,12 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
     }, [])
 
     const header = (
-        <View style={styles.titleRow}>
+        <View style={shell.modalHeaderRow}>
             <View style={styles.titleBlock}>
-                <Text style={styles.title}>PROFILES</Text>
+                <Text style={shell.modalTitleMono}>PROFILES</Text>
                 <Text style={styles.count}>{`${profiles.length} SAVED`}</Text>
             </View>
-            <Pressable style={styles.closeChip} onPress={onClose} android_ripple={{ color: colors.ripple, foreground: true }} accessibilityLabel="Close">
+            <Pressable style={shell.modalCloseChip} onPress={onClose} android_ripple={{ color: colors.ripple, foreground: true }} accessibilityLabel="Close">
                 <Ionicons name="close" size={18} color={colors.text} />
             </Pressable>
         </View>
@@ -427,7 +416,7 @@ const ProfileManagerModal: React.FC<ProfileManagerModalProps> = ({
             <GlassModal visible={showDeleteDialog} onRequestClose={handleDeleteCancel} contentStyle={styles.deleteModalContent} dismissOnBackdropPress={false}>
                 <View style={styles.deleteHeader}>
                     <Text style={styles.deleteTitle}>Delete Profile</Text>
-                    <Pressable style={styles.closeChip} onPress={handleDeleteCancel} android_ripple={{ color: colors.ripple, foreground: true }} accessibilityLabel="Close">
+                    <Pressable style={shell.modalCloseChip} onPress={handleDeleteCancel} android_ripple={{ color: colors.ripple, foreground: true }} accessibilityLabel="Close">
                         <Ionicons name="close" size={18} color={colors.text} />
                     </Pressable>
                 </View>

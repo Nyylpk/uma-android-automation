@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback } from "react"
 import { View, Text, StyleSheet, Pressable, TextInput } from "react-native"
 import Ionicons from "@react-native-vector-icons/ionicons"
 import { SheetModal } from "../ui/sheet-modal"
+import { useModalShellStyles } from "../ui/modal-shell-styles"
 import { useTheme } from "../../context/ThemeContext"
 import { useProfileManager } from "../../hooks/useProfileManager"
 import { Settings } from "../../context/BotStateContext"
@@ -41,6 +42,7 @@ interface ProfileCreationModalProps {
  */
 const ProfileCreationModal: React.FC<ProfileCreationModalProps> = ({ visible, onClose, currentTrainingSettings, currentTrainingStatTargetSettings, onProfileCreated, onError }) => {
     const { colors } = useTheme()
+    const shell = useModalShellStyles()
     const { createProfile } = useProfileManager(onError)
     const [profileName, setProfileName] = useState("")
     const [isCreating, setIsCreating] = useState(false)
@@ -48,19 +50,6 @@ const ProfileCreationModal: React.FC<ProfileCreationModalProps> = ({ visible, on
     const styles = useMemo(
         () =>
             StyleSheet.create({
-                titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-                title: { ...TYPE.monoLabel, color: colors.text, fontSize: 13, letterSpacing: 1.5 },
-                closeChip: {
-                    width: 36,
-                    height: 36,
-                    borderRadius: 8,
-                    overflow: "hidden",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: colors.surfaceRaised,
-                    borderWidth: 1,
-                    borderColor: colors.borderHair,
-                },
                 label: { ...TYPE.monoLabel, color: colors.textMuted, marginBottom: SPACING.xs },
                 input: {
                     backgroundColor: colors.surfaceRaised,
@@ -194,9 +183,9 @@ const ProfileCreationModal: React.FC<ProfileCreationModalProps> = ({ visible, on
     }, [onClose])
 
     const header = (
-        <View style={styles.titleRow}>
-            <Text style={styles.title}>CREATE PROFILE</Text>
-            <Pressable style={styles.closeChip} onPress={handleClose} android_ripple={{ color: colors.ripple, foreground: true }} accessibilityLabel="Close">
+        <View style={shell.modalHeaderRow}>
+            <Text style={shell.modalTitleMono}>CREATE PROFILE</Text>
+            <Pressable style={shell.modalCloseChip} onPress={handleClose} android_ripple={{ color: colors.ripple, foreground: true }} accessibilityLabel="Close">
                 <Ionicons name="close" size={18} color={colors.text} />
             </Pressable>
         </View>

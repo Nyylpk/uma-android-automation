@@ -2,6 +2,14 @@ import * as SQLite from "expo-sqlite"
 import { startTiming } from "./performanceLogger"
 import { logWithTimestamp, logErrorWithTimestamp } from "./logger"
 
+/**
+ * Extracts a human-readable message from an unknown caught error.
+ *
+ * @param error The value caught in a catch block, which may or may not be an `Error`.
+ * @returns The `Error`'s message, or the value coerced to a string.
+ */
+const errorMessage = (error: unknown): string => (error instanceof Error ? error.message : String(error))
+
 // The schema for the database.
 export interface DatabaseSettings {
     /** The unique identifier for the setting. */
@@ -451,7 +459,7 @@ export class DatabaseManager {
             endTiming({ status: "success", category, key })
         } catch (error) {
             logErrorWithTimestamp(`[DB] Failed to save setting ${category}.${key}:`, error)
-            endTiming({ status: "error", category, key, error: error instanceof Error ? error.message : String(error) })
+            endTiming({ status: "error", category, key, error: errorMessage(error) })
             throw error
         }
     }
@@ -503,6 +511,21 @@ export class DatabaseManager {
     }
 
     /**
+     * Rolls back the active transaction, swallowing and logging any failure of the rollback itself.
+     *
+     * @param context Trailing context string appended to the rollback-failure log (e.g. the batch summary).
+     */
+    private async rollbackQuietly(context: string): Promise<void> {
+        try {
+            if (this.db && this.isTransactionActive) {
+                await this.db.runAsync("ROLLBACK")
+            }
+        } catch (rollbackError) {
+            logErrorWithTimestamp(`[DB] Failed to rollback transaction${context}:`, rollbackError)
+        }
+    }
+
+    /**
      * Save multiple settings in a single transaction for better performance.
      * @param settings - The settings to save.
      * @returns A promise that resolves when the settings are saved.
@@ -546,15 +569,9 @@ export class DatabaseManager {
             logErrorWithTimestamp(`[DB] Failed to save settings batch${settingsInfo}:`, error)
 
             // Rollback transaction on error.
-            try {
-                if (this.db && this.isTransactionActive) {
-                    await this.db.runAsync("ROLLBACK")
-                }
-            } catch (rollbackError) {
-                logErrorWithTimestamp(`[DB] Failed to rollback transaction${settingsInfo}:`, rollbackError)
-            }
+            await this.rollbackQuietly(settingsInfo)
 
-            endTiming({ status: "error", settingsCount: settings.length, error: error instanceof Error ? error.message : String(error) })
+            endTiming({ status: "error", settingsCount: settings.length, error: errorMessage(error) })
             throw error
         }
     }
@@ -582,7 +599,7 @@ export class DatabaseManager {
             return value
         } catch (error) {
             logErrorWithTimestamp(`[DB] Failed to load setting ${category}.${key}:`, error)
-            endTiming({ status: "error", category, key, error: error instanceof Error ? error.message : String(error) })
+            endTiming({ status: "error", category, key, error: errorMessage(error) })
             throw error
         }
     }
@@ -603,7 +620,7 @@ export class DatabaseManager {
             endTiming({ status: "success", category, key })
         } catch (error) {
             logErrorWithTimestamp(`[DB] Failed to delete setting ${category}.${key}:`, error)
-            endTiming({ status: "error", category, key, error: error instanceof Error ? error.message : String(error) })
+            endTiming({ status: "error", category, key, error: errorMessage(error) })
             throw error
         }
     }
@@ -632,7 +649,7 @@ export class DatabaseManager {
             return settings
         } catch (error) {
             logErrorWithTimestamp("[DB] Failed to load all settings:", error)
-            endTiming({ status: "error", error: error instanceof Error ? error.message : String(error) })
+            endTiming({ status: "error", error: errorMessage(error) })
             throw error
         }
     }
@@ -698,15 +715,9 @@ export class DatabaseManager {
             logErrorWithTimestamp(`[DB] Failed to save races batch${racesInfo}:`, error)
 
             // Rollback transaction on error.
-            try {
-                if (this.db && this.isTransactionActive) {
-                    await this.db.runAsync("ROLLBACK")
-                }
-            } catch (rollbackError) {
-                logErrorWithTimestamp(`[DB] Failed to rollback transaction${racesInfo}:`, rollbackError)
-            }
+            await this.rollbackQuietly(racesInfo)
 
-            endTiming({ status: "error", racesCount: races.length, error: error instanceof Error ? error.message : String(error) })
+            endTiming({ status: "error", racesCount: races.length, error: errorMessage(error) })
             throw error
         }
     }
@@ -726,7 +737,7 @@ export class DatabaseManager {
             endTiming({ status: "success" })
         } catch (error) {
             logErrorWithTimestamp("[DB] Failed to clear races:", error)
-            endTiming({ status: "error", error: error instanceof Error ? error.message : String(error) })
+            endTiming({ status: "error", error: errorMessage(error) })
             throw error
         }
     }
@@ -792,15 +803,9 @@ export class DatabaseManager {
             logErrorWithTimestamp(`[DB] Failed to save skills batch${skillsInfo}:\n`, error)
 
             // Rollback transaction on error.
-            try {
-                if (this.db && this.isTransactionActive) {
-                    await this.db.runAsync("ROLLBACK")
-                }
-            } catch (rollbackError) {
-                logErrorWithTimestamp(`[DB] Failed to rollback transaction${skillsInfo}:`, rollbackError)
-            }
+            await this.rollbackQuietly(skillsInfo)
 
-            endTiming({ status: "error", skillsCount: skills.length, error: error instanceof Error ? error.message : String(error) })
+            endTiming({ status: "error", skillsCount: skills.length, error: errorMessage(error) })
             throw error
         }
     }
@@ -820,7 +825,7 @@ export class DatabaseManager {
             endTiming({ status: "success" })
         } catch (error) {
             logErrorWithTimestamp("[DB] Failed to clear skills:", error)
-            endTiming({ status: "error", error: error instanceof Error ? error.message : String(error) })
+            endTiming({ status: "error", error: errorMessage(error) })
             throw error
         }
     }
@@ -860,7 +865,7 @@ export class DatabaseManager {
             return results
         } catch (error) {
             logErrorWithTimestamp("[DB] Failed to load all profiles:", error)
-            endTiming({ status: "error", error: error instanceof Error ? error.message : String(error) })
+            endTiming({ status: "error", error: errorMessage(error) })
             throw error
         }
     }
@@ -881,7 +886,7 @@ export class DatabaseManager {
             return result || null
         } catch (error) {
             logErrorWithTimestamp(`[DB] Failed to load profile ${id}:`, error)
-            endTiming({ status: "error", error: error instanceof Error ? error.message : String(error) })
+            endTiming({ status: "error", error: errorMessage(error) })
             throw error
         }
     }
@@ -947,7 +952,7 @@ export class DatabaseManager {
             }
         } catch (error) {
             logErrorWithTimestamp(`[DB] Failed to save profile ${profile.name}:`, error)
-            endTiming({ status: "error", profileName: profile.name, error: error instanceof Error ? error.message : String(error) })
+            endTiming({ status: "error", profileName: profile.name, error: errorMessage(error) })
             throw error
         }
     }
@@ -969,7 +974,7 @@ export class DatabaseManager {
             endTiming({ status: "success", profileId: id })
         } catch (error) {
             logErrorWithTimestamp(`[DB] Failed to delete profile ${id}:`, error)
-            endTiming({ status: "error", profileId: id, error: error instanceof Error ? error.message : String(error) })
+            endTiming({ status: "error", profileId: id, error: errorMessage(error) })
             throw error
         }
     }
@@ -988,7 +993,7 @@ export class DatabaseManager {
             return profileName || null
         } catch (error) {
             logErrorWithTimestamp("[DB] Failed to load current profile name:", error)
-            endTiming({ status: "error", error: error instanceof Error ? error.message : String(error) })
+            endTiming({ status: "error", error: errorMessage(error) })
             return null
         }
     }
@@ -1012,7 +1017,7 @@ export class DatabaseManager {
             endTiming({ status: "success", profileName })
         } catch (error) {
             logErrorWithTimestamp("[DB] Failed to save current profile name:", error)
-            endTiming({ status: "error", error: error instanceof Error ? error.message : String(error) })
+            endTiming({ status: "error", error: errorMessage(error) })
             throw error
         }
     }

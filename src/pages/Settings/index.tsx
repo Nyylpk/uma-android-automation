@@ -13,10 +13,10 @@ import CustomButton from "../../components/CustomButton"
 import PageHeader from "../../components/PageHeader"
 import { Row } from "../../components/ui/row"
 import { Section } from "../../components/ui/section"
-import { Switch } from "../../components/ui/switch"
 import WarningContainer from "../../components/WarningContainer"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../../components/ui/alert-dialog"
 import SearchableItem from "../../components/SearchableItem"
+import ToggleSetting from "../../components/ToggleSetting"
 import { useSettings } from "../../context/SettingsContext"
 import { useSettingsFileManager } from "../../hooks/useSettingsFileManager"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
@@ -227,21 +227,9 @@ const Settings = () => {
         return (
             <View>
                 <Section label="MISC">
-                    <SearchableItem id="settings-stop-before-finals" title="Stop before Finals" description="Pause to buy skills before the final races">
-                        <Row
-                            title="Stop before Finals"
-                            description="Pause to buy skills before the final races"
-                            right={<Switch checked={general.enableStopBeforeFinals} onCheckedChange={(checked) => updateGeneral({ enableStopBeforeFinals: checked })} />}
-                        />
-                    </SearchableItem>
+                    <ToggleSetting id="settings-stop-before-finals" title="Stop before Finals" description="Pause to buy skills before the final races" checked={general.enableStopBeforeFinals} onCheckedChange={(checked) => updateGeneral({ enableStopBeforeFinals: checked })} />
 
-                    <SearchableItem id="settings-stop-at-date" title="Stop at Date" description="Stop on one or more specified dates">
-                        <Row
-                            title="Stop at Date"
-                            description="Stop on one or more specified dates"
-                            right={<Switch checked={general.enableStopAtDate} onCheckedChange={(checked) => updateGeneral({ enableStopAtDate: checked })} />}
-                        />
-                    </SearchableItem>
+                    <ToggleSetting id="settings-stop-at-date" title="Stop at Date" description="Stop on one or more specified dates" checked={general.enableStopAtDate} onCheckedChange={(checked) => updateGeneral({ enableStopAtDate: checked })} />
 
                     {general.enableStopAtDate && (
                         <SearchableItem id="settings-target-dates" title="Target Dates" description="Stops the bot on the specified dates." parentId="settings-stop-at-date">
@@ -314,33 +302,11 @@ const Settings = () => {
                         </SearchableItem>
                     )}
 
-                    <SearchableItem id="settings-claw-machine-attempt" title="Enable Claw Machine Attempt" description="Attempt to complete the claw machine instead of stopping">
-                        <Row
-                            title="Enable Claw Machine Attempt"
-                            description="Attempt to complete the claw machine instead of stopping"
-                            right={<Switch checked={general.enableClawMachineAttempt} onCheckedChange={(checked) => updateGeneral({ enableClawMachineAttempt: checked })} />}
-                        />
-                    </SearchableItem>
+                    <ToggleSetting id="settings-claw-machine-attempt" title="Enable Claw Machine Attempt" description="Attempt to complete the claw machine instead of stopping" checked={general.enableClawMachineAttempt} onCheckedChange={(checked) => updateGeneral({ enableClawMachineAttempt: checked })} />
 
-                    <SearchableItem
-                        id="settings-enable-swipe-based-scrolling"
-                        title="Enable Swipe-Based Scrolling"
-                        description="Scroll lists by swiping instead of detecting the in-game scrollbar. Enable this if the bot cannot scroll lists normally. This may or may not work depending on the device."
-                    >
-                        <Row
-                            title="Enable Swipe-Based Scrolling"
-                            description="Scroll lists by swiping instead of detecting the in-game scrollbar. Enable this if the bot cannot scroll lists normally. This may or may not work depending on the device."
-                            right={<Switch checked={general.enableSwipeBasedScrolling} onCheckedChange={(checked) => updateGeneral({ enableSwipeBasedScrolling: checked })} />}
-                        />
-                    </SearchableItem>
+                    <ToggleSetting id="settings-enable-swipe-based-scrolling" title="Enable Swipe-Based Scrolling" description="Scroll lists by swiping instead of detecting the in-game scrollbar. Enable this if the bot cannot scroll lists normally. This may or may not work depending on the device." checked={general.enableSwipeBasedScrolling} onCheckedChange={(checked) => updateGeneral({ enableSwipeBasedScrolling: checked })} />
 
-                    <SearchableItem id="settings-enable-settings-display" title="Enable Settings Display in Message Log" description="Show current bot configuration in the message log">
-                        <Row
-                            title="Enable Settings Display in Message Log"
-                            description="Show current bot configuration in the message log"
-                            right={<Switch checked={misc.enableSettingsDisplay} onCheckedChange={(checked) => updateMisc({ enableSettingsDisplay: checked })} />}
-                        />
-                    </SearchableItem>
+                    <ToggleSetting id="settings-enable-settings-display" title="Enable Settings Display in Message Log" description="Show current bot configuration in the message log" checked={misc.enableSettingsDisplay} onCheckedChange={(checked) => updateMisc({ enableSettingsDisplay: checked })} />
                 </Section>
 
                 <Section label="WAIT DELAY">

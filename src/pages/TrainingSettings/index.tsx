@@ -17,6 +17,7 @@ import { databaseManager } from "../../lib/database"
 import PageHeader from "../../components/PageHeader"
 import { SearchPageProvider } from "../../context/SearchPageContext"
 import SearchableItem from "../../components/SearchableItem"
+import ToggleSetting from "../../components/ToggleSetting"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
 import { shallowArrayEqual } from "../../lib/utils"
 import { computePrioritySync } from "../../lib/training/syncPriorities"
@@ -648,29 +649,9 @@ const TrainingSettings = () => {
                                         />
                                     </View>
 
-                                    <SearchableItem
-                                        id="disable-training-on-maxed-stats"
-                                        title="Disable Training on Maxed Stats"
-                                        description="When enabled, training will be skipped for stats that have reached their maximum value."
-                                    >
-                                        <Row
-                                            title="Disable Training on Maxed Stats"
-                                            description="When enabled, training will be skipped for stats that have reached their maximum value."
-                                            right={<Switch checked={disableTrainingOnMaxedStat} onCheckedChange={(checked) => updateTrainingSetting("disableTrainingOnMaxedStat", checked)} />}
-                                        />
-                                    </SearchableItem>
+                                    <ToggleSetting id="disable-training-on-maxed-stats" title="Disable Training on Maxed Stats" description="When enabled, training will be skipped for stats that have reached their maximum value." checked={disableTrainingOnMaxedStat} onCheckedChange={(checked) => updateTrainingSetting("disableTrainingOnMaxedStat", checked)} />
 
-                                    <SearchableItem
-                                        id="enable-riskier-training"
-                                        title="Enable Riskier Training"
-                                        description="When enabled, trainings with high main stat gains will use a separate, higher maximum failure chance threshold."
-                                    >
-                                        <Row
-                                            title="Enable Riskier Training"
-                                            description="When enabled, trainings with high main stat gains will use a separate, higher maximum failure chance threshold."
-                                            right={<Switch checked={enableRiskyTraining} onCheckedChange={(checked) => updateTrainingSetting("enableRiskyTraining", checked)} />}
-                                        />
-                                    </SearchableItem>
+                                    <ToggleSetting id="enable-riskier-training" title="Enable Riskier Training" description="When enabled, trainings with high main stat gains will use a separate, higher maximum failure chance threshold." checked={enableRiskyTraining} onCheckedChange={(checked) => updateTrainingSetting("enableRiskyTraining", checked)} />
                                     {enableRiskyTraining && (
                                         <View style={styles.sliderShell}>
                                             <CustomSlider
@@ -710,53 +691,13 @@ const TrainingSettings = () => {
                                         </View>
                                     )}
 
-                                    <SearchableItem
-                                        id="enable-prioritize-skill-hints"
-                                        title="Prioritize Skill Hints"
-                                        description="When enabled, the bot will prioritize acquiring skill hints, bypassing stat prioritization and blacklist, while still being constrained by the failure chance thresholds."
-                                    >
-                                        <Row
-                                            title="Prioritize Skill Hints"
-                                            description="When enabled, the bot will prioritize acquiring skill hints, bypassing stat prioritization and blacklist, while still being constrained by the failure chance thresholds."
-                                            right={<Switch checked={enablePrioritizeSkillHints} onCheckedChange={(checked) => updateTrainingSetting("enablePrioritizeSkillHints", checked)} />}
-                                        />
-                                    </SearchableItem>
-                                    <SearchableItem
-                                        id="must-rest-before-summer"
-                                        title="Must Rest before Summer"
-                                        description="Optimizes June Late Phase in Classic and Senior Years for Summer Training. If Energy < 70%, it will Rest. If Energy >= 70% and Mood < Great, it will recover Mood. If Energy >= 70% and Mood is Great, it will train Wit."
-                                    >
-                                        <Row
-                                            title="Must Rest before Summer"
-                                            description="Optimizes June Late Phase in Classic and Senior Years for Summer Training. If Energy < 70%, it will Rest. If Energy >= 70% and Mood < Great, it will recover Mood. If Energy >= 70% and Mood is Great, it will train Wit."
-                                            right={<Switch checked={mustRestBeforeSummer} onCheckedChange={(checked) => updateTrainingSetting("mustRestBeforeSummer", checked)} />}
-                                        />
-                                    </SearchableItem>
-                                    <SearchableItem
-                                        id="train-wit-during-finale"
-                                        title="Train Wit During Finale"
-                                        description="When enabled, the bot will train Wit during URA finale turns (73, 74, 75) instead of recovering energy or mood, even if the failure chance is high."
-                                    >
-                                        <Row
-                                            title="Train Wit During Finale"
-                                            description="When enabled, the bot will train Wit during URA finale turns (73, 74, 75) instead of recovering energy or mood, even if the failure chance is high."
-                                            right={<Switch checked={trainWitDuringFinale} onCheckedChange={(checked) => updateTrainingSetting("trainWitDuringFinale", checked)} />}
-                                        />
-                                    </SearchableItem>
+                                    <ToggleSetting id="enable-prioritize-skill-hints" title="Prioritize Skill Hints" description="When enabled, the bot will prioritize acquiring skill hints, bypassing stat prioritization and blacklist, while still being constrained by the failure chance thresholds." checked={enablePrioritizeSkillHints} onCheckedChange={(checked) => updateTrainingSetting("enablePrioritizeSkillHints", checked)} />
+                                    <ToggleSetting id="must-rest-before-summer" title="Must Rest before Summer" description="Optimizes June Late Phase in Classic and Senior Years for Summer Training. If Energy < 70%, it will Rest. If Energy >= 70% and Mood < Great, it will recover Mood. If Energy >= 70% and Mood is Great, it will train Wit." checked={mustRestBeforeSummer} onCheckedChange={(checked) => updateTrainingSetting("mustRestBeforeSummer", checked)} />
+                                    <ToggleSetting id="train-wit-during-finale" title="Train Wit During Finale" description="When enabled, the bot will train Wit during URA finale turns (73, 74, 75) instead of recovering energy or mood, even if the failure chance is high." checked={trainWitDuringFinale} onCheckedChange={(checked) => updateTrainingSetting("trainWitDuringFinale", checked)} />
                                 </Section>
 
                                 <Section label="Scoring">
-                                    <SearchableItem
-                                        id="enable-training-level-weighting"
-                                        title="Weight Score by Training Level"
-                                        description="When enabled (Year 2+), the bot reads each training's level (1-5) via OCR and boosts the score for trainings whose stat sits in the top 3 of your Stat Prioritization list. Helps the bot stick with stats you've invested in. OCR is skipped during Pre-Debut, Junior, and Summer."
-                                    >
-                                        <Row
-                                            title="Weight Score by Training Level"
-                                            description="When enabled (Year 2+), the bot reads each training's level (1-5) via OCR and boosts the score for trainings whose stat sits in the top 3 of your Stat Prioritization list. Helps the bot stick with stats you've invested in. OCR is skipped during Pre-Debut, Junior, and Summer."
-                                            right={<Switch checked={enableTrainingLevelWeighting} onCheckedChange={(checked) => updateTrainingSetting("enableTrainingLevelWeighting", checked)} />}
-                                        />
-                                    </SearchableItem>
+                                    <ToggleSetting id="enable-training-level-weighting" title="Weight Score by Training Level" description="When enabled (Year 2+), the bot reads each training's level (1-5) via OCR and boosts the score for trainings whose stat sits in the top 3 of your Stat Prioritization list. Helps the bot stick with stats you've invested in. OCR is skipped during Pre-Debut, Junior, and Summer." checked={enableTrainingLevelWeighting} onCheckedChange={(checked) => updateTrainingSetting("enableTrainingLevelWeighting", checked)} />
                                     <SearchableItem
                                         id="enable-rainbow-training-bonus"
                                         title="Enable Rainbow Training Bonus"
@@ -844,17 +785,7 @@ const TrainingSettings = () => {
                                             }
                                         />
                                     </SearchableItem>
-                                    <SearchableItem
-                                        id="disable-stat-targets"
-                                        title="Disable Stat Targets"
-                                        description="When enabled, all per-distance stat targets below are ignored. Every stat is treated as having a target equal to the in-game stat cap (1200), so the bot will keep pushing your top priority stats even after they would normally be considered 'done.' Useful when you want strict adherence to your Stat Prioritization list."
-                                    >
-                                        <Row
-                                            title="Disable Stat Targets"
-                                            description="When enabled, all per-distance stat targets below are ignored. Every stat is treated as having a target equal to the in-game stat cap (1200), so the bot will keep pushing your top priority stats even after they would normally be considered 'done.' Useful when you want strict adherence to your Stat Prioritization list."
-                                            right={<Switch checked={disableStatTargets} onCheckedChange={(checked) => updateTrainingSetting("disableStatTargets", checked)} />}
-                                        />
-                                    </SearchableItem>
+                                    <ToggleSetting id="disable-stat-targets" title="Disable Stat Targets" description="When enabled, all per-distance stat targets below are ignored. Every stat is treated as having a target equal to the in-game stat cap (1200), so the bot will keep pushing your top priority stats even after they would normally be considered 'done.' Useful when you want strict adherence to your Stat Prioritization list." checked={disableStatTargets} onCheckedChange={(checked) => updateTrainingSetting("disableStatTargets", checked)} />
 
                                     {/* Per-distance stat targets stay nested inside the Distance section so the whole distance domain reads as one block. */}
                                     <View style={disableStatTargets ? { opacity: 0.5 } : undefined} pointerEvents={disableStatTargets ? "none" : "auto"}>
