@@ -358,19 +358,15 @@ enum class SkillCommunityTier {
 /** Defines the metadata and properties of a skill in the game. */
 data class SkillData(
     val id: Int,
-    val geneId: Int,
     val name: String,
     val description: String,
     val iconId: Int,
     val cost: Int,
     val evalPt: Int,
-    val ptRatio: Double,
-    val rarity: Int,
     val condition: String,
     val precondition: String,
     val bIsInheritedUnique: Boolean,
     val communityTier: Int?,
-    val versions: List<Int>,
     val upgrade: Int?,
     val downgrade: Int?,
 ) {
@@ -452,46 +448,6 @@ data class SkillData(
      * the skill will not give any rank bonus based on aptitudes.
      */
     val inferredRunningStyles: List<RunningStyle> = calculateInferredRunningStyles()
-
-    constructor(
-        id: Int,
-        geneId: Int,
-        name: String,
-        description: String,
-        iconId: Int,
-        cost: Int,
-        evalPt: Int,
-        ptRatio: Double,
-        rarity: Int,
-        condition: String,
-        precondition: String,
-        bIsInheritedUnique: Boolean,
-        communityTier: Int?,
-        versions: String,
-        upgrade: Int?,
-        downgrade: Int?,
-    ) : this(
-        id,
-        geneId,
-        name,
-        description,
-        iconId,
-        cost,
-        evalPt,
-        ptRatio,
-        rarity,
-        condition,
-        precondition,
-        bIsInheritedUnique,
-        communityTier,
-        versions
-            .replace("[", "")
-            .replace("]", "")
-            .split(",")
-            .filter { it.isNotEmpty() }.map { it.trim().toInt() },
-        upgrade,
-        downgrade,
-    )
 
     enum class Operator(val opString: String) {
         EQ("=="),

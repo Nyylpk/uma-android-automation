@@ -235,10 +235,10 @@ class SkillScraper(BaseScraper):
         super().__init__("https://gametora.com/umamusume/skills", "skills.json")
 
     def scrape_skill_evaluation_points(self):
-        """Scrapes skill Evaluation Points (which affect result rank) and their point-to-cost ratio from the umamusu wiki.
+        """Scrapes skill Evaluation Points (which affect result rank) from the umamusu wiki.
 
         Returns:
-            A dict mapping skill ID to its `evaluation_points` and `point_ratio`.
+            A dict mapping skill ID to its `evaluation_points`.
         """
         soup = fetch_soup("https://umamusu.wiki/Game:List_of_Skills")
         data = {}
@@ -258,10 +258,7 @@ class SkillScraper(BaseScraper):
                 skill_points = int(cells[3].get_text(strip=True))
                 if skill_points == 0:
                     continue
-                data[skill_id] = {
-                    "evaluation_points": int(cells[4].get_text(strip=True)),
-                    "point_ratio": float(cells[5].get_text(strip=True)),
-                }
+                data[skill_id] = {"evaluation_points": int(cells[4].get_text(strip=True))}
 
         return data
 
@@ -380,6 +377,7 @@ class SkillScraper(BaseScraper):
             skill_data = fetch_gametora_manifest_data("skills")
 
             skill_id_to_name = {}
+            versions_by_name = {}
             for skill in skill_data:
                 try:
                     # No name_en means the skill isn't on Global yet.
@@ -391,7 +389,6 @@ class SkillScraper(BaseScraper):
                     skill_name_en = skill["name_en"].strip().replace("  ", " ")
                     skill_desc_en = skill["desc_en"]
                     skill_iconid = skill["iconid"]
-                    skill_rarity = skill["rarity"]
                     skill_inherited = False
                     skill_cost = skill.get("cost", None)
                     # Unique inherited skills: use the gene_version, since the primary ID isn't purchasable via inheritance.
@@ -399,7 +396,6 @@ class SkillScraper(BaseScraper):
                         skill_gene_id = skill["gene_version"]["id"]
                         skill_desc_en = skill["gene_version"]["desc_en"]
                         skill_iconid = skill["gene_version"]["iconid"]
-                        skill_rarity = skill["gene_version"]["rarity"]
                         skill_inherited = skill["gene_version"].get("inherited", False)
                         skill_cost = skill["gene_version"].get("cost", None)
 
@@ -411,10 +407,7 @@ class SkillScraper(BaseScraper):
                     skill_condition = self.get_skill_activation_conditions(skill)
                     skill_precondition = self.get_skill_activation_conditions(skill, get_preconditions=True)
 
-                    extra_data = skill_evaluation_points.get(
-                        skill_gene_id,
-                        {"evaluation_points": 0, "point_ratio": 0.0},
-                    )
+                    extra_data = skill_evaluation_points.get(skill_gene_id, {"evaluation_points": 0})
 
                     # JP-only skills aren't on the tier list, so a miss isn't an error (review for misspellings). Negative skills never appear there.
                     tmp_skill_name = skill_to_tier_map_lowercase.get(skill_name_en.lower(), None)
@@ -441,23 +434,20 @@ class SkillScraper(BaseScraper):
 
                     tmp = {
                         "id": skill_id,
-                        "gene_id": skill_gene_id,
                         "name_en": skill_name_en,
                         "desc_en": skill_desc_en,
                         "icon_id": skill_iconid,
                         "cost": skill_cost,
                         "eval_pt": extra_data["evaluation_points"],
-                        "pt_ratio": extra_data["point_ratio"],
-                        "rarity": skill_rarity,
                         "condition": skill_condition,
                         "precondition": skill_precondition,
                         "inherited": skill_inherited,
                         "community_tier": community_tier,
-                        "versions": sorted(skill.get("versions", [])),
                         "upgrade": None,
                         "downgrade": None,
                     }
                     skill_id_to_name[skill["id"]] = skill_name_en
+                    versions_by_name[skill_name_en] = sorted(skill.get("versions", []))
 
                     self.data[skill_name_en] = tmp
                 except KeyError as exc:
@@ -467,31 +457,30 @@ class SkillScraper(BaseScraper):
                         logging.error(f"KeyError when parsing skill: {exc}")
                     continue
 
-            # Populate the upgrade/downgrade versions for every skill.
+            # Populate the upgrade/downgrade IDs for every skill from its version chain.
             for skill_name, skill in self.data.items():
-                # If skill has no other versions, skip.
-                if skill["versions"] == []:
+                versions = versions_by_name.get(skill_name, [])
+                if not versions:
                     continue
 
-                # Now determine the upgrades/downgrades of this skill.
-                index = bisect.bisect_left(skill["versions"], skill["id"])
+                index = bisect.bisect_left(versions, skill["id"])
                 if index == 0:
                     # This is the highest level of this skill.
-                    downgrade_version = skill["versions"][0]
+                    downgrade_version = versions[0]
                     if downgrade_version in skill_id_to_name:
                         self.data[skill_name]["downgrade"] = downgrade_version
-                elif index == len(skill["versions"]):
+                elif index == len(versions):
                     # This is the lowest level of this skill.
-                    upgrade_version = skill["versions"][-1]
+                    upgrade_version = versions[-1]
                     if upgrade_version in skill_id_to_name:
                         self.data[skill_name]["upgrade"] = upgrade_version
                 else:
                     # Skill has both an upgraded and downgraded variant.
-                    upgrade_version = skill["versions"][index - 1]
+                    upgrade_version = versions[index - 1]
                     if upgrade_version in skill_id_to_name:
                         self.data[skill_name]["upgrade"] = upgrade_version
 
-                    downgrade_version = skill["versions"][index]
+                    downgrade_version = versions[index]
                     if downgrade_version in skill_id_to_name:
                         self.data[skill_name]["downgrade"] = downgrade_version
 
