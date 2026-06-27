@@ -823,6 +823,9 @@
             "Randomly either\n----------\nMaximum Energy +12\nEnergy +40\nHeal all negative status effects\nor (~30%)\nor (~30%)\nEnergy -20\nMood -2\nGet Practice Poor status",
             "Randomly either\n----------\nEnergy +20\nMood +1\nGet Charming ○ status\nor (~15%)\nor (~15%)\nEnergy -10 / -20\nMood -1\n(random) Get Practice Poor status",
             "Energy +10"
+        ],
+        "After the Kikuka Sho: King of the Game": [
+            "Speed +15\nAll stats +3\nSkill points +45\nCorner Adept ○ hint +2\nYayoi Akikawa bond +4"
         ]
     },
     "Biwa Hayahide": {
@@ -5027,6 +5030,12 @@
             "Randomly either\n----------\nMaximum Energy +12\nEnergy +40\nHeal all negative status effects\nor (~30%)\nor (~30%)\nEnergy -20\nMood -2\nGet Practice Poor status",
             "Randomly either\n----------\nEnergy +20\nMood +1\nGet Charming ○ status\nor (~15%)\nor (~15%)\nEnergy -10 / -20\nMood -1\n(random) Get Practice Poor status",
             "Energy +10"
+        ],
+        "After the Japanese Derby: Shattering Fate": [
+            "Standard race rewards\nAll I've Got hint +1"
+        ],
+        "After the Kikuka Sho: Fighting the Current": [
+            "Standard race rewards\nSteadfast hint +2"
         ]
     },
     "Mejiro Bright": {
@@ -8192,6 +8201,16 @@
         "Today and Tomorrow, Too": [
             "Speed +20\n(random) Get Hot Topic status",
             "Wit +20\n(random) Get Hot Topic status"
+        ],
+        "The Days Past and the Days to Come": [
+            "Randomly either\n----------\nPower +5\n----------\n\n----------\nPower +10\nWinter Runner ○ hint +1\n----------\n\n----------\nPower +15\nWinter Runner ○ hint +2"
+        ],
+        "The Ruler of the Stage": [
+            "Speed +10\nHomestretch Haste hint +2"
+        ],
+        "Spe's Impromptu Guided Tour": [
+            "Stamina +15\n(random) Get Fast Learner status",
+            "Guts +10\nWit +5\n(random) Get Fast Learner status"
         ]
     },
     "Super Creek": {
