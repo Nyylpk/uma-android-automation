@@ -677,7 +677,7 @@ abstract class Campaign(game: Game) : Task(game) {
      * Determines whether to proceed with a consecutive race despite the warning.
      *
      * Called after [onConsecutiveRaceWarningDetected] and after force-race flags have been checked.
-     * This is only called when force-race flags are NOT active — if they are, the race proceeds unconditionally.
+     * This is only called when force-race flags are NOT active - if they are, the race proceeds unconditionally.
      *
      * @param args Additional arguments from dialog handling.
      * @return True to proceed with the race, false to abort and clear racing requirement flags.

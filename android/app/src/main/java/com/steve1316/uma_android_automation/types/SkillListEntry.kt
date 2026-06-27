@@ -227,6 +227,16 @@ class SkillListEntry(
     }
 
     /**
+     * Looks up the evaluation-point modifier for an optional aptitude-bearing requirement.
+     *
+     * @param value The requirement (running style, track distance, or surface), or null if this skill has none.
+     * @param check Resolves the trainee's [Aptitude] for that requirement.
+     * @return The aptitude's modifier from [EVALUATION_POINT_APTITUDE_RATIO_MAP], or null when value is null.
+     */
+    private inline fun <T> aptitudeModifier(value: T?, check: (T) -> Aptitude): Double? =
+        value?.let { EVALUATION_POINT_APTITUDE_RATIO_MAP[check(it)] }
+
+    /**
      * Gets the evaluation point modifier for any running style requirements.
      *
      * Activation conditions for skills often require the uma to be in a specific [RunningStyle].
@@ -234,11 +244,8 @@ class SkillListEntry(
      * @return If this skill's activation conditions require a specific [RunningStyle], then we return the evaluation point modifier for that style. If there are no such conditions, then we return
      *    null.
      */
-    private fun getRunningStyleAptitudeEvaluationModifier(): Double? {
-        val runningStyle: RunningStyle = runningStyle ?: return null
-        val aptitude: Aptitude = campaign.trainee.checkRunningStyleAptitude(runningStyle)
-        return EVALUATION_POINT_APTITUDE_RATIO_MAP[aptitude]
-    }
+    private fun getRunningStyleAptitudeEvaluationModifier(): Double? =
+        aptitudeModifier(runningStyle) { campaign.trainee.checkRunningStyleAptitude(it) }
 
     /**
      * Gets the evaluation point modifier for any track distance requirements.
@@ -248,11 +255,8 @@ class SkillListEntry(
      * @return If this skill's activation conditions require a specific [TrackDistance], then we return the evaluation point modifier for that distance. If there are no such conditions, then we return
      *    null.
      */
-    private fun getTrackDistanceAptitudeEvaluationModifier(): Double? {
-        val trackDistance: TrackDistance = trackDistance ?: return null
-        val aptitude: Aptitude = campaign.trainee.checkTrackDistanceAptitude(trackDistance)
-        return EVALUATION_POINT_APTITUDE_RATIO_MAP[aptitude]
-    }
+    private fun getTrackDistanceAptitudeEvaluationModifier(): Double? =
+        aptitudeModifier(trackDistance) { campaign.trainee.checkTrackDistanceAptitude(it) }
 
     /**
      * Gets the evaluation point modifier for any track surface requirements.
@@ -262,11 +266,8 @@ class SkillListEntry(
      * @return If this skill's activation conditions require a specific [TrackSurface], then we return the evaluation point modifier for that surface. If there are no such conditions, then we return
      *    null.
      */
-    private fun getTrackSurfaceAptitudeEvaluationModifier(): Double? {
-        val trackSurface: TrackSurface = trackSurface ?: return null
-        val aptitude: Aptitude = campaign.trainee.checkTrackSurfaceAptitude(trackSurface)
-        return EVALUATION_POINT_APTITUDE_RATIO_MAP[aptitude]
-    }
+    private fun getTrackSurfaceAptitudeEvaluationModifier(): Double? =
+        aptitudeModifier(trackSurface) { campaign.trainee.checkTrackSurfaceAptitude(it) }
 
     /**
      * Calculates the total evaluation points (rank gain) awarded for this skill.

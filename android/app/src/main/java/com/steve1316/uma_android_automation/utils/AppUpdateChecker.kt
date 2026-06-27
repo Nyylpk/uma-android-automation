@@ -54,20 +54,20 @@ class AppUpdateChecker(private val activity: Activity) {
     enum class DisplayMode { UPDATE_AVAILABLE, CURRENT_CHANGELOG }
 
     /**
-     * Fetches the remote update XML and shows the update dialog if a newer version is available.
+     * Fetches the remote update XML off the main thread and shows the update/changelog dialog when [shouldShow] passes.
      *
-     * @param forceShow If true, always shows the dialog regardless of version comparison. Useful for testing the dialog UI.
+     * @param mode Which dialog variant to display.
+     * @param shouldShow Decides, given the parsed update info, whether the dialog should actually be shown.
      */
-    fun checkForUpdate(forceShow: Boolean = false) {
+    private fun fetchUpdateInfoAndShow(mode: DisplayMode, shouldShow: (UpdateInfo) -> Boolean) {
         CoroutineScope(Dispatchers.Main + SupervisorJob()).launch {
             try {
                 val updateInfo =
                     withContext(Dispatchers.IO) {
                         URL(UPDATE_XML_URL).openStream().use { parseUpdateXml(it) }
                     } ?: return@launch
-
-                if (forceShow || isNewerVersion(updateInfo.latestVersion, BuildConfig.VERSION_NAME)) {
-                    showUpdateDialog(updateInfo, DisplayMode.UPDATE_AVAILABLE)
+                if (shouldShow(updateInfo)) {
+                    showUpdateDialog(updateInfo, mode)
                 }
             } catch (_: Exception) {
                 // Silently ignore network or parsing failures.
@@ -76,22 +76,21 @@ class AppUpdateChecker(private val activity: Activity) {
     }
 
     /**
+     * Fetches the remote update XML and shows the update dialog if a newer version is available.
+     *
+     * @param forceShow If true, always shows the dialog regardless of version comparison. Useful for testing the dialog UI.
+     */
+    fun checkForUpdate(forceShow: Boolean = false) =
+        fetchUpdateInfoAndShow(DisplayMode.UPDATE_AVAILABLE) {
+            forceShow || isNewerVersion(it.latestVersion, BuildConfig.VERSION_NAME)
+        }
+
+    /**
      * Fetches the same remote update XML and shows the dialog as a read-only changelog for the currently installed app version. Reuses the
      * existing dialog layout/styling but rewrites the title, subtitle, and action button to reflect that no upgrade is being offered.
      */
-    fun showCurrentChangelog() {
-        CoroutineScope(Dispatchers.Main + SupervisorJob()).launch {
-            try {
-                val updateInfo =
-                    withContext(Dispatchers.IO) {
-                        URL(UPDATE_XML_URL).openStream().use { parseUpdateXml(it) }
-                    } ?: return@launch
-                showUpdateDialog(updateInfo, DisplayMode.CURRENT_CHANGELOG)
-            } catch (_: Exception) {
-                // Silently ignore network or parsing failures.
-            }
-        }
-    }
+    fun showCurrentChangelog() =
+        fetchUpdateInfoAndShow(DisplayMode.CURRENT_CHANGELOG) { true }
 
     /**
      * Parses the update XML stream and extracts version, URL, and release notes.

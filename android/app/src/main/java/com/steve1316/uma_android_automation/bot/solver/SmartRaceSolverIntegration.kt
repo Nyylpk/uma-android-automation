@@ -35,6 +35,11 @@ object SmartRaceSolverIntegration {
      *  turn and the existing Preview-based seed runs instead. */
     private const val PRE_DEBUT_TURN_THRESHOLD: TurnNumber = 13
 
+    /** Calendar turn used for the synthetic Junior Make Debut display row. The viewer's date-label scheme renders this turn as "Late Jun",
+     *  matching the in-game date the Make Debut race actually occurs on. The cell sits inside the pre-debut block; the renderer suppresses
+     *  the pre-debut style when a synthetic result is attached. */
+    private const val MAKE_DEBUT_DISPLAY_TURN: TurnNumber = 12
+
     /** Wins for the current run - both confirmed in-game finishes and Preview-assumed wins
      *  added on a mid-run restart. Cleared by [reset]. Guarded by its own monitor since the
      *  bot and UI threads can read/write here concurrently. */
@@ -153,11 +158,6 @@ object SmartRaceSolverIntegration {
     // //////////////////////////////////////////////////////////////////////////////////////////////////
     // //////////////////////////////////////////////////////////////////////////////////////////////////
     // Junior Make Debut display-only entry
-
-    /** Calendar turn used for the synthetic Junior Make Debut display row. The viewer's date-label scheme renders this turn as "Late Jun",
-     *  matching the in-game date the Make Debut race actually occurs on. The cell sits inside the pre-debut block; the renderer suppresses
-     *  the pre-debut style when a synthetic result is attached. */
-    private const val MAKE_DEBUT_DISPLAY_TURN: TurnNumber = 12
 
     /**
      * Emits a single MessageLog line announcing the synthetic Junior Make Debut entry shown in the Remote Log Viewer calendar. Idempotent
@@ -300,7 +300,7 @@ object SmartRaceSolverIntegration {
      * @param historyAfter Snapshot of [raceHistory] after [recordRaceWon] added this win.
      */
     private fun logEpithetProgressAfterWin(raceName: String, turnNumber: TurnNumber, historyBefore: List<RaceWin>, historyAfter: List<RaceWin>) {
-        val epithets = epithetsForActiveContext(cachedEpithets ?: loadEpithets() ?: return, currentRunScenario)
+        val epithets = epithetsForActiveContext(cachedEpithets ?: loadEpithets() ?: return, currentRunScenario, SettingsHelper.getStringSetting("racing", "smartRaceSolverCharacterPreset"))
         val racesByTurn = cachedRaces ?: loadAllRaces() ?: return
         val race = racesByTurn[turnNumber]?.firstOrNull { it.name == raceName }
         val candidates = epithets.filter { epi -> epi.matchers.any { matcherReferencesRace(it, raceName, race) } }
@@ -672,7 +672,7 @@ object SmartRaceSolverIntegration {
             characterPreset = characterPreset,
             aptitudes = aptitudes,
             racesByTurn = applied.racesByTurn,
-            epithets = epithetsForActiveContext(epithets, scenario),
+            epithets = epithetsForActiveContext(epithets, scenario, characterPreset ?: ""),
             raceHistory = raceHistorySnapshot,
             forcedEpithets = readStringSet("smartRaceSolverForcedEpithets"),
             targetEpithets = readStringSet("smartRaceSolverTargetEpithets"),
@@ -695,10 +695,10 @@ object SmartRaceSolverIntegration {
      * @param epithets Full epithet list parsed from epithets.json.
      * @param scenario Active scenario name (e.g. "Trackblazer", "URA Finale", "Unity Cup"). Blank
      *   disables the scenario gate so test contexts and the preview history seed keep working.
+     * @param preset Active character preset. Blank disables the character gate.
      * @return Subset of [epithets] usable for the active scenario / preset.
      */
-    private fun epithetsForActiveContext(epithets: List<Epithet>, scenario: String): List<Epithet> {
-        val preset = SettingsHelper.getStringSetting("racing", "smartRaceSolverCharacterPreset")
+    private fun epithetsForActiveContext(epithets: List<Epithet>, scenario: String, preset: String): List<Epithet> {
         return epithets.filter {
             val scenarioRestrictions = EpithetFilters.scenariosFor(it)
             val scenarioOk =
@@ -899,10 +899,7 @@ object SmartRaceSolverIntegration {
     private fun readStringSet(key: String): Set<String> {
         val json = SettingsHelper.getStringSetting("racing", key)
         if (json.isEmpty()) return emptySet()
-        return runCatching {
-            val arr = JSONArray(json)
-            (0 until arr.length()).mapTo(mutableSetOf()) { arr.getString(it) }
-        }.getOrElse { emptySet() }
+        return runCatching { jsonStringList(JSONArray(json)).toSet() }.getOrElse { emptySet() }
     }
 
     /**
@@ -1027,9 +1024,7 @@ object SmartRaceSolverIntegration {
     internal fun parseEpithets(json: String): List<Epithet> {
         val obj = JSONObject(json)
         val out = ArrayList<Epithet>(obj.length())
-        val keys = obj.keys()
-        while (keys.hasNext()) {
-            val name = keys.next()
+        for (name in obj.keys()) {
             val e = obj.getJSONObject(name)
             out.add(
                 Epithet(
@@ -1052,13 +1047,7 @@ object SmartRaceSolverIntegration {
      */
     private fun parseMatchers(arr: JSONArray?): List<EpithetMatcher> {
         if (arr == null) return emptyList()
-        val out = ArrayList<EpithetMatcher>(arr.length())
-        for (i in 0 until arr.length()) {
-            val m = arr.getJSONObject(i)
-            val matcher = parseMatcher(m) ?: continue
-            out.add(matcher)
-        }
-        return out
+        return (0 until arr.length()).mapNotNull { parseMatcher(arr.getJSONObject(it)) }
     }
 
     /**
@@ -1152,9 +1141,7 @@ object SmartRaceSolverIntegration {
     private fun parsePresets(json: String): Map<String, Aptitudes> {
         val obj = JSONObject(json)
         val out = HashMap<String, Aptitudes>(obj.length())
-        val keys = obj.keys()
-        while (keys.hasNext()) {
-            val name = keys.next()
+        for (name in obj.keys()) {
             val p = obj.getJSONObject(name)
             val dist = p.optJSONObject("distanceAptitudes")
             val surf = p.optJSONObject("surfaceAptitudes")
@@ -1249,9 +1236,7 @@ object SmartRaceSolverIntegration {
     internal fun parseRacesData(json: String): Map<TurnNumber, List<RaceCandidate>> {
         val obj = JSONObject(json)
         val out = HashMap<TurnNumber, MutableList<RaceCandidate>>()
-        val keys = obj.keys()
-        while (keys.hasNext()) {
-            val key = keys.next()
+        for (key in obj.keys()) {
             val r = obj.getJSONObject(key)
             val turn = r.optInt("turnNumber", -1)
             if (turn <= 0) continue
@@ -1295,9 +1280,7 @@ object SmartRaceSolverIntegration {
     ): Map<TurnNumber, Decision> {
         if (obj == null) return emptyMap()
         val out = HashMap<TurnNumber, Decision>()
-        val keys = obj.keys()
-        while (keys.hasNext()) {
-            val turnStr = keys.next()
+        for (turnStr in obj.keys()) {
             val turn = turnStr.toIntOrNull() ?: continue
             val value = obj.optString(turnStr, "")
             if (value.isEmpty()) continue

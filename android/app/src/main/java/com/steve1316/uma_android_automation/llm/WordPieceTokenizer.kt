@@ -39,7 +39,7 @@ class WordPieceTokenizer(private val vocab: Map<String, Int>) {
 
         /**
          * Load a tokenizer from a BERT-style vocab.txt where each line is one wordpiece in id order
-         * (line 0 → id 0, line 1 → id 1, …).
+         * (line 0 -> id 0, line 1 -> id 1, ...).
          *
          * @param stream Input stream over the vocab.txt resource.
          * @return A [WordPieceTokenizer] configured with the parsed vocabulary.

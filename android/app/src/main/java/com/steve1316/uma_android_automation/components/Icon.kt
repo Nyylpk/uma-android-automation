@@ -6,222 +6,71 @@
 
 package com.steve1316.uma_android_automation.components
 
-object IconMoodGreat : ComponentInterface {
-    override val template = Template("components/icon/mood_great", region = Region.topHalf)
-}
+/**
+ * Builds an icon component backed by the `components/icon/[name]` template.
+ *
+ * @param name Leaf filename under `components/icon/` identifying the template image.
+ * @param region Screen region to constrain matching to. Defaults to the whole screen.
+ * @param confidence Match-confidence override for this template. Defaults to 0.0 (use the global default).
+ * @return A [ComponentInterface] wrapping the resolved template.
+ */
+private fun icon(name: String, region: IntArray = intArrayOf(0, 0, 0, 0), confidence: Double = 0.0): ComponentInterface =
+    object : ComponentInterface {
+        override val template = Template("components/icon/$name", region = region, confidence = confidence)
+    }
 
-object IconMoodGood : ComponentInterface {
-    override val template = Template("components/icon/mood_good", region = Region.topHalf)
-}
-
-object IconMoodNormal : ComponentInterface {
-    override val template = Template("components/icon/mood_normal", region = Region.topHalf)
-}
-
-object IconMoodBad : ComponentInterface {
-    override val template = Template("components/icon/mood_bad", region = Region.topHalf)
-}
-
-object IconMoodAwful : ComponentInterface {
-    override val template = Template("components/icon/mood_awful", region = Region.topHalf)
-}
-
-object IconTrainingHeaderSpeed : ComponentInterface {
-    override val template = Template("components/icon/training_header_speed", region = Region.topHalf)
-}
-
-object IconTrainingHeaderStamina : ComponentInterface {
-    override val template = Template("components/icon/training_header_stamina", region = Region.topHalf)
-}
-
-object IconTrainingHeaderPower : ComponentInterface {
-    override val template = Template("components/icon/training_header_power", region = Region.topHalf)
-}
-
-object IconTrainingHeaderGuts : ComponentInterface {
-    override val template = Template("components/icon/training_header_guts", region = Region.topHalf)
-}
-
-object IconTrainingHeaderWit : ComponentInterface {
-    override val template = Template("components/icon/training_header_wit", region = Region.topHalf)
-}
-
-object IconHorseshoe : ComponentInterface {
-    override val template = Template("components/icon/horseshoe")
-}
-
-object IconDoubleCircle : ComponentInterface {
-    override val template = Template("components/icon/double_circle")
-}
-
-object IconUnityCupRaceEndLogo : ComponentInterface {
-    override val template = Template("components/icon/unity_cup_race_end_logo", region = Region.topHalf)
-}
-
-object IconTazuna : ComponentInterface {
-    override val template = Template("components/icon/tazuna", region = Region.topHalf)
-}
-
-object IconRaceDayRibbon : ComponentInterface {
-    override val template = Template("components/icon/race_day_ribbon", region = Region.bottomHalf)
-}
-
-object IconRaceHistory1st : ComponentInterface {
-    override val template = Template("components/icon/race_history_1st")
-}
-
-object IconGoalRibbon : ComponentInterface {
-    override val template = Template("components/icon/goal_ribbon", region = Region.leftHalf)
-}
-
-object IconRaceListPredictionDoubleStar : ComponentInterface {
-    override val template = Template("components/icon/race_list_prediction_double_star", region = Region.rightHalf)
-}
-
-object IconRaceListSelectionBracketBottomRight : ComponentInterface {
-    override val template = Template("components/icon/race_list_selection_bracket_bottom_right", region = Region.rightHalf)
-}
-
-object IconRaceListMaidenPill : ComponentInterface {
-    override val template = Template("components/icon/race_list_maiden_pill", region = Region.bottomHalf)
-}
-
-object IconScrollListTopLeft : ComponentInterface {
-    override val template = Template("components/icon/scroll_list_top_left", region = Region.leftHalf)
-}
-
-object IconScrollListBottomRight : ComponentInterface {
-    override val template = Template("components/icon/scroll_list_bottom_right", region = Region.rightHalf)
-}
-
-object IconObtainedPill : ComponentInterface {
-    override val template = Template("components/icon/obtained_pill", region = Region.rightHalf)
-}
-
-object IconSkillTitleDoubleCircle : ComponentInterface {
-    override val template = Template("components/icon/skill_title_double_circle")
-}
-
-object IconSkillTitleCircle : ComponentInterface {
-    override val template = Template("components/icon/skill_title_circle")
-}
-
-object IconSkillTitleX : ComponentInterface {
-    override val template = Template("components/icon/skill_title_x")
-}
-
-object IconRaceListTopLeft : ComponentInterface {
-    override val template = Template("components/icon/race_list_top_left", region = Region.leftHalf)
-}
-
-object IconRaceListBottomRight : ComponentInterface {
-    override val template = Template("components/icon/race_list_bottom_right", region = Region.rightHalf)
-}
-
-object IconOneFreePerDayTooltip : ComponentInterface {
-    override val template = Template("components/icon/one_free_per_day_tooltip", region = Region.middle)
-}
-
-object IconEnergyBarLeftPart : ComponentInterface {
-    override val template = Template("components/icon/energy_bar_left_part", region = Region.topHalf)
-}
-
-object IconEnergyBarRightPart0 : ComponentInterface {
-    override val template = Template("components/icon/energy_bar_right_part_0", region = Region.topHalf)
-}
-
-object IconEnergyBarRightPart1 : ComponentInterface {
-    override val template = Template("components/icon/energy_bar_right_part_1", region = Region.topHalf)
-}
-
-object IconRaceNotEnoughFans : ComponentInterface {
-    override val template = Template("components/icon/race_not_enough_fans", region = Region.middle)
-}
-
-object IconStatBlockSpeed : ComponentInterface {
-    override val template = Template("components/icon/stat_block_speed")
-}
-
-object IconStatBlockStamina : ComponentInterface {
-    override val template = Template("components/icon/stat_block_stamina")
-}
-
-object IconStatBlockPower : ComponentInterface {
-    override val template = Template("components/icon/stat_block_power")
-}
-
-object IconStatBlockGuts : ComponentInterface {
-    override val template = Template("components/icon/stat_block_guts")
-}
-
-object IconStatBlockWit : ComponentInterface {
-    override val template = Template("components/icon/stat_block_wit")
-}
-
-object IconStatBlockTrainer : ComponentInterface {
-    override val template = Template("components/icon/stat_block_trainer")
-}
-
-object IconStatBlockGroup : ComponentInterface {
-    override val template = Template("components/icon/stat_block_group")
-}
-
-object IconStatSupportEtsukoOtonashi : ComponentInterface {
-    override val template = Template("components/icon/stat_support_etsuko_otonashi")
-}
-
-object IconStatSupportRikoKashimoto : ComponentInterface {
-    override val template = Template("components/icon/stat_support_riko_kashimoto")
-}
-
-object IconStatSupportYayoiAkikawa : ComponentInterface {
-    override val template = Template("components/icon/stat_support_yayoi_akikawa")
-}
-
-object IconStatSkillHint : ComponentInterface {
-    override val template = Template("components/icon/stat_skill_hint", confidence = 0.9)
-}
-
-object IconRecreationDate : ComponentInterface {
-    override val template = Template("components/icon/recreation_date", region = Region.bottomHalf)
-}
-
-object IconRecreationDateOpen : ComponentInterface {
-    override val template = Template("components/icon/recreation_date_open", region = Region.middle)
-}
-
-object IconTrainingEventHorseshoe : ComponentInterface {
-    override val template = Template("components/icon/training_event_horseshoe", region = Region.leftHalf)
-}
-
-object IconEventTitleSpacer : ComponentInterface {
-    override val template = Template("components/icon/event_title_spacer")
-}
-
-object IconUnityCupSpiritExplosion : ComponentInterface {
-    override val template = Template("components/icon/unitycup_spirit_explosion", region = Region.topRightThird)
-}
-
-object IconUnityCupSpiritTraining : ComponentInterface {
-    override val template = Template("components/icon/unitycup_spirit_training", region = Region.topRightThird)
-}
-
-object IconUnityCupTutorialHeader : ComponentInterface {
-    override val template = Template("components/icon/unitycup_tutorial_header", region = Region.topHalf)
-}
-
-object IconInfirmaryEventHeader : ComponentInterface {
-    override val template = Template("components/icon/infirmary_event_header", region = Region.topHalf)
-}
-
-object IconRaceAgendaEmpty : ComponentInterface {
-    override val template = Template("components/icon/race_agenda_empty", region = Region.topHalf)
-}
-
-object IconDialogScrollListTopLeft : ComponentInterface {
-    override val template = Template("components/icon/dialog_scroll_list_top_left", region = Region.leftHalf)
-}
-
-object IconDialogScrollListBottomRight : ComponentInterface {
-    override val template = Template("components/icon/dialog_scroll_list_bottom_right", region = Region.rightHalf)
-}
+val IconMoodGreat = icon("mood_great", Region.topHalf)
+val IconMoodGood = icon("mood_good", Region.topHalf)
+val IconMoodNormal = icon("mood_normal", Region.topHalf)
+val IconMoodBad = icon("mood_bad", Region.topHalf)
+val IconMoodAwful = icon("mood_awful", Region.topHalf)
+val IconTrainingHeaderSpeed = icon("training_header_speed", Region.topHalf)
+val IconTrainingHeaderStamina = icon("training_header_stamina", Region.topHalf)
+val IconTrainingHeaderPower = icon("training_header_power", Region.topHalf)
+val IconTrainingHeaderGuts = icon("training_header_guts", Region.topHalf)
+val IconTrainingHeaderWit = icon("training_header_wit", Region.topHalf)
+val IconHorseshoe = icon("horseshoe")
+val IconDoubleCircle = icon("double_circle")
+val IconUnityCupRaceEndLogo = icon("unity_cup_race_end_logo", Region.topHalf)
+val IconTazuna = icon("tazuna", Region.topHalf)
+val IconRaceDayRibbon = icon("race_day_ribbon", Region.bottomHalf)
+val IconRaceHistory1st = icon("race_history_1st")
+val IconGoalRibbon = icon("goal_ribbon", Region.leftHalf)
+val IconRaceListPredictionDoubleStar = icon("race_list_prediction_double_star", Region.rightHalf)
+val IconRaceListSelectionBracketBottomRight = icon("race_list_selection_bracket_bottom_right", Region.rightHalf)
+val IconRaceListMaidenPill = icon("race_list_maiden_pill", Region.bottomHalf)
+val IconScrollListTopLeft = icon("scroll_list_top_left", Region.leftHalf)
+val IconScrollListBottomRight = icon("scroll_list_bottom_right", Region.rightHalf)
+val IconObtainedPill = icon("obtained_pill", Region.rightHalf)
+val IconSkillTitleDoubleCircle = icon("skill_title_double_circle")
+val IconSkillTitleCircle = icon("skill_title_circle")
+val IconSkillTitleX = icon("skill_title_x")
+val IconRaceListTopLeft = icon("race_list_top_left", Region.leftHalf)
+val IconRaceListBottomRight = icon("race_list_bottom_right", Region.rightHalf)
+val IconOneFreePerDayTooltip = icon("one_free_per_day_tooltip", Region.middle)
+val IconEnergyBarLeftPart = icon("energy_bar_left_part", Region.topHalf)
+val IconEnergyBarRightPart0 = icon("energy_bar_right_part_0", Region.topHalf)
+val IconEnergyBarRightPart1 = icon("energy_bar_right_part_1", Region.topHalf)
+val IconRaceNotEnoughFans = icon("race_not_enough_fans", Region.middle)
+val IconStatBlockSpeed = icon("stat_block_speed")
+val IconStatBlockStamina = icon("stat_block_stamina")
+val IconStatBlockPower = icon("stat_block_power")
+val IconStatBlockGuts = icon("stat_block_guts")
+val IconStatBlockWit = icon("stat_block_wit")
+val IconStatBlockTrainer = icon("stat_block_trainer")
+val IconStatBlockGroup = icon("stat_block_group")
+val IconStatSupportEtsukoOtonashi = icon("stat_support_etsuko_otonashi")
+val IconStatSupportRikoKashimoto = icon("stat_support_riko_kashimoto")
+val IconStatSupportYayoiAkikawa = icon("stat_support_yayoi_akikawa")
+val IconStatSkillHint = icon("stat_skill_hint", confidence = 0.9)
+val IconRecreationDate = icon("recreation_date", Region.bottomHalf)
+val IconRecreationDateOpen = icon("recreation_date_open", Region.middle)
+val IconTrainingEventHorseshoe = icon("training_event_horseshoe", Region.leftHalf)
+val IconEventTitleSpacer = icon("event_title_spacer")
+val IconUnityCupSpiritExplosion = icon("unitycup_spirit_explosion", Region.topRightThird)
+val IconUnityCupSpiritTraining = icon("unitycup_spirit_training", Region.topRightThird)
+val IconUnityCupTutorialHeader = icon("unitycup_tutorial_header", Region.topHalf)
+val IconInfirmaryEventHeader = icon("infirmary_event_header", Region.topHalf)
+val IconRaceAgendaEmpty = icon("race_agenda_empty", Region.topHalf)
+val IconDialogScrollListTopLeft = icon("dialog_scroll_list_top_left", Region.leftHalf)
+val IconDialogScrollListBottomRight = icon("dialog_scroll_list_bottom_right", Region.rightHalf)

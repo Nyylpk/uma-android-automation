@@ -76,7 +76,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
     private val manualStatCap: Int = SettingsHelper.getIntSetting("training", "manualStatCap")
 
     /** Whether to use YOLOv8 for stat detection. */
-    private val useYolo: Boolean get() = SettingsHelper.getBooleanSetting("training", "enableYoloStatDetection")
+    private val useYolo: Boolean = SettingsHelper.getBooleanSetting("training", "enableYoloStatDetection")
 
     /**
      * Defines the details of a race.
@@ -169,6 +169,20 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
     init {
         initTesseract("eng.traineddata")
         SharedData.templateSubfolderPathName = "images/"
+    }
+
+    /** Converts this bitmap to a new OpenCV [Mat]. */
+    private fun Bitmap.toMat(): Mat {
+        val mat = Mat()
+        Utils.bitmapToMat(this, mat)
+        return mat
+    }
+
+    /** Converts this [Mat] to a new ARGB bitmap of matching dimensions. */
+    private fun Mat.toBitmap(): Bitmap {
+        val bitmap = createBitmap(cols(), rows())
+        Utils.matToBitmap(this, bitmap)
+        return bitmap
     }
 
     // //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -271,8 +285,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
             return ""
         }
 
-        val tempImage = Mat()
-        Utils.bitmapToMat(croppedBitmap, tempImage)
+        val tempImage = croppedBitmap.toMat()
         if (debugMode) Imgcodecs.imwrite("$matchFilePath/debugEventTitleText.png", tempImage)
 
         // Now see if it is necessary to shift the cropped region over by 70 pixels or not to account for certain events.
@@ -286,8 +299,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
             }
 
         // Make the cropped screenshot grayscale.
-        val cvImage = Mat()
-        Utils.bitmapToMat(croppedBitmap, cvImage)
+        val cvImage = croppedBitmap.toMat()
         Imgproc.cvtColor(cvImage, cvImage, Imgproc.COLOR_BGR2GRAY)
 
         // Save the cropped image before converting it to black and white in order to troubleshoot issues related to differing device sizes and cropping.
@@ -299,8 +311,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
         if (debugMode) Imgcodecs.imwrite("$matchFilePath/debugEventTitleText_afterThreshold.png", bwImage)
 
         // Convert the Mat directly to Bitmap and then pass it to the text reader.
-        val resultBitmap = createBitmap(bwImage.cols(), bwImage.rows())
-        Utils.matToBitmap(bwImage, resultBitmap)
+        val resultBitmap = bwImage.toBitmap()
         tessBaseAPI.setImage(resultBitmap)
 
         var result = ""
@@ -546,6 +557,18 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
         // Sort the combined stat blocks by ascending y-coordinate.
         allStatBlocks.sortBy { it.point.y }
 
+        return analyzeRelationshipBarFills(sourceBitmap, allStatBlocks, statName)
+    }
+
+    /**
+     * Computes the relationship-bar fill result for each detected stat block.
+     *
+     * @param sourceBitmap The screenshot the stat blocks were detected in.
+     * @param allStatBlocks The detected, de-duplicated, y-sorted stat blocks to analyze.
+     * @param statName The stat these bars belong to, stamped onto each result.
+     * @return One [BarFillResult] per analyzable stat block.
+     */
+    private fun analyzeRelationshipBarFills(sourceBitmap: Bitmap, allStatBlocks: List<StatBlock>, statName: StatName): ArrayList<BarFillResult> {
         // Define HSV color ranges.
         val blueLower = Scalar(10.0, 150.0, 150.0)
         val blueUpper = Scalar(25.0, 255.0, 255.0)
@@ -584,8 +607,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
                 continue
             }
 
-            val barMat = Mat()
-            Utils.bitmapToMat(croppedBitmap, barMat)
+            val barMat = croppedBitmap.toMat()
 
             // Convert to RGB and then to HSV for better color detection.
             val rgbMat = Mat()
@@ -707,8 +729,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
 
             val gaugeBitmap = createSafeBitmap(currentBitmap, gaugeStartX, gaugeStartY, gaugeWidth, gaugeHeight, "analyzeSpiritExplosionGauges") ?: continue
 
-            val gaugeMat = Mat()
-            Utils.bitmapToMat(gaugeBitmap, gaugeMat)
+            val gaugeMat = gaugeBitmap.toMat()
             if (debugMode) Imgcodecs.imwrite("$matchFilePath/debug_spiritExplosionGauge${index + 1}.png", gaugeMat)
 
             // Convert to RGB and then to HSV for better color detection.
@@ -1027,6 +1048,8 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
             }
 
             // Process all stats in parallel using threads.
+            // Fetch the shared YOLO detector once so the per-stat threads do not race the lazy-init lock.
+            val yolo = if (useYolo) getYoloDetector(context) else null
             val statLatch = CountDownLatch(5)
             for (statName in StatName.entries) {
                 Thread {
@@ -1118,8 +1141,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
                                 }
 
                                 // Convert to Mat and then turn it to grayscale.
-                                val rowMat = Mat()
-                                Utils.bitmapToMat(rowBitmap, rowMat)
+                                val rowMat = rowBitmap.toMat()
                                 matObjects.add(rowMat)
 
                                 val rowGray = Mat()
@@ -1141,8 +1163,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
                                 val trainingContext = "${trainingName.name} training for ${statName.name} $effectType"
 
                                 // Process results based on detection method.
-                                if (useYolo) {
-                                    val yolo = getYoloDetector(context)
+                                if (useYolo && yolo != null) {
                                     val detections = yolo.detect(rowBitmap)
 
                                     // Parse YOLO detections into rowMatches for compatibility with constructIntegerFromMatches and debug visualization.
@@ -1838,16 +1859,13 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
      * @return The number of fans if successful, or null if detection fails.
      */
     fun getUmamusumeClassDialogFanCount(bitmap: Bitmap): Int? {
-        val cvImage = Mat()
-        Utils.bitmapToMat(bitmap, cvImage)
+        val cvImage = bitmap.toMat()
         // Convert to grayscale.
-        Utils.bitmapToMat(bitmap, cvImage)
         Imgproc.cvtColor(cvImage, cvImage, Imgproc.COLOR_BGR2GRAY)
         if (debugMode) Imgcodecs.imwrite("$matchFilePath/debugGetUmamusumeClassDialogFanCount_afterCrop.png", cvImage)
 
         // Convert the Mat directly to Bitmap and then pass it to the text reader.
-        var resultBitmap = createBitmap(cvImage.cols(), cvImage.rows())
-        Utils.matToBitmap(cvImage, resultBitmap)
+        var resultBitmap = cvImage.toBitmap()
 
         // Thresh the grayscale cropped image to make it black and white.
         val bwImage = Mat()
@@ -1975,8 +1993,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
         val colorUpper = Scalar(180.0, 255.0, 255.0)
 
         // Convert the cropped region to HSV
-        val barMat = Mat()
-        Utils.bitmapToMat(croppedBitmap, barMat)
+        val barMat = croppedBitmap.toMat()
         val hsvMat = Mat()
         Imgproc.cvtColor(barMat, hsvMat, Imgproc.COLOR_BGR2HSV)
 
@@ -2182,8 +2199,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
             return RaceDetails(-1, false, rivalCheck)
         }
 
-        val cvImage = Mat()
-        Utils.bitmapToMat(croppedBitmap, cvImage)
+        val cvImage = croppedBitmap.toMat()
         if (debugMode) Imgcodecs.imwrite("$matchFilePath/debugExtraRacePrediction.png", cvImage)
 
         // Determine if the extra race has double star prediction.
@@ -2226,8 +2242,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
             if (debugMode) Imgcodecs.imwrite("$matchFilePath/debugExtraRaceFans_afterCrop.png", cvImage)
 
             // Convert the Mat directly to Bitmap and then pass it to the text reader.
-            var resultBitmap = createBitmap(cvImage.cols(), cvImage.rows())
-            Utils.matToBitmap(cvImage, resultBitmap)
+            var resultBitmap = cvImage.toBitmap()
 
             // Thresh the grayscale cropped image to make it black and white.
             val bwImage = Mat()
@@ -2326,8 +2341,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
         }
 
         // Convert to Mat.
-        val cvImage = Mat()
-        Utils.bitmapToMat(croppedBitmap, cvImage)
+        val cvImage = croppedBitmap.toMat()
 
         // Save the cropped image for debugging.
         if (debugMode) {
@@ -2368,8 +2382,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
 
         // Convert the processed Mat to Bitmap and apply scaling.
         val clampedScale = max(0, scale.toInt()).toDouble().coerceAtLeast(1.0)
-        val baseBitmap = createBitmap(invertedMask.cols(), invertedMask.rows())
-        Utils.matToBitmap(invertedMask, baseBitmap)
+        val baseBitmap = invertedMask.toBitmap()
         val finalBitmap =
             if (clampedScale != 1.0) {
                 baseBitmap.scale((baseBitmap.width * clampedScale).toInt(), (baseBitmap.height * clampedScale).toInt())
@@ -2575,8 +2588,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
      */
     fun saveBitmap(bitmap: Bitmap? = null, filename: String, fullRes: Boolean = false) {
         val bitmap = bitmap ?: getSourceBitmap()
-        val tempImage = Mat()
-        Utils.bitmapToMat(bitmap, tempImage)
+        val tempImage = bitmap.toMat()
         if (fullRes) {
             val params = MatOfInt(Imgcodecs.IMWRITE_JPEG_QUALITY, 100)
             Imgcodecs.imwrite("$matchFilePath/$filename.png", tempImage, params)
@@ -2595,8 +2607,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
      * @param filename The output filename.
      */
     fun saveDebugImageWithBboxes(bitmap: Bitmap, bboxes: List<BoundingBox>, filename: String) {
-        val mat = Mat()
-        Utils.bitmapToMat(bitmap, mat)
+        val mat = bitmap.toMat()
 
         for (bbox in bboxes) {
             val pt1 = Point(bbox.x.toDouble(), bbox.y.toDouble())
@@ -2707,6 +2718,65 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
     }
 
     /**
+     * Finds four-vertex (quad) contours in a binary image, filtered by area and approximated via convex hull.
+     *
+     * @param image The single-channel image to find contours within.
+     * @param minArea The smallest contour area to keep.
+     * @param maxArea The largest contour area to keep.
+     * @param epsilonScalar The polygon-approximation tolerance, scaled by each contour's perimeter.
+     * @return The bounding rectangles of the detected quad contours.
+     */
+    private fun findQuadRects(image: Mat, minArea: Int, maxArea: Int, epsilonScalar: Double): List<Rect> {
+        val rects = mutableListOf<Rect>()
+        val contours: MutableList<MatOfPoint> = mutableListOf()
+        val hierarchy = Mat()
+        Imgproc.findContours(
+            image,
+            contours,
+            hierarchy,
+            Imgproc.RETR_EXTERNAL,
+            Imgproc.CHAIN_APPROX_SIMPLE,
+        )
+
+        for (cnt in contours) {
+            val area = Imgproc.contourArea(cnt)
+
+            // Filter out contours with invalid areas.
+            if (area < minArea || area > maxArea) {
+                continue
+            }
+
+            // Use convex hull to ignore rounded corners.
+            val hullPoints = MatOfInt()
+            Imgproc.convexHull(cnt, hullPoints)
+            // Convert hull indices back to MatOfPoint.
+            val hullContour = getHullFromIndices(cnt, hullPoints)
+
+            // Approximate shape.
+            val approx = MatOfPoint2f()
+            val cnt2f = MatOfPoint2f(*hullContour.toArray())
+            val peri = Imgproc.arcLength(cnt2f, true)
+            Imgproc.approxPolyDP(cnt2f, approx, epsilonScalar * peri, true)
+
+            // Check for four vertices.
+            if (approx.total() == 4L) {
+                rects.add(Imgproc.boundingRect(cnt))
+            }
+
+            // Free memory for each mat.
+            hullPoints.release()
+            hullContour.release()
+            approx.release()
+            cnt2f.release()
+        }
+
+        contours.forEach { it.release() }
+        contours.clear()
+        hierarchy.release()
+        return rects
+    }
+
+    /**
      * Detects rectangles with rounded corners on the screen.
      *
      * @param bitmap Optional bitmap to analyze. If null, a screenshot is used.
@@ -2769,8 +2839,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
 
         val result: MutableList<BoundingBox> = mutableListOf()
 
-        val srcImage = Mat()
-        Utils.bitmapToMat(bitmap, srcImage)
+        val srcImage = bitmap.toMat()
 
         val image = Mat()
         Imgproc.cvtColor(srcImage, image, Imgproc.COLOR_RGB2GRAY)
@@ -2797,55 +2866,15 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
         }
 
         if (debugMode) {
-            val resultBitmap = createBitmap(image.cols(), image.rows())
-            Utils.matToBitmap(image, resultBitmap)
+            val resultBitmap = image.toBitmap()
             saveBitmap(resultBitmap, "detectRoundedRectangles_canny", fullRes = true)
         }
 
-        val contours: MutableList<MatOfPoint> = mutableListOf()
-        val hierarchy = Mat()
-        Imgproc.findContours(
-            image,
-            contours,
-            hierarchy,
-            Imgproc.RETR_EXTERNAL,
-            Imgproc.CHAIN_APPROX_SIMPLE,
-        )
-
-        for (cnt in contours) {
-            val area = Imgproc.contourArea(cnt)
-
-            // Filter out contours with invalid areas.
-            if (area < minArea || area > maxArea) {
-                continue
+        for (rect in findQuadRects(image, minArea, maxArea, epsilonScalar)) {
+            if (debugMode) {
+                Imgproc.rectangle(srcImage, rect.tl(), rect.br(), Scalar(0.0, 255.0, 0.0), 2)
             }
-
-            // Use convex hull to ignore rounded corners.
-            val hullPoints = MatOfInt()
-            Imgproc.convexHull(cnt, hullPoints)
-            // Convert hull indices back to MatOfPoint.
-            val hullContour = getHullFromIndices(cnt, hullPoints)
-
-            // Approximate shape.
-            val approx = MatOfPoint2f()
-            val cnt2f = MatOfPoint2f(*hullContour.toArray())
-            val peri = Imgproc.arcLength(cnt2f, true)
-            Imgproc.approxPolyDP(cnt2f, approx, epsilonScalar * peri, true)
-
-            // Check for four vertices.
-            if (approx.total() == 4L) {
-                val rect = Imgproc.boundingRect(cnt)
-                if (debugMode) {
-                    Imgproc.rectangle(srcImage, rect.tl(), rect.br(), Scalar(0.0, 255.0, 0.0), 2)
-                }
-                result.add(BoundingBox(rect.x, rect.y, rect.width, rect.height))
-            }
-
-            // Free memory for each mat.
-            hullPoints.release()
-            hullContour.release()
-            approx.release()
-            cnt2f.release()
+            result.add(BoundingBox(rect.x, rect.y, rect.width, rect.height))
         }
 
         if (debugMode) {
@@ -2856,9 +2885,6 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
         }
 
         // Free memory for each mat.
-        contours.forEach { it.release() }
-        contours.clear()
-        hierarchy.release()
         image.release()
         srcImage.release()
 
@@ -2942,8 +2968,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
 
         val result: MutableList<BoundingBox> = mutableListOf()
 
-        val srcImage = Mat()
-        Utils.bitmapToMat(bitmap, srcImage)
+        val srcImage = bitmap.toMat()
 
         val image = Mat()
         Imgproc.cvtColor(srcImage, image, Imgproc.COLOR_RGB2GRAY)
@@ -2962,8 +2987,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
         )
 
         if (debugMode) {
-            val resultBitmap = createBitmap(image.cols(), image.rows())
-            Utils.matToBitmap(image, resultBitmap)
+            val resultBitmap = image.toBitmap()
             saveBitmap(resultBitmap, "detectRectanglesGeneric_floodFill", fullRes = true)
         }
 
@@ -2977,80 +3001,38 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
         nonBlackMask.release()
 
         if (debugMode) {
-            val resultBitmap = createBitmap(image.cols(), image.rows())
-            Utils.matToBitmap(image, resultBitmap)
+            val resultBitmap = image.toBitmap()
             saveBitmap(resultBitmap, "detectRectanglesGeneric_masked", fullRes = true)
         }
 
         Imgproc.morphologyEx(image, image, Imgproc.MORPH_OPEN, morphKernel)
 
         if (debugMode) {
-            val resultBitmap = createBitmap(image.cols(), image.rows())
-            Utils.matToBitmap(image, resultBitmap)
+            val resultBitmap = image.toBitmap()
             saveBitmap(resultBitmap, "detectRectanglesGeneric_opened", fullRes = true)
         }
 
         // Invert binary image.
         // Core.bitwise_not(image, image)
 
-        val contours: MutableList<MatOfPoint> = mutableListOf()
-        val hierarchy = Mat()
-        Imgproc.findContours(
-            image,
-            contours,
-            hierarchy,
-            Imgproc.RETR_EXTERNAL,
-            Imgproc.CHAIN_APPROX_SIMPLE,
-        )
-
-        for (cnt in contours) {
-            val area = Imgproc.contourArea(cnt)
-
-            // Filter out contours with invalid areas.
-            if (area < minArea || area > maxArea) {
-                continue
+        for (rect in findQuadRects(image, minArea, maxArea, epsilonScalar)) {
+            // Do not include any rects that are touching the bounding region.
+            if (bIgnoreOverflowYAxis) {
+                if (rect.y <= 0 || rect.y + rect.height >= bitmap.height - 1) {
+                    continue
+                }
             }
 
-            // Use convex hull to ignore rounded corners.
-            val hullPoints = MatOfInt()
-            Imgproc.convexHull(cnt, hullPoints)
-            // Convert hull indices back to MatOfPoint
-            val hullContour = getHullFromIndices(cnt, hullPoints)
-
-            // Approximate shape.
-            val approx = MatOfPoint2f()
-            val cnt2f = MatOfPoint2f(*hullContour.toArray())
-            val peri = Imgproc.arcLength(cnt2f, true)
-            Imgproc.approxPolyDP(cnt2f, approx, epsilonScalar * peri, true)
-
-            // Check for four vertices.
-            if (approx.total() == 4L) {
-                val rect = Imgproc.boundingRect(cnt)
-
-                // Do not include any rects that are touching the bounding region.
-                if (bIgnoreOverflowYAxis) {
-                    if (rect.y <= 0 || rect.y + rect.height >= bitmap.height - 1) {
-                        continue
-                    }
+            if (bIgnoreOverflowXAxis) {
+                if (rect.x <= 0 || rect.x + rect.width >= bitmap.width - 1) {
+                    continue
                 }
-
-                if (bIgnoreOverflowXAxis) {
-                    if (rect.x <= 0 || rect.x + rect.width >= bitmap.width - 1) {
-                        continue
-                    }
-                }
-
-                if (debugMode) {
-                    Imgproc.rectangle(srcImage, rect.tl(), rect.br(), Scalar(0.0, 255.0, 0.0), 2)
-                }
-                result.add(BoundingBox(rect.x, rect.y, rect.width, rect.height))
             }
 
-            // Free memory for each mat.
-            hullPoints.release()
-            hullContour.release()
-            approx.release()
-            cnt2f.release()
+            if (debugMode) {
+                Imgproc.rectangle(srcImage, rect.tl(), rect.br(), Scalar(0.0, 255.0, 0.0), 2)
+            }
+            result.add(BoundingBox(rect.x, rect.y, rect.width, rect.height))
         }
 
         if (debugMode) {
@@ -3061,9 +3043,6 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
         }
 
         // Free memory for each mat.
-        contours.forEach { it.release() }
-        contours.clear()
-        hierarchy.release()
         image.release()
         srcImage.release()
 
@@ -3158,8 +3137,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
 
         val morphOpenKernel = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, Size(5.0, 5.0))
 
-        val srcImage = Mat()
-        Utils.bitmapToMat(bitmap, srcImage)
+        val srcImage = bitmap.toMat()
 
         val image = Mat()
         Imgproc.cvtColor(srcImage, image, Imgproc.COLOR_RGB2GRAY)
@@ -3168,8 +3146,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
         Imgproc.cvtColor(srcImage, hsvImage, Imgproc.COLOR_RGB2HSV)
 
         if (debugMode) {
-            val resultBitmap = createBitmap(hsvImage.cols(), hsvImage.rows())
-            Utils.matToBitmap(hsvImage, resultBitmap)
+            val resultBitmap = hsvImage.toBitmap()
             saveBitmap(resultBitmap, "detectScrollBar_hsvImage", fullRes = true)
         }
 
@@ -3219,8 +3196,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
                 combinedColorRange,
             )
         if (debugMode) {
-            val resultBitmap = createBitmap(barMask.cols(), barMask.rows())
-            Utils.matToBitmap(barMask, resultBitmap)
+            val resultBitmap = barMask.toBitmap()
             saveBitmap(resultBitmap, "detectScrollBar_barMask", fullRes = true)
         }
 
@@ -3230,8 +3206,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
                 listOf(thumbColorRange),
             )
         if (debugMode) {
-            val resultBitmap = createBitmap(thumbMask.cols(), thumbMask.rows())
-            Utils.matToBitmap(thumbMask, resultBitmap)
+            val resultBitmap = thumbMask.toBitmap()
             saveBitmap(resultBitmap, "detectScrollBar_thumbMask", fullRes = true)
         }
 
@@ -3245,8 +3220,7 @@ class CustomImageUtils(context: Context, private val game: Game) : ImageUtils(co
          * @return The BoundingBox of the detected scrollbar on success. Otherwise, null.
          */
         fun detectFromMask(mask: Mat, minArea: Int, maxArea: Int, debugString: String = ""): BoundingBox? {
-            val debugImage = Mat()
-            Utils.bitmapToMat(bitmap, debugImage)
+            val debugImage = bitmap.toMat()
 
             val contours: MutableList<MatOfPoint> = mutableListOf()
             val hierarchy = Mat()

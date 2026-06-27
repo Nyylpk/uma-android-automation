@@ -60,6 +60,16 @@ object EpithetTracker {
         epithet.matchers.any { progress(it, state) > 0.0 }
 
     /**
+     * Counts how many distinct races in the run's history match the given candidate names.
+     *
+     * @param names The candidate race names to match against.
+     * @param state The solver state holding the race-win history.
+     * @return The number of distinct matched race names.
+     */
+    private fun winsMatchingCount(names: List<String>, state: SolverState): Int =
+        state.raceHistory.map { it.name }.toSet().intersect(names.toSet()).size
+
+    /**
      * Whole-matcher satisfaction check. Each [EpithetMatcher] subtype has its own predicate;
      * see [Epithet] for the semantics of each.
      *
@@ -83,10 +93,7 @@ object EpithetTracker {
                         (matcher.atClass == null || win.classYear.equals(matcher.atClass, ignoreCase = true))
                 } >= matcher.count
             }
-            is EpithetMatcher.WinAtLeast -> {
-                val pool = matcher.names.toSet()
-                state.raceHistory.map { it.name }.toSet().intersect(pool).size >= matcher.count
-            }
+            is EpithetMatcher.WinAtLeast -> winsMatchingCount(matcher.names, state) >= matcher.count
             is EpithetMatcher.WinCount ->
                 state.raceHistory.count { matchesFilter(it, matcher.filter, state) } >= matcher.count
             is EpithetMatcher.EpithetAnyOf ->
@@ -121,7 +128,7 @@ object EpithetTracker {
                 (have.toDouble() / matcher.count).coerceAtMost(1.0)
             }
             is EpithetMatcher.WinAtLeast -> {
-                val have = state.raceHistory.map { it.name }.toSet().intersect(matcher.names.toSet()).size
+                val have = winsMatchingCount(matcher.names, state)
                 (have.toDouble() / matcher.count).coerceAtMost(1.0)
             }
             is EpithetMatcher.WinCount -> {

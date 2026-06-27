@@ -106,7 +106,7 @@ class Racing(private val game: Game, private val campaign: Campaign) {
     /** Optional custom agenda title that overrides the selected agenda name for OCR matching. */
     private val customAgendaTitle = SettingsHelper.getStringSetting("racing", "customAgendaTitle")
 
-    /** The effective agenda name used for OCR matching — custom title if provided, otherwise the selected agenda. */
+    /** The effective agenda name used for OCR matching - custom title if provided, otherwise the selected agenda. */
     private val effectiveAgendaName = if (customAgendaTitle.isNotBlank()) customAgendaTitle else selectedUserAgenda
 
     /** Whether to skip Summer training to do races from the in-game agenda. */
@@ -342,6 +342,69 @@ class Racing(private val game: Game, private val campaign: Campaign) {
     }
 
     /**
+     * Handles the dialog sequence that appears after tapping a Load List button (overwrite, scheduled-race, and closing dialogs).
+     * Polls until the agenda finishes loading or a 5-second timeout elapses.
+     */
+    private fun handleAgendaLoadDialogs() {
+        // Timeout after 5 seconds. Shouldn't ever take near that long.
+        val timeoutMs = 5000
+        val startTime: Long = System.currentTimeMillis()
+        while (System.currentTimeMillis() - startTime < timeoutMs) {
+            val result: DialogHandlerResult =
+                campaign.handleDialogs(
+                    args =
+                        mapOf(
+                            "bShouldDefer" to true,
+                            "bShouldWait" to true,
+                            "bShouldWaitForLoading" to true,
+                        ),
+                )
+
+            if (result is DialogHandlerResult.NoDialogDetected) {
+                continue
+            }
+
+            if (result !is DialogHandlerResult.Deferred) {
+                val name =
+                    when (result) {
+                        is DialogHandlerResult.Handled -> result.dialog.name
+                        is DialogHandlerResult.Unhandled -> result.dialog.name
+                        else -> "Unknown"
+                    }
+                throw IllegalStateException("loadUserRaceAgenda: Received non-deferred dialog result ($name). Expected deferred.")
+            }
+
+            when (result.dialog.name) {
+                "overwrite" -> {
+                    result.dialog.ok(game.imageUtils)
+                }
+
+                // Pops up when we try to load agenda with races that are in the past.
+                "scheduled_race" -> {
+                    result.dialog.close(game.imageUtils)
+                }
+
+                // We've closed all the extra dialogs after loading agenda so break from the loop.
+                "scheduled_races" -> {
+                    break
+                }
+
+                // We might detect the dialog too quick and find this one as it is in the process of closing. Ignore this and continue the loop.
+                "my_agendas" -> {}
+
+                // No dialog detected. This can happen if a dialog is closing. Not a problem, just continue with loop and timeout when the time comes.
+                null -> {}
+
+                // Fall back to the base dialog handler if we get a dialog that we weren't expecting.
+                else -> {
+                    MessageLog.e(TAG, "[ERROR] loadUserRaceAgenda:: Unknown dialog detected: ${result.dialog.name}. Falling back to base dialog handler.")
+                    campaign.handleDialogs()
+                }
+            }
+        }
+    }
+
+    /**
      * Loads the user's selected in-game race agenda.
      *
      * This function navigates through the agenda UI, finds the matching agenda, and loads it. If the agenda is not immediately visible, it will scroll the list to find it.
@@ -466,62 +529,7 @@ class Racing(private val game: Game, private val campaign: Campaign) {
                     // 3. The my_agendas dialog closes automatically and the scheduled_races dialog remains on screen.
                     game.gestureUtils.tap(buttonLocation.x, buttonLocation.y, ButtonRaceAgendaLoadList.template.path)
 
-                    // Timeout after 5 seconds. Shouldn't ever take near that long.
-                    val timeoutMs = 5000
-                    val startTime: Long = System.currentTimeMillis()
-                    while (System.currentTimeMillis() - startTime < timeoutMs) {
-                        val result: DialogHandlerResult =
-                            campaign.handleDialogs(
-                                args =
-                                    mapOf(
-                                        "bShouldDefer" to true,
-                                        "bShouldWait" to true,
-                                        "bShouldWaitForLoading" to true,
-                                    ),
-                            )
-
-                        if (result is DialogHandlerResult.NoDialogDetected) {
-                            continue
-                        }
-
-                        if (result !is DialogHandlerResult.Deferred) {
-                            val name =
-                                when (result) {
-                                    is DialogHandlerResult.Handled -> result.dialog.name
-                                    is DialogHandlerResult.Unhandled -> result.dialog.name
-                                    else -> "Unknown"
-                                }
-                            throw IllegalStateException("loadUserRaceAgenda: Received non-deferred dialog result ($name). Expected deferred.")
-                        }
-
-                        when (result.dialog.name) {
-                            "overwrite" -> {
-                                result.dialog.ok(game.imageUtils)
-                            }
-
-                            // Pops up when we try to load agenda with races that are in the past.
-                            "scheduled_race" -> {
-                                result.dialog.close(game.imageUtils)
-                            }
-
-                            // We've closed all the extra dialogs after loading agenda so break from the loop.
-                            "scheduled_races" -> {
-                                break
-                            }
-
-                            // We might detect the dialog too quick and find this one as it is in the process of closing. Ignore this and continue the loop.
-                            "my_agendas" -> {}
-
-                            // No dialog detected. This can happen if a dialog is closing. Not a problem, just continue with loop and timeout when the time comes.
-                            null -> {}
-
-                            // Fall back to the base dialog handler if we get a dialog that we weren't expecting.
-                            else -> {
-                                MessageLog.e(TAG, "[ERROR] loadUserRaceAgenda:: Unknown dialog detected: ${result.dialog.name}. Falling back to base dialog handler.")
-                                campaign.handleDialogs()
-                            }
-                        }
-                    }
+                    handleAgendaLoadDialogs()
 
                     foundAgenda = true
                     break
@@ -622,22 +630,6 @@ class Racing(private val game: Game, private val campaign: Campaign) {
         game.wait(2.0)
 
         return IconRaceListPredictionDoubleStar.findAll(game.imageUtils)
-    }
-
-    /**
-     * Checks if the racer's aptitudes match the race requirements (both terrain and distance must be B or greater).
-     *
-     * @param raceData The race data to check aptitudes against.
-     * @return True if both track surface and distance aptitudes are B or greater; false otherwise.
-     */
-    private fun checkRaceAptitudeMatch(raceData: RaceData): Boolean {
-        val trackSurfaceAptitude: Aptitude = campaign.trainee.checkTrackSurfaceAptitude(raceData.trackSurface)
-        val trackDistanceAptitude: Aptitude = campaign.trainee.checkTrackDistanceAptitude(raceData.trackDistance)
-
-        val trackSurfaceMatch: Boolean = trackSurfaceAptitude >= Aptitude.B
-        val trackDistanceMatch: Boolean = trackDistanceAptitude >= Aptitude.B
-
-        return trackSurfaceMatch && trackDistanceMatch
     }
 
     /**
@@ -1029,6 +1021,42 @@ class Racing(private val game: Game, private val campaign: Campaign) {
     }
 
     /**
+     * Whether the just-finished race is an eligible grade that can still be retried within the remaining budgets.
+     *
+     * @param sourceBitmap Optional pre-captured screenshot to match the retry button against.
+     * @return True when a grade-based retry should be attempted.
+     */
+    private fun canRetryGrade(sourceBitmap: Bitmap? = null): Boolean =
+        !disableRaceRetries &&
+            lastRaceGrade != null &&
+            retryEligibleGrades.contains(lastRaceGrade) &&
+            raceRetries > 0 &&
+            retriesThisRace < maxRetriesPerRace &&
+            ButtonTryAgainAlt.checkDisabled(game.imageUtils, sourceBitmap = sourceBitmap) == false
+
+    /**
+     * Whether the just-finished race was a one-time rival race that can still be retried within the remaining budgets.
+     *
+     * @param sourceBitmap Optional pre-captured screenshot to match the retry button against.
+     * @return True when a rival-race retry should be attempted (at most once per race).
+     */
+    private fun canRetryRival(sourceBitmap: Bitmap? = null): Boolean =
+        lastRaceIsRival && !bRetriedCurrentRace && canRetryGrade(sourceBitmap)
+
+    /**
+     * Taps the retry button and, on a successful tap, waits for the race to restart and consumes one retry from the budgets.
+     *
+     * @param sourceBitmap Optional pre-captured screenshot to match the retry button against.
+     */
+    private fun attemptRaceRetry(sourceBitmap: Bitmap? = null) {
+        if (ButtonTryAgainAlt.click(game.imageUtils, sourceBitmap = sourceBitmap)) {
+            game.wait(3.0)
+            retriesThisRace++
+            raceRetries--
+        }
+    }
+
+    /**
      * Executes the race with retry logic.
      *
      * @param isMandatory True if this is a mandatory race, which always retries until 1st place whenever possible.
@@ -1119,75 +1147,27 @@ class Racing(private val game: Game, private val campaign: Campaign) {
                     game.wait(1.0)
 
                     // After closing the popup, check if we can retry a specific race grade.
-                    if (!disableRaceRetries &&
-                        lastRaceGrade != null &&
-                        retryEligibleGrades.contains(lastRaceGrade) &&
-                        raceRetries > 0 &&
-                        retriesThisRace < maxRetriesPerRace &&
-                        ButtonTryAgainAlt.checkDisabled(game.imageUtils) == false
-                    ) {
+                    if (canRetryGrade()) {
                         MessageLog.i(TAG, "[RACE] $lastRaceGrade race detected and retry button is available. Retrying...")
-                        if (ButtonTryAgainAlt.click(game.imageUtils)) {
-                            game.wait(3.0)
-                            retriesThisRace++
-                            raceRetries--
-                        }
-                    } else if (!disableRaceRetries &&
-                        lastRaceIsRival &&
-                        lastRaceGrade != null &&
-                        retryEligibleGrades.contains(lastRaceGrade) &&
-                        !bRetriedCurrentRace &&
-                        raceRetries > 0 &&
-                        retriesThisRace < maxRetriesPerRace &&
-                        ButtonTryAgainAlt.checkDisabled(game.imageUtils) == false
-                    ) {
+                        attemptRaceRetry()
+                    } else if (canRetryRival()) {
                         MessageLog.i(TAG, "[RACE] Rival Race retry button is available. Retrying once...")
                         bRetriedCurrentRace = true
-                        if (ButtonTryAgainAlt.click(game.imageUtils)) {
-                            game.wait(3.0)
-                            retriesThisRace++
-                            raceRetries--
-                        }
+                        attemptRaceRetry()
                     } else {
                         MessageLog.i(TAG, "[RACE] No retries remaining or eligible race conditions not met.")
                     }
                 }
 
-                !disableRaceRetries &&
-                    lastRaceGrade != null &&
-                    retryEligibleGrades.contains(lastRaceGrade) &&
-                    raceRetries > 0 &&
-                    retriesThisRace < maxRetriesPerRace &&
-                    ButtonTryAgainAlt.checkDisabled(
-                        game.imageUtils,
-                        sourceBitmap = bitmap,
-                    ) == false -> {
+                canRetryGrade(bitmap) -> {
                     MessageLog.i(TAG, "[RACE] $lastRaceGrade race detected and retry button is available. Retrying...")
-                    if (ButtonTryAgainAlt.click(game.imageUtils, sourceBitmap = bitmap)) {
-                        game.wait(3.0)
-                        retriesThisRace++
-                        raceRetries--
-                    }
+                    attemptRaceRetry(bitmap)
                 }
 
-                !disableRaceRetries &&
-                    lastRaceIsRival &&
-                    lastRaceGrade != null &&
-                    retryEligibleGrades.contains(lastRaceGrade) &&
-                    !bRetriedCurrentRace &&
-                    raceRetries > 0 &&
-                    retriesThisRace < maxRetriesPerRace &&
-                    ButtonTryAgainAlt.checkDisabled(
-                        game.imageUtils,
-                        sourceBitmap = bitmap,
-                    ) == false -> {
+                canRetryRival(bitmap) -> {
                     MessageLog.i(TAG, "[RACE] Rival Race retry button is available. Retrying once...")
                     bRetriedCurrentRace = true
-                    if (ButtonTryAgainAlt.click(game.imageUtils, sourceBitmap = bitmap)) {
-                        game.wait(3.0)
-                        retriesThisRace++
-                        raceRetries--
-                    }
+                    attemptRaceRetry(bitmap)
                 }
 
                 // Mandatory races always retry until 1st place whenever possible.
@@ -1234,11 +1214,11 @@ class Racing(private val game: Game, private val campaign: Campaign) {
             return false
         }
 
-        // Use the Congratulations banner to confirm 1st place — only real wins should land
+        // Use the Congratulations banner to confirm 1st place - only real wins should land
         // in the solver's history. Losses drop the pending entry so the next plan sees the
         // unchanged history.
         val firstPlace = LabelCongratulations.check(game.imageUtils)
-        MessageLog.i(TAG, "[RACE] Race result detected — 1st place: $firstPlace.")
+        MessageLog.i(TAG, "[RACE] Race result detected - 1st place: $firstPlace.")
         SmartRaceSolverIntegration.commitPendingRace(won = firstPlace)
 
         // Max time limit for the while loop to attempt to finalize race results.
@@ -2086,7 +2066,7 @@ class Racing(private val game: Game, private val campaign: Campaign) {
      *
      * Detects on-screen double-star race predictions, matches them via [lookupRaceInDatabase],
      * and asks the solver to pick one. Returns false if the solver is disabled, no candidates
-     * match, or no schedule pick is found on screen — callers fall through to standard racing.
+     * match, or no schedule pick is found on screen - callers fall through to standard racing.
      *
      * @return True if a race was successfully selected and ready to run, false otherwise.
      */
@@ -2106,7 +2086,7 @@ class Racing(private val game: Game, private val campaign: Campaign) {
             SmartRaceSolverIntegration.peekRaceKeyForTurn(currentTurn = campaign.date.day, scenario = game.scenario)
 
         if (plannedKey != null) {
-            MessageLog.i(TAG, "[RACE] Smart Race Solver wants \"$plannedKey\" for turn ${campaign.date.day} — scanning until matched.")
+            MessageLog.i(TAG, "[RACE] Smart Race Solver wants \"$plannedKey\" for turn ${campaign.date.day} - scanning until matched.")
             val sourceBitmap = game.imageUtils.getSourceBitmap()
             for (location in doublePredictionLocations) {
                 val raceName = game.imageUtils.extractRaceName(location)

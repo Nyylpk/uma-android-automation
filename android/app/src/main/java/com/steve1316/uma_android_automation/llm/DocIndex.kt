@@ -11,7 +11,7 @@ import java.nio.ByteOrder
  * In-memory vector store backing the documentation chatbot's retrieval step.
  *
  * Loads a compact binary index produced at build time by the indexer script, holding all chunk metadata plus
- * 384-dim L2-normalized embeddings. At 500 chunks × 384 floats × 4 bytes this is ~750 KB of RAM - linear cosine
+ * 384-dim L2-normalized embeddings. At 500 chunks x 384 floats x 4 bytes this is ~750 KB of RAM - linear cosine
  * scan over the whole set is microseconds, no ANN datastructure needed at this scale.
  *
  * Binary format (little-endian):
@@ -20,8 +20,8 @@ import java.nio.ByteOrder
  * version : u32        (currently 2)
  * count   : u32        number of chunks
  * dim     : u32        embedding dimensionality
- * chunks  : count × { idLen u16, id utf-8; sourceLen u16, source utf-8; headingLen u16, heading utf-8;
- *                     textLen u32, text utf-8; dim × f32 }
+ * chunks  : count x { idLen u16, id utf-8; sourceLen u16, source utf-8; headingLen u16, heading utf-8;
+ *                     textLen u32, text utf-8; dim x f32 }
  * ```
  *
  * @property chunks Loaded chunk records with their embeddings.
