@@ -2248,7 +2248,7 @@ open class Training(protected val game: Game, protected val campaign: Campaign) 
             analyzeTrainings()
             trainingSelected =
                 if (forceStat != null) {
-                    MessageLog.i(TAG, "[TRAINING] forceStat override active — selecting $forceStat without running recommendTraining.")
+                    MessageLog.i(TAG, "[TRAINING] forceStat override active - selecting $forceStat without running recommendTraining.")
                     forceStat
                 } else {
                     recommendTraining()

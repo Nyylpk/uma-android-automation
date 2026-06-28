@@ -2,6 +2,7 @@ import React, { useMemo } from "react"
 import { Pressable, StyleProp, StyleSheet, ViewStyle } from "react-native"
 import { Moon, Sun } from "lucide-react-native"
 import { useTheme } from "../../context/ThemeContext"
+import { iconChipStyle } from "../ui/icon-chip"
 
 interface ThemeToggleProps {
     /** Optional custom style for the toggle button. */
@@ -18,17 +19,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ style }) => {
     const styles = useMemo(
         () =>
             StyleSheet.create({
-                chip: {
-                    width: 36,
-                    height: 36,
-                    borderRadius: 8,
-                    overflow: "hidden",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: colors.surfaceRaised,
-                    borderWidth: 1,
-                    borderColor: colors.borderHair,
-                },
+                chip: iconChipStyle(colors),
             }),
         [colors]
     )

@@ -396,6 +396,190 @@ class TrainingEvent(private val game: Game, private val campaign: Campaign) {
     // //////////////////////////////////////////////////////////////////////////////////////////////////
 
     /**
+     * Scores each option of a normal training event by weighting its reward lines (energy, mood, bond, hints, statuses, skills, and prioritized stats).
+     *
+     * @param eventRewards The OCR-read reward text for each event option.
+     * @param regex The letter-stripping regex used to normalize each reward line before parsing numbers.
+     * @return A mutable list of per-option selection weights; the highest-weighted index is the best choice.
+     */
+    private fun computeEventSelectionWeights(eventRewards: List<String>, regex: Regex): MutableList<Int> {
+        // Initialize the List for normal event processing.
+        val selectionWeight = List(eventRewards.size) { 0 }.toMutableList()
+
+        // Sum up the stat gains with additional weight applied to stats that are prioritized.
+        eventRewards.forEachIndexed { rewardIndex, reward ->
+            val formattedReward: List<String> = reward.split("\n")
+
+            formattedReward.forEach { line ->
+                val formattedLine: String =
+                    regex
+                        .replace(line, "")
+                        .replace("(", "")
+                        .replace(")", "")
+                        .trim()
+                        .lowercase()
+
+                // Skip empty strings and divider lines (lines that are all dashes or start with 5 dashes).
+                if (line.trim().isEmpty() || line.trim().length >= 5 && line.trim().substring(0, 5).all { it == '-' }) {
+                    return@forEach
+                }
+
+                var priorityStatCheck = false
+                if (line.lowercase().contains("can start dating")) {
+                    selectionWeight[rewardIndex] += 1000
+                } else if (line.lowercase().contains("event chain ended")) {
+                    selectionWeight[rewardIndex] += -300
+                } else if (line.lowercase().contains("(random)")) {
+                    selectionWeight[rewardIndex] += -10
+                } else if (line.lowercase().contains("randomly")) {
+                    selectionWeight[rewardIndex] += 50
+                } else if (line.lowercase().contains("energy")) {
+                    val finalEnergyValue =
+                        try {
+                            val energyValue =
+                                if (formattedLine.contains("/")) {
+                                    val splits = formattedLine.split("/")
+                                    var sum = 0
+                                    for (split in splits) {
+                                        sum +=
+                                            try {
+                                                split.trim().toInt()
+                                            } catch (_: NumberFormatException) {
+                                                20
+                                            }
+                                    }
+                                    sum
+                                } else {
+                                    formattedLine.toInt()
+                                }
+
+                            if (enablePrioritizeEnergyOptions) {
+                                energyValue * 100
+                            } else {
+                                val energyMultiplier =
+                                    when {
+                                        campaign.trainee.energy < 30 -> 4
+                                        campaign.trainee.energy < 50 -> 3
+                                        campaign.trainee.energy < 70 -> 2
+                                        campaign.trainee.energy >= 90 -> 0
+                                        else -> 1
+                                    }
+                                energyValue * energyMultiplier
+                            }
+                        } catch (_: NumberFormatException) {
+                            20
+                        }
+                    selectionWeight[rewardIndex] += finalEnergyValue
+                } else if (line.lowercase().contains("mood")) {
+                    val moodMultiplier =
+                        when (campaign.trainee.mood) {
+                            Mood.AWFUL -> 150
+                            Mood.BAD -> 120
+                            Mood.NORMAL -> 100
+                            Mood.GOOD -> 80
+                            Mood.GREAT -> 0
+                        }
+                    val moodWeight = if (formattedLine.contains("-")) -150 else moodMultiplier
+                    selectionWeight[rewardIndex] += moodWeight
+                } else if (line.lowercase().contains("bond")) {
+                    val bondWeight = if (formattedLine.contains("-")) -20 else 20
+                    selectionWeight[rewardIndex] += bondWeight
+                } else if (line.lowercase().contains("hint")) {
+                    selectionWeight[rewardIndex] += 25
+                } else if (PositiveStatus.names.any { status -> line.contains(status) }) {
+                    selectionWeight[rewardIndex] += 25
+                } else if (NegativeStatus.names.any { status -> line.contains(status) }) {
+                    selectionWeight[rewardIndex] += -25
+                } else if (line.lowercase().contains("skill")) {
+                    val finalSkillPoints =
+                        if (formattedLine.contains("/")) {
+                            val splits = formattedLine.split("/")
+                            var sum = 0
+                            for (split in splits) {
+                                sum +=
+                                    try {
+                                        split.trim().toInt()
+                                    } catch (_: NumberFormatException) {
+                                        10
+                                    }
+                            }
+                            sum
+                        } else {
+                            formattedLine.toInt()
+                        }
+                    selectionWeight[rewardIndex] += finalSkillPoints
+                } else {
+                    // Apply inflated weights to the prioritized stats based on their order.
+                    campaign.training.eventChoiceStatPriority.forEachIndexed { index, stat ->
+                        if (line.lowercase().contains(stat.name.lowercase())) {
+                            // Calculate weight bonus based on position (higher priority = higher bonus).
+                            val priorityBonus =
+                                when (index) {
+                                    0 -> 50
+                                    1 -> 40
+                                    2 -> 30
+                                    3 -> 20
+                                    else -> 10
+                                }
+
+                            val finalStatValue =
+                                try {
+                                    priorityStatCheck = true
+                                    if (formattedLine.contains("/")) {
+                                        val splits = formattedLine.split("/")
+                                        var sum = 0
+                                        for (split in splits) {
+                                            sum +=
+                                                try {
+                                                    split.trim().toInt()
+                                                } catch (_: NumberFormatException) {
+                                                    10
+                                                }
+                                        }
+                                        sum + priorityBonus
+                                    } else {
+                                        formattedLine.toInt() + priorityBonus
+                                    }
+                                } catch (_: NumberFormatException) {
+                                    priorityStatCheck = false
+                                    10
+                                }
+                            selectionWeight[rewardIndex] += finalStatValue
+                        }
+                    }
+
+                    // Apply normal weights to the rest of the stats.
+                    if (!priorityStatCheck) {
+                        val finalStatValue =
+                            try {
+                                if (formattedLine.contains("/")) {
+                                    val splits = formattedLine.split("/")
+                                    var sum = 0
+                                    for (split in splits) {
+                                        sum +=
+                                            try {
+                                                split.trim().toInt()
+                                            } catch (_: NumberFormatException) {
+                                                10
+                                            }
+                                    }
+                                    sum
+                                } else {
+                                    formattedLine.toInt()
+                                }
+                            } catch (_: NumberFormatException) {
+                                10
+                            }
+                        selectionWeight[rewardIndex] += finalStatValue
+                    }
+                }
+            }
+        }
+
+        return selectionWeight
+    }
+
+    /**
      * Handle the active Training Event. By default, it will select the first option.
      *
      * This method performs OCR to identify the event and its associated rewards. It then evaluates the options based on user preferences and character specific overrides to select the best possible
@@ -517,178 +701,7 @@ class TrainingEvent(private val game: Game, private val campaign: Campaign) {
                     MessageLog.v(TAG, "[TRAINING_EVENT] Scenario event override applied.")
                     printEventSummary(eventTitle, characterOrSupportName, eventRewards, null, optionSelected, confidence)
                 } else {
-                    // Initialize the List for normal event processing.
-                    val selectionWeight = List(eventRewards.size) { 0 }.toMutableList()
-
-                    // Sum up the stat gains with additional weight applied to stats that are prioritized.
-                    eventRewards.forEachIndexed { rewardIndex, reward ->
-                        val formattedReward: List<String> = reward.split("\n")
-
-                        formattedReward.forEach { line ->
-                            val formattedLine: String =
-                                regex
-                                    .replace(line, "")
-                                    .replace("(", "")
-                                    .replace(")", "")
-                                    .trim()
-                                    .lowercase()
-
-                            // Skip empty strings and divider lines (lines that are all dashes or start with 5 dashes).
-                            if (line.trim().isEmpty() || line.trim().length >= 5 && line.trim().substring(0, 5).all { it == '-' }) {
-                                return@forEach
-                            }
-
-                            var priorityStatCheck = false
-                            if (line.lowercase().contains("can start dating")) {
-                                selectionWeight[rewardIndex] += 1000
-                            } else if (line.lowercase().contains("event chain ended")) {
-                                selectionWeight[rewardIndex] += -300
-                            } else if (line.lowercase().contains("(random)")) {
-                                selectionWeight[rewardIndex] += -10
-                            } else if (line.lowercase().contains("randomly")) {
-                                selectionWeight[rewardIndex] += 50
-                            } else if (line.lowercase().contains("energy")) {
-                                val finalEnergyValue =
-                                    try {
-                                        val energyValue =
-                                            if (formattedLine.contains("/")) {
-                                                val splits = formattedLine.split("/")
-                                                var sum = 0
-                                                for (split in splits) {
-                                                    sum +=
-                                                        try {
-                                                            split.trim().toInt()
-                                                        } catch (_: NumberFormatException) {
-                                                            20
-                                                        }
-                                                }
-                                                sum
-                                            } else {
-                                                formattedLine.toInt()
-                                            }
-
-                                        if (enablePrioritizeEnergyOptions) {
-                                            energyValue * 100
-                                        } else {
-                                            val energyMultiplier =
-                                                when {
-                                                    campaign.trainee.energy < 30 -> 4
-                                                    campaign.trainee.energy < 50 -> 3
-                                                    campaign.trainee.energy < 70 -> 2
-                                                    campaign.trainee.energy >= 90 -> 0
-                                                    else -> 1
-                                                }
-                                            energyValue * energyMultiplier
-                                        }
-                                    } catch (_: NumberFormatException) {
-                                        20
-                                    }
-                                selectionWeight[rewardIndex] += finalEnergyValue
-                            } else if (line.lowercase().contains("mood")) {
-                                val moodMultiplier =
-                                    when (campaign.trainee.mood) {
-                                        Mood.AWFUL -> 150
-                                        Mood.BAD -> 120
-                                        Mood.NORMAL -> 100
-                                        Mood.GOOD -> 80
-                                        Mood.GREAT -> 0
-                                    }
-                                val moodWeight = if (formattedLine.contains("-")) -150 else moodMultiplier
-                                selectionWeight[rewardIndex] += moodWeight
-                            } else if (line.lowercase().contains("bond")) {
-                                val bondWeight = if (formattedLine.contains("-")) -20 else 20
-                                selectionWeight[rewardIndex] += bondWeight
-                            } else if (line.lowercase().contains("hint")) {
-                                selectionWeight[rewardIndex] += 25
-                            } else if (PositiveStatus.names.any { status -> line.contains(status) }) {
-                                selectionWeight[rewardIndex] += 25
-                            } else if (NegativeStatus.names.any { status -> line.contains(status) }) {
-                                selectionWeight[rewardIndex] += -25
-                            } else if (line.lowercase().contains("skill")) {
-                                val finalSkillPoints =
-                                    if (formattedLine.contains("/")) {
-                                        val splits = formattedLine.split("/")
-                                        var sum = 0
-                                        for (split in splits) {
-                                            sum +=
-                                                try {
-                                                    split.trim().toInt()
-                                                } catch (_: NumberFormatException) {
-                                                    10
-                                                }
-                                        }
-                                        sum
-                                    } else {
-                                        formattedLine.toInt()
-                                    }
-                                selectionWeight[rewardIndex] += finalSkillPoints
-                            } else {
-                                // Apply inflated weights to the prioritized stats based on their order.
-                                campaign.training.eventChoiceStatPriority.forEachIndexed { index, stat ->
-                                    if (line.lowercase().contains(stat.name.lowercase())) {
-                                        // Calculate weight bonus based on position (higher priority = higher bonus).
-                                        val priorityBonus =
-                                            when (index) {
-                                                0 -> 50
-                                                1 -> 40
-                                                2 -> 30
-                                                3 -> 20
-                                                else -> 10
-                                            }
-
-                                        val finalStatValue =
-                                            try {
-                                                priorityStatCheck = true
-                                                if (formattedLine.contains("/")) {
-                                                    val splits = formattedLine.split("/")
-                                                    var sum = 0
-                                                    for (split in splits) {
-                                                        sum +=
-                                                            try {
-                                                                split.trim().toInt()
-                                                            } catch (_: NumberFormatException) {
-                                                                10
-                                                            }
-                                                    }
-                                                    sum + priorityBonus
-                                                } else {
-                                                    formattedLine.toInt() + priorityBonus
-                                                }
-                                            } catch (_: NumberFormatException) {
-                                                priorityStatCheck = false
-                                                10
-                                            }
-                                        selectionWeight[rewardIndex] += finalStatValue
-                                    }
-                                }
-
-                                // Apply normal weights to the rest of the stats.
-                                if (!priorityStatCheck) {
-                                    val finalStatValue =
-                                        try {
-                                            if (formattedLine.contains("/")) {
-                                                val splits = formattedLine.split("/")
-                                                var sum = 0
-                                                for (split in splits) {
-                                                    sum +=
-                                                        try {
-                                                            split.trim().toInt()
-                                                        } catch (_: NumberFormatException) {
-                                                            10
-                                                        }
-                                                }
-                                                sum
-                                            } else {
-                                                formattedLine.toInt()
-                                            }
-                                        } catch (_: NumberFormatException) {
-                                            10
-                                        }
-                                    selectionWeight[rewardIndex] += finalStatValue
-                                }
-                            }
-                        }
-                    }
+                    val selectionWeight = computeEventSelectionWeights(eventRewards, regex)
 
                     // Select the best option that aligns with the stat prioritization made in the Training options.
                     val max: Int? = selectionWeight.maxOrNull()

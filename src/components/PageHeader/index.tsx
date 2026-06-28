@@ -7,6 +7,7 @@ import { useSearchRegistry } from "../../context/SearchRegistryContext"
 import { Portal } from "@rn-primitives/portal"
 import { circularPress } from "../../lib/pressSurface"
 import { StickyPageHeader } from "../ui/sticky-page-header"
+import { iconChipStyle } from "../ui/icon-chip"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 interface PageHeaderProps {
@@ -257,17 +258,7 @@ const PageHeader = ({ title, showHomeButton = true, titleComponent, leftComponen
                 },
                 menuButton: circularPress(44),
                 homeButton: circularPress(40),
-                chipButton: {
-                    width: 36,
-                    height: 36,
-                    borderRadius: 8,
-                    overflow: "hidden",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: colors.surfaceRaised,
-                    borderWidth: 1,
-                    borderColor: colors.borderHair,
-                },
+                chipButton: iconChipStyle(colors),
                 title: {
                     flex: 1,
                     flexShrink: 1,

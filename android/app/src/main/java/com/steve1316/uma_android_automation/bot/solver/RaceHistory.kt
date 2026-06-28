@@ -146,6 +146,29 @@ object RaceHistory {
     }
 
     /**
+     * Reads one crop region relative to an anchor point via OCR and trims the result.
+     *
+     * @param game Active Game instance for OCR.
+     * @param anchor The reference point the crop offsets are measured from.
+     * @param offsetX Horizontal offset of the crop from the anchor.
+     * @param offsetY Vertical offset of the crop from the anchor.
+     * @param w Crop width in reference pixels (scaled via relWidth).
+     * @param h Crop height in reference pixels (scaled via relHeight).
+     * @param debugName Identifier used for debug image dumps.
+     * @return The trimmed OCR text for the crop region.
+     */
+    private fun ocrFromAnchor(game: Game, anchor: Point, offsetX: Int, offsetY: Int, w: Int, h: Int, debugName: String): String =
+        game.imageUtils
+            .performOCRFromReference(
+                referencePoint = anchor,
+                offsetX = offsetX,
+                offsetY = offsetY,
+                width = game.imageUtils.relWidth(w),
+                height = game.imageUtils.relHeight(h),
+                debugName = debugName,
+            ).trim()
+
+    /**
      * Parse a single race history row by anchoring on its visible LabelStrategy chip and OCR-ing the crop regions relative to it.
      *
      * @param game Active Game instance for OCR and image search.
@@ -162,38 +185,11 @@ object RaceHistory {
         val anchorY: Int = entry.bbox.y + anchorInEntry.y.toInt()
         val anchor = Point(anchorX.toDouble(), anchorY.toDouble())
 
-        val nameFormatted =
-            game.imageUtils
-                .performOCRFromReference(
-                    referencePoint = anchor,
-                    offsetX = FORMATTED_NAME_OFFSET_X,
-                    offsetY = FORMATTED_NAME_OFFSET_Y,
-                    width = game.imageUtils.relWidth(FORMATTED_NAME_W),
-                    height = game.imageUtils.relHeight(FORMATTED_NAME_H),
-                    debugName = "race_history_formatted_$anchorY",
-                ).trim()
+        val nameFormatted = ocrFromAnchor(game, anchor, FORMATTED_NAME_OFFSET_X, FORMATTED_NAME_OFFSET_Y, FORMATTED_NAME_W, FORMATTED_NAME_H, "race_history_formatted_$anchorY")
 
-        val dateString =
-            game.imageUtils
-                .performOCRFromReference(
-                    referencePoint = anchor,
-                    offsetX = DATE_OFFSET_X,
-                    offsetY = DATE_OFFSET_Y,
-                    width = game.imageUtils.relWidth(DATE_W),
-                    height = game.imageUtils.relHeight(DATE_H),
-                    debugName = "race_history_date_$anchorY",
-                ).trim()
+        val dateString = ocrFromAnchor(game, anchor, DATE_OFFSET_X, DATE_OFFSET_Y, DATE_W, DATE_H, "race_history_date_$anchorY")
 
-        val strategy =
-            game.imageUtils
-                .performOCRFromReference(
-                    referencePoint = anchor,
-                    offsetX = STRATEGY_OFFSET_X,
-                    offsetY = STRATEGY_OFFSET_Y,
-                    width = game.imageUtils.relWidth(STRATEGY_W),
-                    height = game.imageUtils.relHeight(STRATEGY_H),
-                    debugName = "race_history_strategy_$anchorY",
-                ).trim()
+        val strategy = ocrFromAnchor(game, anchor, STRATEGY_OFFSET_X, STRATEGY_OFFSET_Y, STRATEGY_W, STRATEGY_H, "race_history_strategy_$anchorY")
 
         val firstPlaceRegion =
             intArrayOf(

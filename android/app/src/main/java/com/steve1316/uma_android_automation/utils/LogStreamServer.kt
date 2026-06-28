@@ -56,8 +56,8 @@ import java.util.regex.Pattern
  * Embedded WebSocket server that streams MessageLog entries in real-time to any browser on the local network. Built on Ktor Server CIO.
  *
  * When running, the server serves:
- * - HTTP GET "/" → the log viewer HTML page (from assets).
- * - WebSocket "/" → real-time log message streaming.
+ * - HTTP GET "/" -> the log viewer HTML page (from assets).
+ * - WebSocket "/" -> real-time log message streaming.
  */
 object LogStreamServer {
     private const val TAG: String = "${SharedData.loggerTag}LogStreamServer"

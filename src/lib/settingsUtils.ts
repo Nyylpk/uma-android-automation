@@ -106,6 +106,16 @@ export const applyMigrations = (settings: any, rawSettings?: any): { settings: a
     let anyMigrated = false
     let migratedSettings = settings
 
+    /**
+     * Marks that at least one migration ran and logs it under the shared SettingsManager prefix.
+     *
+     * @param message Human-readable description of the migration that was applied.
+     */
+    const markMigrated = (message: string): void => {
+        anyMigrated = true
+        logWithTimestamp(`[SettingsManager] ${message}`)
+    }
+
     // Migration: Move Training Event specific OCR settings to trainingEvent category.
     const ocr = (migratedSettings as any).ocr
     const debug = (migratedSettings as any).debug
@@ -113,29 +123,25 @@ export const applyMigrations = (settings: any, rawSettings?: any): { settings: a
     if (ocr?.ocrConfidence !== undefined) {
         migratedSettings.trainingEvent.ocrConfidence = ocr.ocrConfidence
         delete ocr.ocrConfidence
-        anyMigrated = true
-        logWithTimestamp("[SettingsManager] Migrated ocrConfidence to trainingEvent category.")
+        markMigrated("Migrated ocrConfidence to trainingEvent category.")
     }
 
     if (ocr?.enableAutomaticOCRRetry !== undefined) {
         migratedSettings.trainingEvent.enableAutomaticOCRRetry = ocr.enableAutomaticOCRRetry
         delete ocr.enableAutomaticOCRRetry
-        anyMigrated = true
-        logWithTimestamp("[SettingsManager] Migrated enableAutomaticOCRRetry to trainingEvent category.")
+        markMigrated("Migrated enableAutomaticOCRRetry to trainingEvent category.")
     }
 
     if (debug?.enableHideOCRComparisonResults !== undefined) {
         migratedSettings.trainingEvent.enableHideOCRComparisonResults = debug.enableHideOCRComparisonResults
         delete debug.enableHideOCRComparisonResults
-        anyMigrated = true
-        logWithTimestamp("[SettingsManager] Migrated enableHideOCRComparisonResults to trainingEvent category.")
+        markMigrated("Migrated enableHideOCRComparisonResults to trainingEvent category.")
     }
 
     if (ocr?.ocrThreshold !== undefined) {
         migratedSettings.debug.ocrThreshold = ocr.ocrThreshold
         delete ocr.ocrThreshold
-        anyMigrated = true
-        logWithTimestamp("[SettingsManager] Migrated ocrThreshold to debug category.")
+        markMigrated("Migrated ocrThreshold to debug category.")
     }
 
     // Migration: Move enableMessageIdDisplay and overlayButtonSizeDP from misc to debug category.
@@ -143,14 +149,12 @@ export const applyMigrations = (settings: any, rawSettings?: any): { settings: a
     if (misc?.enableMessageIdDisplay !== undefined) {
         migratedSettings.debug.enableMessageIdDisplay = misc.enableMessageIdDisplay
         delete misc.enableMessageIdDisplay
-        anyMigrated = true
-        logWithTimestamp("[SettingsManager] Migrated enableMessageIdDisplay to debug category.")
+        markMigrated("Migrated enableMessageIdDisplay to debug category.")
     }
     if (misc?.overlayButtonSizeDP !== undefined) {
         migratedSettings.debug.overlayButtonSizeDP = misc.overlayButtonSizeDP
         delete misc.overlayButtonSizeDP
-        anyMigrated = true
-        logWithTimestamp("[SettingsManager] Migrated overlayButtonSizeDP to debug category.")
+        markMigrated("Migrated overlayButtonSizeDP to debug category.")
     }
 
     // After moving all OCR settings, delete the empty ocr object.
@@ -166,13 +170,11 @@ export const applyMigrations = (settings: any, rawSettings?: any): { settings: a
     if (training && rawTraining) {
         if (rawTraining.eventChoiceStatPriority === undefined && Array.isArray(training.statPrioritization)) {
             training.eventChoiceStatPriority = [...training.statPrioritization]
-            anyMigrated = true
-            logWithTimestamp("[SettingsManager] Mirrored statPrioritization into eventChoiceStatPriority for upgrade.")
+            markMigrated("Mirrored statPrioritization into eventChoiceStatPriority for upgrade.")
         }
         if (rawTraining.summerTrainingStatPriority === undefined && Array.isArray(training.statPrioritization)) {
             training.summerTrainingStatPriority = [...training.statPrioritization]
-            anyMigrated = true
-            logWithTimestamp("[SettingsManager] Mirrored statPrioritization into summerTrainingStatPriority for upgrade.")
+            markMigrated("Mirrored statPrioritization into summerTrainingStatPriority for upgrade.")
         }
     }
 
@@ -181,23 +183,20 @@ export const applyMigrations = (settings: any, rawSettings?: any): { settings: a
     if (general?.stopAtDate !== undefined && typeof general.stopAtDate === "string") {
         migratedSettings.general.stopAtDates = [general.stopAtDate]
         delete general.stopAtDate
-        anyMigrated = true
-        logWithTimestamp("[SettingsManager] Migrated stopAtDate to stopAtDates array.")
+        markMigrated("Migrated stopAtDate to stopAtDates array.")
     }
 
     // Migration: Drop the removed enablePopupCheck setting.
     if (general?.enablePopupCheck !== undefined) {
         delete general.enablePopupCheck
-        anyMigrated = true
-        logWithTimestamp("[SettingsManager] Dropped removed setting enablePopupCheck.")
+        markMigrated("Dropped removed setting enablePopupCheck.")
     }
 
     // Migration: Rename the Crane Game setting to Claw Machine.
     if (general?.enableCraneGameAttempt !== undefined) {
         migratedSettings.general.enableClawMachineAttempt = general.enableCraneGameAttempt
         delete general.enableCraneGameAttempt
-        anyMigrated = true
-        logWithTimestamp("[SettingsManager] Migrated enableCraneGameAttempt to enableClawMachineAttempt.")
+        markMigrated("Migrated enableCraneGameAttempt to enableClawMachineAttempt.")
     }
 
     // Migration: Rename Trackblazer Charm and Item Floor settings to behavior-first names.
@@ -209,14 +208,12 @@ export const applyMigrations = (settings: any, rawSettings?: any): { settings: a
         if (rawScenarioOverrides.trackblazerMinStatGainForCharm !== undefined) {
             scenarioOverrides.trackblazerSkipRiskyCharmTrainingBelowGain = rawScenarioOverrides.trackblazerMinStatGainForCharm
             delete scenarioOverrides.trackblazerMinStatGainForCharm
-            anyMigrated = true
-            logWithTimestamp("[SettingsManager] Migrated trackblazerMinStatGainForCharm to trackblazerSkipRiskyCharmTrainingBelowGain.")
+            markMigrated("Migrated trackblazerMinStatGainForCharm to trackblazerSkipRiskyCharmTrainingBelowGain.")
         }
         if (rawScenarioOverrides.trackblazerLowMainStatGainItemFloor !== undefined) {
             scenarioOverrides.trackblazerSkipBadMoodItemsBelowGain = rawScenarioOverrides.trackblazerLowMainStatGainItemFloor
             delete scenarioOverrides.trackblazerLowMainStatGainItemFloor
-            anyMigrated = true
-            logWithTimestamp("[SettingsManager] Migrated trackblazerLowMainStatGainItemFloor to trackblazerSkipBadMoodItemsBelowGain.")
+            markMigrated("Migrated trackblazerLowMainStatGainItemFloor to trackblazerSkipBadMoodItemsBelowGain.")
         }
     }
 

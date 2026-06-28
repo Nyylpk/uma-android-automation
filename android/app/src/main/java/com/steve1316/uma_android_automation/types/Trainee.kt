@@ -713,6 +713,60 @@ class Trainee {
     }
 
     /**
+     * Applies one OCR-read stat value through the consistency-verification guard shared by the parallel and sequential update paths.
+     *
+     * @param statName The stat being updated.
+     * @param newValue The newly OCR-read value for the stat.
+     * @param viaSequential True when called from the sequential fallback, which annotates the log messages accordingly.
+     */
+    private fun applyStatUpdate(statName: StatName, newValue: Int, viaSequential: Boolean) {
+        val via = if (viaSequential) " via sequential processing" else ""
+
+        val oldValue = getStat(statName)
+        val diff = abs(newValue - oldValue)
+
+        // Reject updates that vary too wildly unless the previous value was unset (<= 0).
+        if (oldValue <= 0 || diff < 150) {
+            stats.setStat(statName, newValue)
+            bHasUpdatedStats = true
+
+            // Reset mismatch tracking for this stat.
+            mismatchCounts[statName] = 0
+            lastMismatchedValues[statName] = -1
+        } else {
+            // Start or continue a verification count if the OCR result is consistent but different.
+            val lastMismatchedValue = lastMismatchedValues[statName] ?: -1
+            val mismatchDiff = abs(newValue - lastMismatchedValue)
+            val currentCount = mismatchCounts[statName] ?: 0
+
+            if (mismatchDiff < 50) {
+                val newCount = currentCount + 1
+                mismatchCounts[statName] = newCount
+
+                // If the "incorrect" value is detected multiple times, assume the previous
+                // recorded value was the actual misread and update to the new one.
+                if (newCount >= 2) {
+                    MessageLog.d(TAG, "[DEBUG] updateStats:: New $statName stat value has been consistent for $newCount updates$via. Trusting the new value: $newValue (was $oldValue)")
+                    stats.setStat(statName, newValue)
+                    bHasUpdatedStats = true
+                    mismatchCounts[statName] = 0
+                    lastMismatchedValues[statName] = -1
+                } else {
+                    MessageLog.w(
+                        TAG,
+                        "[WARN] updateStats:: New $statName stat value has changed too much since last update (old=$oldValue, new=$newValue)$via. Consecutive mismatch count: $newCount",
+                    )
+                }
+            } else {
+                // The mismatch itself is inconsistent, so reset the counter.
+                mismatchCounts[statName] = 1
+                lastMismatchedValues[statName] = newValue
+                MessageLog.w(TAG, "[WARN] updateStats:: New $statName stat value has changed too much since last update (old=$oldValue, new=$newValue)$via. Resetting mismatch count.")
+            }
+        }
+    }
+
+    /**
      * Updates the trainee's stats by performing OCR on the screen.
      *
      * To prevent "jumping" to incorrect values due to OCR misreads, this method implements a verification process:
@@ -762,48 +816,7 @@ class Trainee {
             // Update stats with thread-safe results.
             val statMapping = threadSafeResults.toMap()
             for ((statName, newValue) in statMapping) {
-                val oldValue = getStat(statName)
-                val diff = abs(newValue - oldValue)
-
-                // Reject updates that vary too wildly unless the previous value was unset (<= 0).
-                if (oldValue <= 0 || diff < 150) {
-                    stats.setStat(statName, newValue)
-                    bHasUpdatedStats = true
-
-                    // Reset mismatch tracking for this stat.
-                    mismatchCounts[statName] = 0
-                    lastMismatchedValues[statName] = -1
-                } else {
-                    // Start or continue a verification count if the OCR result is consistent but different.
-                    val lastMismatchedValue = lastMismatchedValues[statName] ?: -1
-                    val mismatchDiff = abs(newValue - lastMismatchedValue)
-                    val currentCount = mismatchCounts[statName] ?: 0
-
-                    if (mismatchDiff < 50) {
-                        val newCount = currentCount + 1
-                        mismatchCounts[statName] = newCount
-
-                        // If the "incorrect" value is detected multiple times, assume the previous
-                        // recorded value was the actual misread and update to the new one.
-                        if (newCount >= 2) {
-                            MessageLog.d(TAG, "[DEBUG] updateStats:: New $statName stat value has been consistent for $newCount updates. Trusting the new value: $newValue (was $oldValue)")
-                            stats.setStat(statName, newValue)
-                            bHasUpdatedStats = true
-                            mismatchCounts[statName] = 0
-                            lastMismatchedValues[statName] = -1
-                        } else {
-                            MessageLog.w(
-                                TAG,
-                                "[WARN] updateStats:: New $statName stat value has changed too much since last update (old=$oldValue, new=$newValue). Consecutive mismatch count: $newCount",
-                            )
-                        }
-                    } else {
-                        // The mismatch itself is inconsistent, so reset the counter.
-                        mismatchCounts[statName] = 1
-                        lastMismatchedValues[statName] = newValue
-                        MessageLog.w(TAG, "[WARN] updateStats:: New $statName stat value has changed too much since last update (old=$oldValue, new=$newValue). Resetting mismatch count.")
-                    }
-                }
+                applyStatUpdate(statName, newValue, viaSequential = false)
             }
         } else {
             // Sequential processing (fallback).
@@ -815,48 +828,7 @@ class Trainee {
                 )
 
             for ((statName, newValue) in statMapping) {
-                val oldValue = getStat(statName)
-                val diff = abs(newValue - oldValue)
-
-                if (oldValue <= 0 || diff < 150) {
-                    stats.setStat(statName, newValue)
-                    bHasUpdatedStats = true
-
-                    mismatchCounts[statName] = 0
-                    lastMismatchedValues[statName] = -1
-                } else {
-                    val lastMismatchedValue = lastMismatchedValues[statName] ?: -1
-                    val mismatchDiff = abs(newValue - lastMismatchedValue)
-                    val currentCount = mismatchCounts[statName] ?: 0
-
-                    if (mismatchDiff < 50) {
-                        val newCount = currentCount + 1
-                        mismatchCounts[statName] = newCount
-
-                        if (newCount >= 2) {
-                            MessageLog.d(
-                                TAG,
-                                "[DEBUG] updateStats:: New $statName stat value has been consistent for $newCount updates via sequential processing. Trusting the new value: $newValue (was $oldValue)",
-                            )
-                            stats.setStat(statName, newValue)
-                            bHasUpdatedStats = true
-                            mismatchCounts[statName] = 0
-                            lastMismatchedValues[statName] = -1
-                        } else {
-                            MessageLog.w(
-                                TAG,
-                                "[WARN] updateStats:: New $statName stat value has changed too much since last update (old=$oldValue, new=$newValue) via sequential processing. Consecutive mismatch count: $newCount",
-                            )
-                        }
-                    } else {
-                        mismatchCounts[statName] = 1
-                        lastMismatchedValues[statName] = newValue
-                        MessageLog.w(
-                            TAG,
-                            "[WARN] updateStats:: New $statName stat value has changed too much since last update (old=$oldValue, new=$newValue) via sequential processing. Resetting mismatch count.",
-                        )
-                    }
-                }
+                applyStatUpdate(statName, newValue, viaSequential = true)
             }
         }
     }

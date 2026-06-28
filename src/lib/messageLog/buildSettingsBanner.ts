@@ -2,18 +2,29 @@ import { Settings } from "../../context/BotStateContext"
 import { SCORING_CONSTANTS_CATALOG } from "../training/scoringConstantsCatalog"
 
 /**
+ * Parse `raw` as JSON, returning `fallback` (and adopting its type) when `raw` is empty or malformed.
+ *
+ * @param raw Raw JSON string from a settings field.
+ * @param fallback Value returned on empty input or parse failure. Also fixes the return type.
+ * @returns The parsed value, or `fallback`.
+ */
+const safeJsonParse = <T>(raw: string, fallback: T): T => {
+    try {
+        return JSON.parse(raw || JSON.stringify(fallback)) as T
+    } catch {
+        return fallback
+    }
+}
+
+/**
  * Length of `json` parsed as either a JSON array or object. Returns 0 on parse failure or empty input.
  *
  * @param json Raw JSON string from a Smart Race Solver settings field.
  * @returns Number of array entries or object keys, or 0 if `json` is empty or malformed.
  */
 const safeJsonLength = (json: string): number => {
-    try {
-        const parsed = JSON.parse(json || "[]")
-        return Array.isArray(parsed) ? parsed.length : Object.keys(parsed).length
-    } catch {
-        return 0
-    }
+    const parsed = safeJsonParse<unknown[] | Record<string, unknown>>(json, [])
+    return Array.isArray(parsed) ? parsed.length : Object.keys(parsed).length
 }
 
 const csvCount = (csv: string): number => (csv ? csv.split(",").filter((s) => s.trim() !== "").length : 0)
@@ -48,6 +59,19 @@ const formatExcludedCategories = (plan: { excludeGreenSkills: boolean; excludeRe
 }
 
 /**
+ * Render an override-count summary line: "No X" when empty, otherwise "N X applied".
+ *
+ * @param overrides The override map whose key count is summarized.
+ * @param emptyLabel Phrase shown after "No " when there are no overrides.
+ * @param appliedNoun Noun phrase shown between the count and " applied".
+ * @returns The summary string for one override category.
+ */
+const formatOverrideCount = (overrides: Record<string, unknown>, emptyLabel: string, appliedNoun: string): string => {
+    const count = Object.keys(overrides).length
+    return count === 0 ? `No ${emptyLabel}` : `${count} ${appliedNoun} applied`
+}
+
+/**
  * Build the welcome / startup banner that summarizes the current bot configuration. Pure function of the
  * settings snapshot. The output is rendered at the top of the in-app message log and persisted to SQLite
  * so the Kotlin runtime (`SettingsHelper.getStringSetting`) can read the same string the user sees.
@@ -66,47 +90,19 @@ export function buildSettingsBanner(settings: Settings): string {
     const smartRaceSolverTargetCount = safeJsonLength(settings.racing.smartRaceSolverTargetEpithets)
     const smartRaceSolverForcedCount = safeJsonLength(settings.racing.smartRaceSolverForcedEpithets)
     const smartRaceSolverLockCount = safeJsonLength(settings.racing.smartRaceSolverManualLocks)
-    const smartRaceSolverWeightsObj = (() => {
-        try {
-            return JSON.parse(settings.racing.smartRaceSolverWeights || "{}") as Record<string, number | string | boolean>
-        } catch {
-            return {} as Record<string, number | string | boolean>
-        }
-    })()
+    const smartRaceSolverWeightsObj = safeJsonParse<Record<string, number | string | boolean>>(settings.racing.smartRaceSolverWeights, {})
     const smartRaceSolverFanWeight = typeof smartRaceSolverWeightsObj.fanWeight === "number" ? smartRaceSolverWeightsObj.fanWeight : 0
     const smartRaceSolverOptimizeMode = smartRaceSolverFanWeight > 0 ? "Fans + Epitaphs" : "Stat Epitaphs"
-    const smartRaceSolverAptitudesObj = (() => {
-        try {
-            return JSON.parse(settings.racing.smartRaceSolverAptitudes || "{}") as Record<string, string>
-        } catch {
-            return {} as Record<string, string>
-        }
-    })()
+    const smartRaceSolverAptitudesObj = safeJsonParse<Record<string, string>>(settings.racing.smartRaceSolverAptitudes, {})
 
     return `🏁 Campaign Selected: ${settings.general.scenario !== "" ? `${settings.general.scenario}` : "Please select one in the Select Campaign option"}
 👤 Profile Selected: ${settings.misc.currentProfileName ? `${settings.misc.currentProfileName}` : "Default Profile"}
 
 ---------- Training Event Options ----------
-🎭 Special Event Overrides: ${
-        Object.keys(settings.trainingEvent.specialEventOverrides).length === 0
-            ? "No Special Event Overrides"
-            : `${Object.keys(settings.trainingEvent.specialEventOverrides).length} Special Event Overrides applied`
-    }
-👤 Character Event Overrides: ${
-        Object.keys(settings.trainingEvent.characterEventOverrides).length === 0
-            ? "No Character Event Overrides"
-            : `${Object.keys(settings.trainingEvent.characterEventOverrides).length} Character Event Override(s) applied`
-    }
-💪 Support Event Overrides: ${
-        Object.keys(settings.trainingEvent.supportEventOverrides).length === 0
-            ? "No Support Event Overrides"
-            : `${Object.keys(settings.trainingEvent.supportEventOverrides).length} Support Event Override(s) applied`
-    }
-🎭 Scenario Event Overrides: ${
-        Object.keys(settings.trainingEvent.scenarioEventOverrides).length === 0
-            ? "No Scenario Event Overrides"
-            : `${Object.keys(settings.trainingEvent.scenarioEventOverrides).length} Scenario Event Override(s) applied`
-    }
+🎭 Special Event Overrides: ${formatOverrideCount(settings.trainingEvent.specialEventOverrides, "Special Event Overrides", "Special Event Overrides")}
+👤 Character Event Overrides: ${formatOverrideCount(settings.trainingEvent.characterEventOverrides, "Character Event Overrides", "Character Event Override(s)")}
+💪 Support Event Overrides: ${formatOverrideCount(settings.trainingEvent.supportEventOverrides, "Support Event Overrides", "Support Event Override(s)")}
+🎭 Scenario Event Overrides: ${formatOverrideCount(settings.trainingEvent.scenarioEventOverrides, "Scenario Event Overrides", "Scenario Event Override(s)")}
 🔋 Prioritize Energy Options: ${settings.trainingEvent.enablePrioritizeEnergyOptions ? "✅" : "❌"}
 🔍 Enable Automatic OCR retry: ${settings.trainingEvent.enableAutomaticOCRRetry ? "✅" : "❌"}
 🔍 Minimum OCR Confidence: ${settings.trainingEvent.ocrConfidence}

@@ -9,12 +9,10 @@ import CustomSlider from "../../components/CustomSlider"
 import CustomButton from "../../components/CustomButton"
 import PageHeader from "../../components/PageHeader"
 import { Input } from "../../components/ui/input"
-import { Row } from "../../components/ui/row"
-import { Switch } from "../../components/ui/switch"
 import { SheetModal } from "../../components/ui/sheet-modal"
 import { ModalRadioRow } from "../../components/ui/modal-list"
 import { useModalShellStyles } from "../../components/ui/modal-shell-styles"
-import SearchableItem from "../../components/SearchableItem"
+import ToggleSetting from "../../components/ToggleSetting"
 import { CircleCheckBig, Trash2 } from "lucide-react-native"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
 import trackblazerIcons from "./icons"
@@ -500,22 +498,7 @@ const ScenarioOverridesSettings = () => {
                                         />
                                     </View>
 
-                                    <SearchableItem
-                                        id="trackblazer-enable-irregular-training"
-                                        title="Enable Irregular Training"
-                                        description="When enabled, the bot will occasionally check for highly profitable training sessions before opting for extra races."
-                                    >
-                                        <Row
-                                            title="Enable Irregular Training"
-                                            description="When enabled, the bot will occasionally check for highly profitable training sessions before opting for extra races."
-                                            right={
-                                                <Switch
-                                                    checked={scenarioOverrides.trackblazerEnableIrregularTraining}
-                                                    onCheckedChange={(checked) => updateOverrideSetting("trackblazerEnableIrregularTraining", checked)}
-                                                />
-                                            }
-                                        />
-                                    </SearchableItem>
+                                    <ToggleSetting id="trackblazer-enable-irregular-training" title="Enable Irregular Training" description="When enabled, the bot will occasionally check for highly profitable training sessions before opting for extra races." checked={scenarioOverrides.trackblazerEnableIrregularTraining} onCheckedChange={(checked) => updateOverrideSetting("trackblazerEnableIrregularTraining", checked)} />
 
                                     {scenarioOverrides.trackblazerEnableIrregularTraining && (
                                         <View style={{ padding: SPACING.md }}>
@@ -539,22 +522,7 @@ const ScenarioOverridesSettings = () => {
                                         </View>
                                     )}
 
-                                    <SearchableItem
-                                        id="trackblazer-whistle-forces-training"
-                                        title="Reset Whistle Forces Training"
-                                        description="Whether or not using a Reset Whistle means it can ignore the failure chance thresholds in the Training Settings page. If enabled, the bot will pick the best available training after usage even if it's risky."
-                                    >
-                                        <Row
-                                            title="Reset Whistle Forces Training"
-                                            description="Whether or not using a Reset Whistle means it can ignore the failure chance thresholds in the Training Settings page. If enabled, the bot will pick the best available training after usage even if it's risky."
-                                            right={
-                                                <Switch
-                                                    checked={scenarioOverrides.trackblazerWhistleForcesTraining}
-                                                    onCheckedChange={(checked) => updateOverrideSetting("trackblazerWhistleForcesTraining", checked)}
-                                                />
-                                            }
-                                        />
-                                    </SearchableItem>
+                                    <ToggleSetting id="trackblazer-whistle-forces-training" title="Reset Whistle Forces Training" description="Whether or not using a Reset Whistle means it can ignore the failure chance thresholds in the Training Settings page. If enabled, the bot will pick the best available training after usage even if it's risky." checked={scenarioOverrides.trackblazerWhistleForcesTraining} onCheckedChange={(checked) => updateOverrideSetting("trackblazerWhistleForcesTraining", checked)} />
                                 </Section>
 
                                 {/* Shop & Items */}

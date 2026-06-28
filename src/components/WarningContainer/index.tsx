@@ -1,7 +1,8 @@
-import { useMemo, ReactNode } from "react"
-import { View, Text, StyleSheet, StyleProp, ViewStyle } from "react-native"
-import { useTheme } from "../../context/ThemeContext"
+import { ReactNode } from "react"
+import { StyleProp, ViewStyle } from "react-native"
+import NoticeContainer from "../NoticeContainer"
 
+/** Props for WarningContainer. */
 interface Props {
     /** Custom style for the container view. */
     style?: StyleProp<ViewStyle>
@@ -10,35 +11,15 @@ interface Props {
 }
 
 /**
- * A reusable component for displaying warnings or errors.
- * Renders text with default warning styles if children is a string, otherwise renders children directly.
+ * A reusable component for displaying warnings or errors. Thin wrapper over `NoticeContainer` with the "warning" variant.
  * @param style Optional custom style for the container view.
  * @param children The content to display inside the container.
+ * @returns The warning-styled notice container.
  */
-const WarningContainer = ({ style, children }: Props) => {
-    const { colors } = useTheme()
-
-    const styles = useMemo(
-        () =>
-            StyleSheet.create({
-                container: {
-                    backgroundColor: colors.warningBg,
-                    borderLeftWidth: 4,
-                    borderLeftColor: colors.warningBorder,
-                    padding: 12,
-                    marginTop: 12,
-                    borderRadius: 8,
-                },
-                text: {
-                    fontSize: 14,
-                    color: colors.warningText,
-                    lineHeight: 20,
-                },
-            }),
-        [colors]
-    )
-
-    return <View style={[styles.container, style]}>{typeof children === "string" ? <Text style={styles.text}>{children}</Text> : children}</View>
-}
+const WarningContainer = ({ style, children }: Props) => (
+    <NoticeContainer variant="warning" style={style}>
+        {children}
+    </NoticeContainer>
+)
 
 export default WarningContainer

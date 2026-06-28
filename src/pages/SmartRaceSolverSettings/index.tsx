@@ -45,6 +45,7 @@ import characterPresetsData from "../../data/characterPresets.json"
 import PageHeader from "../../components/PageHeader"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
 import SearchableItem from "../../components/SearchableItem"
+import ToggleSetting from "../../components/ToggleSetting"
 import CustomSlider from "../../components/CustomSlider"
 import { useNavigation, useFocusEffect } from "@react-navigation/native"
 import { AptitudeRow, EpithetChip } from "./components/Helpers"
@@ -1286,19 +1287,7 @@ const SmartRaceSolverSettings = () => {
 
                         {enableSmartRaceSolver && (
                             <Section label="General" collapsible defaultOpen={true}>
-                                <SearchableItem
-                                    id="disable-schedule-replan-on-race-loss"
-                                    condition={enableSmartRaceSolver}
-                                    parentId="enable-smart-race-solver"
-                                    title="Disable Schedule Re-Plan Upon Race Loss"
-                                    description="When a race is lost, keep the original schedule instead of re-planning the remaining turns. The loss is still recorded; epithets that depended on the lost race won't be re-routed."
-                                >
-                                    <Row
-                                        title="Disable Schedule Re-Plan Upon Race Loss"
-                                        description="When a race is lost, keep the original schedule instead of re-planning the remaining turns. The loss is still recorded; epithets that depended on the lost race won't be re-routed."
-                                        right={<Switch checked={disableScheduleReplanOnRaceLoss} onCheckedChange={(checked) => updateRacingSetting("disableScheduleReplanOnRaceLoss", checked)} />}
-                                    />
-                                </SearchableItem>
+                                <ToggleSetting id="disable-schedule-replan-on-race-loss" title="Disable Schedule Re-Plan Upon Race Loss" description="When a race is lost, keep the original schedule instead of re-planning the remaining turns. The loss is still recorded; epithets that depended on the lost race won't be re-routed." condition={enableSmartRaceSolver} parentId="enable-smart-race-solver" checked={disableScheduleReplanOnRaceLoss} onCheckedChange={(checked) => updateRacingSetting("disableScheduleReplanOnRaceLoss", checked)} />
 
                                 <View style={{ paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm }}>
                                     <CustomSlider

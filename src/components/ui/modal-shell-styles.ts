@@ -3,7 +3,7 @@ import { StyleSheet } from "react-native"
 import { useTheme } from "../../context/ThemeContext"
 import { TYPE } from "../../lib/type"
 import { SPACING } from "../../lib/spacing"
-import { RADII } from "../../lib/radii"
+import { iconChipStyle } from "./icon-chip"
 
 /**
  * Style helpers shared by every SheetModal-based settings modal in the app. Returns the four canonical
@@ -18,17 +18,7 @@ export const useModalShellStyles = () => {
             StyleSheet.create({
                 modalHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
                 modalTitleMono: { ...TYPE.monoLabel, color: colors.text, fontSize: 13, letterSpacing: 1.5 },
-                modalCloseChip: {
-                    width: 36,
-                    height: 36,
-                    borderRadius: RADII.md,
-                    overflow: "hidden",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: colors.surfaceRaised,
-                    borderWidth: 1,
-                    borderColor: colors.borderHair,
-                },
+                modalCloseChip: iconChipStyle(colors),
                 modalBodyList: { gap: SPACING.xs + 2 },
             }),
         [colors]

@@ -573,6 +573,42 @@ class Trackblazer(game: Game) : Campaign(game) {
         return false
     }
 
+    private data class RaceSuitability(val isSuitable: Boolean, val solverMatched: Boolean, val reasons: List<String>)
+
+    /**
+     * Evaluates whether a detected race passes the Trackblazer grade and consecutive-race filters.
+     * Solver-scheduled races bypass the filters since the solver already weighed those factors when picking the race.
+     *
+     * @param race The detected race to evaluate. Its isRival flag is set from rivalFound as a side effect.
+     * @param rivalFound Whether a rival was detected on this race row.
+     * @param solverPlannedKey The Smart Race Solver's planned race key for this turn, or null when the solver is off.
+     * @param consecutiveRaceCount How many races have been run consecutively, used for the >= 3 grade gate.
+     * @return The suitability verdict, whether the solver matched this race, and the reasons it was rejected.
+     */
+    private fun evaluateRaceSuitability(race: Racing.RaceData, rivalFound: Boolean, solverPlannedKey: String?, consecutiveRaceCount: Int): RaceSuitability {
+        val reasons = mutableListOf<String>()
+        race.isRival = rivalFound
+
+        // Solver-scheduled races bypass the grade and consecutive-race filters: the solver already weighed those factors when picking this race.
+        val solverMatched = solverPlannedKey != null && SmartRaceSolverIntegration.isRaceKeyMatch(race, solverPlannedKey)
+        val isTopGrade = race.grade in listOf(RaceGrade.G1, RaceGrade.G2, RaceGrade.G3)
+        val isSuitable =
+            when {
+                solverMatched -> true
+                date.year == DateYear.JUNIOR && !isTopGrade -> {
+                    reasons.add("Junior Year: Grade ${race.grade} is not G1, G2, or G3")
+                    false
+                }
+                date.year != DateYear.JUNIOR && consecutiveRaceCount >= 3 && !isTopGrade -> {
+                    reasons.add("Consecutive races >= 3: Grade ${race.grade} is not G1, G2, or G3")
+                    false
+                }
+                else -> true
+            }
+
+        return RaceSuitability(isSuitable, solverMatched, reasons)
+    }
+
     /**
      * Searches the race list for a suitable Trackblazer race based on double-star predictions and grade criteria.
      *
@@ -647,31 +683,7 @@ class Trackblazer(game: Game) : Campaign(game) {
                     val matches = racing.lookupRaceInDatabase(date.day, detectedName)
 
                     for (race in matches) {
-                        var isSuitable = false
-                        val reasons = mutableListOf<String>()
-                        race.isRival = rivalFound
-
-                        // Solver-scheduled races bypass the grade and consecutive-race filters: the solver already weighed those factors when picking this race.
-                        val solverMatched = solverPlannedKey != null && SmartRaceSolverIntegration.isRaceKeyMatch(race, solverPlannedKey)
-                        if (solverMatched) {
-                            isSuitable = true
-                        } else if (date.year == DateYear.JUNIOR) {
-                            if (listOf(RaceGrade.G1, RaceGrade.G2, RaceGrade.G3).contains(race.grade)) {
-                                isSuitable = true
-                            } else {
-                                reasons.add("Junior Year: Grade ${race.grade} is not G1, G2, or G3")
-                            }
-                        } else {
-                            if (consecutiveRaceCount >= 3) {
-                                if (listOf(RaceGrade.G1, RaceGrade.G2, RaceGrade.G3).contains(race.grade)) {
-                                    isSuitable = true
-                                } else {
-                                    reasons.add("Consecutive races >= 3: Grade ${race.grade} is not G1, G2, or G3")
-                                }
-                            } else {
-                                isSuitable = true
-                            }
-                        }
+                        val (isSuitable, solverMatched, reasons) = evaluateRaceSuitability(race, rivalFound, solverPlannedKey, consecutiveRaceCount)
 
                         if (isSuitable) {
                             val candidate = Candidate(screenPoint, race, detectedName, rivalFound)
@@ -714,31 +726,7 @@ class Trackblazer(game: Game) : Campaign(game) {
                 val matches = racing.lookupRaceInDatabase(date.day, detectedName)
 
                 for (race in matches) {
-                    var isSuitable = false
-                    val reasons = mutableListOf<String>()
-                    race.isRival = rivalFound
-
-                    // Solver-scheduled races bypass the grade and consecutive-race filters: the solver already weighed those factors when picking this race.
-                    val solverMatched = solverPlannedKey != null && SmartRaceSolverIntegration.isRaceKeyMatch(race, solverPlannedKey)
-                    if (solverMatched) {
-                        isSuitable = true
-                    } else if (date.year == DateYear.JUNIOR) {
-                        if (listOf(RaceGrade.G1, RaceGrade.G2, RaceGrade.G3).contains(race.grade)) {
-                            isSuitable = true
-                        } else {
-                            reasons.add("Junior Year: Grade ${race.grade} is not G1, G2, or G3")
-                        }
-                    } else {
-                        if (consecutiveRaceCount >= 3) {
-                            if (listOf(RaceGrade.G1, RaceGrade.G2, RaceGrade.G3).contains(race.grade)) {
-                                isSuitable = true
-                            } else {
-                                reasons.add("Consecutive races >= 3: Grade ${race.grade} is not G1, G2, or G3")
-                            }
-                        } else {
-                            isSuitable = true
-                        }
-                    }
+                    val (isSuitable, solverMatched) = evaluateRaceSuitability(race, rivalFound, solverPlannedKey, consecutiveRaceCount)
 
                     if (isSuitable) {
                         val candidate = Candidate(location, race, detectedName, rivalFound)
@@ -758,7 +746,7 @@ class Trackblazer(game: Game) : Campaign(game) {
             return null
         }
 
-        // If the Solver's planned race surfaced during the scan, short-circuit straight to it — its on-screen point is still current because the scrollList stopped on that entry.
+        // If the Solver's planned race surfaced during the scan, short-circuit straight to it - its on-screen point is still current because the scrollList stopped on that entry.
         if (solverMatchedCandidate != null) {
             val match = solverMatchedCandidate!!
             sb.appendLine("\nSelected Race: ${match.race.name} (${match.race.grade}) Rival: ${match.isRival} [Smart Race Solver pick]")
@@ -990,7 +978,7 @@ class Trackblazer(game: Game) : Campaign(game) {
             return true
         }
 
-        // Has mood items and energy is low — skip recovery, items will handle mood in useItems().
+        // Has mood items and energy is low - skip recovery, items will handle mood in useItems().
         return false
     }
 
@@ -1840,84 +1828,20 @@ class Trackblazer(game: Game) : Campaign(game) {
     }
 
     /**
-     * Handles the specialized training process for Trackblazer, including item usage.
+     * Attempts a Reset Whistle re-roll when no training was selected and the whistle window is open, re-analyzing and possibly force-picking afterward.
+     *
+     * @param initialSelection The training chosen by the initial analysis pass, or null if none was acceptable.
+     * @param hasCharm Whether a Good-Luck Charm is available this turn, passed through to the post-whistle re-analysis.
+     * @return The training selection after any re-roll - unchanged, newly picked, or null.
      */
-    private fun handleTrackblazerTraining() {
-        MessageLog.i(TAG, "[TRACKBLAZER] Starting specialized Training process.")
+    private fun maybeResetWhistleReroll(initialSelection: StatName?, hasCharm: Boolean): StatName? {
+        var trainingSelected = initialSelection
 
-        // Fast path: Already on the training screen from irregular training evaluation.
-        if (bIsIrregularTraining) {
-            MessageLog.i(TAG, "[TRACKBLAZER] Using existing irregular training analysis (already on Training screen).")
-            val trainingSelected: StatName? = training.recommendTraining(args = mapOf("isIrregularEvaluation" to true, "irregularTrainingMinStatGain" to minIrregularGain))
-            captureRunnerUpsSnapshot()
-            if (trainingSelected != null && training.lastSelectionSource != SelectionSource.ANALYSIS) {
-                MessageLog.i(TAG, "[TRACKBLAZER] On-screen evaluation used fallback (${training.lastSelectionSource}): $trainingSelected.")
-            }
-
-            // Still use training items (megaphones, ankle weights, charms, energy, stat items, etc.)
-            if (date.day >= 13) {
-                useItems(trainee, trainingSelected)
-            }
-
-            if (trainingSelected != null) {
-                val (pickFail, pickGains) = pickedStatDetails(trainingSelected)
-                decisionTracer.recordTrainingSelection(
-                    selected = trainingSelected,
-                    source = training.lastSelectionSource,
-                    reason = "Irregular Training fast-path (already on Training screen from pre-screen evaluation)",
-                    runnerUps = buildTrainingRunnerUps(trainingSelected),
-                    pickedFailureChance = pickFail,
-                    pickedStatGains = pickGains,
-                )
-                training.executeTraining(trainingSelected)
-            } else {
-                MessageLog.w(TAG, "[WARN] handleTrackblazerTraining:: Irregular training unexpectedly became null. Backing out.")
-                decisionTracer.recordTrainingSelection(
-                    selected = null,
-                    source = training.lastSelectionSource,
-                    reason = "Irregular Training fast-path lost its selection (recommendTraining returned null after pre-screen pick); backing out",
-                    runnerUps = buildTrainingRunnerUps(null),
-                )
-                ButtonBack.click(game.imageUtils)
-                game.wait(game.dialogWaitDelay)
-            }
-
-            bIsIrregularTraining = false
-            training.firstTrainingCheck = false
-            return
-        }
-
-        // Enter the Training screen.
-        if (!ButtonTraining.click(game.imageUtils)) {
-            MessageLog.e(TAG, "[ERROR] handleTrackblazerTraining:: Failed to enter Training screen.")
-            return
-        }
-        game.wait(0.5)
-
-        // Initial Training Analysis.
-        val hasCharm = date.day >= 13 && !bUsedCharmToday && (currentInventory["Good-Luck Charm"] ?: 0) > 0
-        training.analyzeTrainings(mapOf("ignoreFailureChance" to hasCharm, "minStatGainForCharm" to minCharmGain))
-        var trainingSelected: StatName? = training.recommendTraining()
-        captureRunnerUpsSnapshot()
-        if (trainingSelected != null && training.lastSelectionSource != SelectionSource.ANALYSIS) {
-            MessageLog.i(TAG, "[TRACKBLAZER] Initial training selection used fallback (${training.lastSelectionSource}): $trainingSelected.")
-        }
-
-        // Finally, perform a consolidated item usage pass after the training is finalized.
-        if (date.day >= 13) {
-            useItems(trainee, trainingSelected)
-        }
-
-        // Reset Whistle Check: Use if recommendations are poor.
-        // We define "poor" as no training being selected or certain other conditions.
-        // Block whistling during irregular training evaluations.
-
-        // Limit automated whistle usage to during summer or near end of senior (Turns 37-40, >60)
         if ((date.day in 37..40 || date.day > 60) && !bUsedWhistleToday && trainingSelected == null && !bIsIrregularTraining && !training.needsEnergyRecovery) {
             val hasWhistle = (currentInventory["Reset Whistle"] ?: 0) > 0
 
             // Whistle viability gate: when mood is below NORMAL, the mood multiplier structurally caps gains.
-            // Reshuffling trainings won't recover from that — so refuse to consume the Whistle if enough
+            // Reshuffling trainings won't recover from that - so refuse to consume the Whistle if enough
             // non-blacklisted trainings already show low main-stat gain. The required count scales with the
             // blacklist size: 0 blacklisted -> 3-of-5, 1 blacklisted -> 2-of-4, 2+ blacklisted -> 1 (clamped).
             val whistleGateBlocks =
@@ -2053,6 +1977,85 @@ class Trackblazer(game: Game) : Campaign(game) {
                 "Outside Whistle window (day=${date.day}, allowed: 37..40 or > 60)",
             )
         }
+
+        return trainingSelected
+    }
+
+    /**
+     * Handles the specialized training process for Trackblazer, including item usage.
+     */
+    private fun handleTrackblazerTraining() {
+        MessageLog.i(TAG, "[TRACKBLAZER] Starting specialized Training process.")
+
+        // Fast path: Already on the training screen from irregular training evaluation.
+        if (bIsIrregularTraining) {
+            MessageLog.i(TAG, "[TRACKBLAZER] Using existing irregular training analysis (already on Training screen).")
+            val trainingSelected: StatName? = training.recommendTraining(args = mapOf("isIrregularEvaluation" to true, "irregularTrainingMinStatGain" to minIrregularGain))
+            captureRunnerUpsSnapshot()
+            if (trainingSelected != null && training.lastSelectionSource != SelectionSource.ANALYSIS) {
+                MessageLog.i(TAG, "[TRACKBLAZER] On-screen evaluation used fallback (${training.lastSelectionSource}): $trainingSelected.")
+            }
+
+            // Still use training items (megaphones, ankle weights, charms, energy, stat items, etc.)
+            if (date.day >= 13) {
+                useItems(trainee, trainingSelected)
+            }
+
+            if (trainingSelected != null) {
+                val (pickFail, pickGains) = pickedStatDetails(trainingSelected)
+                decisionTracer.recordTrainingSelection(
+                    selected = trainingSelected,
+                    source = training.lastSelectionSource,
+                    reason = "Irregular Training fast-path (already on Training screen from pre-screen evaluation)",
+                    runnerUps = buildTrainingRunnerUps(trainingSelected),
+                    pickedFailureChance = pickFail,
+                    pickedStatGains = pickGains,
+                )
+                training.executeTraining(trainingSelected)
+            } else {
+                MessageLog.w(TAG, "[WARN] handleTrackblazerTraining:: Irregular training unexpectedly became null. Backing out.")
+                decisionTracer.recordTrainingSelection(
+                    selected = null,
+                    source = training.lastSelectionSource,
+                    reason = "Irregular Training fast-path lost its selection (recommendTraining returned null after pre-screen pick); backing out",
+                    runnerUps = buildTrainingRunnerUps(null),
+                )
+                ButtonBack.click(game.imageUtils)
+                game.wait(game.dialogWaitDelay)
+            }
+
+            bIsIrregularTraining = false
+            training.firstTrainingCheck = false
+            return
+        }
+
+        // Enter the Training screen.
+        if (!ButtonTraining.click(game.imageUtils)) {
+            MessageLog.e(TAG, "[ERROR] handleTrackblazerTraining:: Failed to enter Training screen.")
+            return
+        }
+        game.wait(0.5)
+
+        // Initial Training Analysis.
+        val hasCharm = date.day >= 13 && !bUsedCharmToday && (currentInventory["Good-Luck Charm"] ?: 0) > 0
+        training.analyzeTrainings(mapOf("ignoreFailureChance" to hasCharm, "minStatGainForCharm" to minCharmGain))
+        var trainingSelected: StatName? = training.recommendTraining()
+        captureRunnerUpsSnapshot()
+        if (trainingSelected != null && training.lastSelectionSource != SelectionSource.ANALYSIS) {
+            MessageLog.i(TAG, "[TRACKBLAZER] Initial training selection used fallback (${training.lastSelectionSource}): $trainingSelected.")
+        }
+
+        // Finally, perform a consolidated item usage pass after the training is finalized.
+        if (date.day >= 13) {
+            useItems(trainee, trainingSelected)
+        }
+
+        // Reset Whistle Check: Use if recommendations are poor.
+        // We define "poor" as no training being selected or certain other conditions.
+        // Block whistling during irregular training evaluations.
+
+        // Limit automated whistle usage to during summer or near end of senior (Turns 37-40, >60)
+        trainingSelected = maybeResetWhistleReroll(trainingSelected, hasCharm)
 
         // Final Training Execution.
         if (trainingSelected != null) {
@@ -2630,7 +2633,7 @@ class Trackblazer(game: Game) : Campaign(game) {
 
         // Determine if a Good-Luck Charm is being used this turn (either already queued or will be queued).
         // If so, skip energy items because the Charm sets failure to 0% regardless of energy, and the energy cost
-        // is subtracted after training — so using energy items would waste them.
+        // is subtracted after training - so using energy items would waste them.
         val charmBeingUsedThisTurn =
             bUsedCharmToday ||
                 (date.day >= 13 && failureChance >= 20 && (nextInventory["Good-Luck Charm"] ?: 0) > 0)
