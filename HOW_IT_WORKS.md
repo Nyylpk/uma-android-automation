@@ -1,6 +1,6 @@
 # How It Works
 
-*Last updated: 2026-05-25*
+*Last updated: 2026-06-27*
 
 A comprehensive guide to the inner workings of the app. This document explains what the bot does at each step of a campaign, how it makes decisions, and how each scenario differs.
 
@@ -20,6 +20,7 @@ A comprehensive guide to the inner workings of the app. This document explains w
 - [12. Smart Race Solver](#12-smart-race-solver)
 - [13. Ask the Docs Chatbot](#13-ask-the-docs-chatbot)
 - [14. Decision Tracer](#14-decision-tracer)
+- [15. Remote Log Viewer & Run Analytics](#15-remote-log-viewer--run-analytics)
 
 ---
 
@@ -31,7 +32,9 @@ The bot is an Android app built with a **React Native** frontend (settings UI, m
 
 **How it interacts:** An `AccessibilityService` performs tap and swipe gestures on the device.
 
-**How it bootstraps:** On first launch the Home page surfaces a unified `PermissionSetupDialog` that walks the user through the screen-overlay, accessibility, battery-optimization, and app-info permissions in one place. A small native bridge exposes those system settings as React Native methods so the dialog can deep-link directly to each toggle instead of expecting the user to find them in the Android settings tree.
+**How it bootstraps:** On first launch the entire app is gated behind a one-time **First-Run Wizard** — a single scrollable page of setup cards — instead of the old Home-screen permission dialog. The wizard is mounted by `useFirstRunGate()`, which reads and writes a `firstRun.completed` flag in SQLite so it only appears once. Card 1 asks where the bot should save its files: the user can pick any folder through the Android **Storage Access Framework (SAF)** picker, or fall back to **App default (internal storage)** (also used automatically on devices that have no document picker). Card 2 appears only when a scan finds files in the old `logs/` and `recordings/` locations and offers to **Move**, **Leave**, or **Delete** them. Card 3 is the **System Checks** list, which walks the user through the Accessibility, Display-over-other-apps (overlay), and Battery-optimization permissions; **Finish** stays disabled until all three are granted (and, for a SAF folder, a write-access probe succeeds).
+
+File storage is brokered by the native `StorageBridgeModule`: logs and screen recordings are written under the chosen SAF tree (in `logs/` and `recordings/` subfolders) or under internal app storage when the fallback is selected. The older `PermissionSetupDialog` still exists on the Home page as an optional on-demand permission re-check, but it no longer drives first-run setup.
 
 **How it decides:** The bot runs a `process()` loop that is called repeatedly by the `Game` class. Each call handles one "tick" — detecting which screen the game is on and taking the appropriate action.
 
@@ -220,6 +223,9 @@ After stat updates, the bot performs several global checks that can stop or paus
 3. **Stop Before Finals:** If `enableStopBeforeFinals` is on and the bot reaches turn 72, it stops so the user can take over for the finals.
 4. **Stop at Date:** If the current date matches any user-configured stop dates, the bot stops.
 
+> [!NOTE]
+> **Skill-plan auto-purchase.** The skill plans referenced above (the skill-point-threshold plan, the pre-Finals plan, and the career-complete plan) auto-buy skills filtered two ways. The **Style** preferences — Running Style, Track Distance, and Track Surface "for Skills" — now strictly restrict which skills the auto-strategy considers, applied consistently across every spending strategy. Separate category-exclusion toggles drop whole groups from the plan: negative, green, red, unique, and the new **Skip Double-O (Circle) Skills** (`excludeDoubleCircleSkills`, default off), which buys only the single-circle version of an upgrade and skips the double-circle one. Skills the user adds to the plan by hand are always bought regardless of these exclusions.
+
 ### 4.3 Scenario Hooks
 
 Each scenario can override these hooks to inject custom logic at specific points in the turn:
@@ -366,6 +372,8 @@ During Finale turns (73–75), if the trainee's energy is too low for optimal tr
 <summary><strong>Skill Hint Prioritization</strong></summary>
 
 When enabled, the bot adds bonus weight to trainings that offer skill hints, making it more likely to choose trainings where support cards are offering learnable skills.
+
+Before committing to a hint, the bot checks that the hinted training is actually safe to take. When it spots a skill-hint icon it maps the icon to the nearest training button to learn which stat it belongs to, navigates to that facility, and reads its failure chance. The hint is only tapped if that failure chance is within the active threshold — or if the check is bypassed because it is a Finals turn or a Good-Luck Charm is active. Otherwise the bot falls back to normal training analysis and picks a safer training instead of tapping the hint blindly.
 </details>
 
 <details>
@@ -459,7 +467,7 @@ Once a race is selected:
 
 1. **Strategy Selection:** The bot selects a running strategy (Front Runner, Stalker, Betweener, or Chaser) based on the trainee's aptitudes. If **per-distance strategies** are enabled in Racing Settings, the bot resolves the strategy separately per distance bucket (Sprint, Mile, Medium, Long) against the currently detected `lastRaceDistance`, overriding the global strategy for that race. For **mandatory races** (which skip the normal race-list selection flow), the bot reads the race distance directly off the Race Prep screen so per-distance strategies still apply on Debut, goal, and Finale turns.
 2. **Skip or Manual:** If the "skip" button is available, the bot skips the race animation. Otherwise, it watches and fast-forwards.
-3. **Retries:** If a race is lost and retries are enabled, the bot can retry the race (free retry available once per campaign if enabled).
+3. **Retries:** If a race is lost and retries are enabled, the bot can retry the race (free retry available once per campaign if enabled). **Mandatory races** (Debut, goal, and Finale races) additionally retry until the trainee places 1st whenever the in-game "Try Again" button is available, so a forced race is re-run for the win rather than accepted at a lower placement.
 4. **Complete Career on Failure:** If a mandatory race is lost and this setting is enabled, the bot continues the campaign anyway rather than stopping.
 
 > [!CAUTION]
@@ -1179,6 +1187,9 @@ When all three hold, [Racing.kt](android/app/src/main/java/com/steve1316/uma_and
 > [!IMPORTANT]
 > **Trackblazer integration.** Trackblazer's `decideNextAction()` consults `peekDecisionForTurn()` *before* the existing flowchart in [Section 11.1](#111-overview-and-flow-differences). When the solver has picked `Race`, the turn defers to the racing flow; when it picks `Train`, the legacy fan-farming heuristic is bypassed so the turn really is a training turn.
 
+> [!NOTE]
+> **Mandatory career races are auto-locked.** For every scenario other than Trackblazer, the solver loads each character's forced career races from [character_objectives.json](src/data/character_objectives.json) and locks them onto their turns via [MandatoryRaces.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/solver/MandatoryRaces.kt). For a choice turn (e.g. Oaks vs. Derby) it picks the option that best fits the run's aptitudes. These locks override any manual lock on the same turn and cannot be edited or removed in the Settings UI — the solver must schedule them, and the rest of the plan is optimized around them.
+
 ### 12.2 Architecture
 
 ```mermaid
@@ -1214,10 +1225,13 @@ Both backends share the scoring function in [ScoringFunctions.kt](android/app/sr
 
 $$\text{Score} = \sum_{\text{race}} v_\text{race} - \sum_{\text{race}} c_\text{race} + \sum_{\text{epithet}} r_\text{epithet} - \text{penalties}$$
 
-where `v_race` is the per-race stat + skill-point reward (uplifted by `raceBonusPct`), `c_race` is the per-race cost expressed as a percentage of a G2 baseline (`raceCostPct`), `r_epithet` is the epithet's reward magnitude scaled by `epithetValue`, and penalties cover the 3rd-consecutive-race penalty (waived on Late-Dec turns 23 / 47 / 71 to match the reference solver) and a summer-racing penalty (turns 37–40 and 61–64).
+where `v_race` is the per-race stat + skill-point reward (uplifted by `raceBonusPct`), `c_race` is the per-race cost expressed as a percentage of a G2 baseline (`raceCostPct`), `r_epithet` is the epithet's reward magnitude scaled by `epithetValue`, and penalties cover the 3rd-consecutive-race penalty (waived on Late-Dec turns 24 / 48 / 72 to match the reference solver) and a summer-racing penalty (turns 37–40 and 61–64).
 
 > [!NOTE]
 > With the default weights — a 50% race-bonus uplift on top of the base reward table and a per-race cost equal to the weighted G2 baseline — G2 / G3 races score zero and only get picked when an epithet, fan tiebreaker, or Late-Dec window pushes them positive. The default schedule is therefore train-heavy and races only when a goal pulls it to.
+
+> [!NOTE]
+> **Hard scheduling caps.** Two optional limits are enforced as hard constraints in both backends (the MILP adds linear constraints; the heuristic prunes the beam). **Maximum Extra Races** (`smartRaceSolverMaxRaces`, default 0 = no limit) caps how many optional races the whole schedule may contain — mandatory career races always run and do not count toward it. **Maximum Consecutive Races** (`smartRaceSolverMaxConsecutiveRaces`, default 3) forbids more than N races in a row across the 72-turn schedule, with the Late-Dec turn windows (24 / 48 / 72) exempt so a year-end chain is not penalized twice.
 
 ### 12.4 Epithets — the goal language
 
@@ -1244,27 +1258,33 @@ The [Smart Race Solver Settings page](src/pages/SmartRaceSolverSettings/) lets t
 
 After every meaningful change the page debounces a `SmartRaceSolverModule.previewSchedule()` call into Kotlin (see [src/lib/solver/preview.ts](src/lib/solver/preview.ts)) and renders the returned `SchedulePreview` onto a 72-cell calendar. Each cell shows the picked race name, grade badge, and epithet progression for that turn; a popover gives the full per-matcher condition labels and pending prerequisites. A floating Recalculate FAB and a stale-preview warning surface when the inputs have changed but the calendar hasn't refreshed yet.
 
+> [!NOTE]
+> **General vs. Aptitudes layout.** The settings page is split into a **General** section (scheduling constraints and toggles — Disable Schedule Re-Plan Upon Race Loss, Maximum Extra Races, Maximum Consecutive Races, Include OP / Pre-OP Races, and Allow Racing During Summer) and an **Aptitudes** section (the six aptitude rows plus the aptitude-threshold selector). The new caps from [Section 12.3](#123-backends--milp-first-beam-search-as-fallback) live in the General section.
+
 ### 12.6 Race-day lifecycle — peek, mark pending, commit
 
 The solver is consulted at three moments per race-day turn:
 
 1. **Peek (pre-decision).** Before deciding to race or train, the bot calls `peekRaceKeyForTurn()` (or `peekDecisionForTurn()` from Trackblazer). The integration object returns the `Decision` from the cached schedule without mutating any state.
 2. **Mark pending (at tap).** Once the bot finds the planned race in the in-game list and taps it, [`SmartRaceSolverIntegration.markPendingRace()`](android/app/src/main/java/com/steve1316/uma_android_automation/bot/solver/SmartRaceSolverIntegration.kt) stores a `pendingRace` snapshot. This race is considered "speculatively won" for downstream peek calls so the rest of the turn can plan against the assumed result.
-3. **Commit (at result).** [Racing.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/Racing.kt) detects the 1st-place screen via [`LabelCongratulations`](android/app/src/main/java/com/steve1316/uma_android_automation/components/LabelCongratulations.kt) and calls `commitPendingRace(won = firstPlace)`. The plan is locked in once at run start (by the post-seed broadcast) and otherwise only changes on a loss. On a win the race is appended to the permanent history and the cached schedule is reused for the broadcast - the future plan does not change, only the past results panel gains the new win. The rest of the schedule was already optimized assuming the trainee would win this race, so re-running the solver would only produce noise. On a loss the race is recorded in `raceLosses`, the matcher's epithet is marked dead, and the next snapshot re-runs the solver so the schedule replans around the dead epithet. Turn-advance broadcasts only refresh the badge - they reuse the cached schedule. Peek calls from `Trackblazer` also read the cached schedule rather than re-solving every main-screen iteration.
+3. **Commit (at result).** [Racing.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/Racing.kt) detects the 1st-place screen via [`LabelCongratulations`](android/app/src/main/java/com/steve1316/uma_android_automation/components/LabelCongratulations.kt) and calls `commitPendingRace(won = firstPlace)`. The plan is locked in once at run start (by the post-seed broadcast) and otherwise only changes on a loss. On a win the race is appended to the permanent history and the cached schedule is reused for the broadcast - the future plan does not change, only the past results panel gains the new win. The rest of the schedule was already optimized assuming the trainee would win this race, so re-running the solver would only produce noise. On a loss the race is recorded in `raceLosses`, the matcher's epithet is marked dead, and the next snapshot re-runs the solver so the schedule replans around the dead epithet. When `disableScheduleReplanOnRaceLoss` (default off) is enabled, the loss is still recorded but the original schedule is kept intact — the remaining turns are not re-planned around the dead epithet. Turn-advance broadcasts only refresh the badge - they reuse the cached schedule. Peek calls from `Trackblazer` also read the cached schedule rather than re-solving every main-screen iteration.
 
 > [!IMPORTANT]
 > The speculative-pending model is what makes the race-list scan in [Trackblazer.findSuitableRace()](#117-race-selection) able to **short-circuit**: once the scan finds a race whose key matches `peekRaceKeyForTurn()`, it stops scrolling and commits to that race instead of finishing the full multi-page sweep.
+
+> [!NOTE]
+> **Same-track disambiguation by fan count.** Two races on the same turn can share an identical on-screen track string (e.g. both read "Tokyo Turf 2400m"). To make sure it taps the race the solver actually planned, the bot also OCRs each row's fan reward and matches it against the planned race's fan count; a row whose fans cannot be read (returns -1) is accepted for backward compatibility.
 
 ### 12.7 Race history — seed, broadcast, calendar
 
 `SmartRaceSolverIntegration` keeps two in-memory lists for the current run:
 
-- `raceHistory` — confirmed wins (or speculatively-pending wins). The solver reads this on every solve so already-won races aren't picked again.
+- `raceHistory` — confirmed wins (or speculatively-pending wins). The solver reads this on every solve so already-won races aren't picked again. Scheduled in-game agenda races (not only solver-picked ones) are now also marked pending so their win or loss is recorded, and each race's running style is captured during the Career → Race History scrape.
 - `raceLosses` — confirmed losses. Not consumed by the solver but surfaced in the Remote Log Viewer so the user can see what was attempted.
 
 Both lists are cleared by `reset()` when a new bot run starts. On startup the bot calls `seedHistoryFromCareerScrape()` to OCR the in-game **Career → Race History** screen so a mid-run restart picks up where the previous session left off (skipped at or before turn 13 since pre-debut has no real history). When that scrape isn't usable, `seedHistoryFromPreview()` falls back to seeding from the Preview schedule's already-completed turns.
 
-After every commit, [LogStreamServer](android/app/src/main/java/com/steve1316/uma_android_automation/log/LogStreamServer.kt) broadcasts a fresh JSON calendar snapshot to the **Remote Log Viewer**. The viewer's Race History tab renders a 72-cell calendar with grade badges, race names, and per-cell tooltips that include the epithet progression, the per-matcher condition labels, and a synthetic Junior Make Debut entry. The whole panel hides itself when `enableSmartRaceSolver` is off.
+After every commit, [LogStreamServer](android/app/src/main/java/com/steve1316/uma_android_automation/utils/LogStreamServer.kt) broadcasts a fresh JSON calendar snapshot to the **Remote Log Viewer**. The viewer's Race History tab renders a 72-cell calendar with grade badges, race names, and per-cell tooltips that include the epithet progression, the per-matcher condition labels, and a synthetic Junior Make Debut entry. The whole panel hides itself when `enableSmartRaceSolver` is off.
 
 ---
 
@@ -1430,3 +1450,38 @@ Each block is bracketed by a header like `============== Turn 25 (CLASSIC EARLY 
 
 > [!TIP]
 > The Decision Report block is greppable — looking for `Decision Report` finds every turn at once, and looking for a specific action like `→ TRAIN` or a specific rejection like `RACE: ` narrows it to the turns where that decision was on the table.
+
+---
+
+## 15. Remote Log Viewer & Run Analytics
+
+The **Remote Log Viewer** is an on-device web dashboard served by [LogStreamServer.kt](android/app/src/main/java/com/steve1316/uma_android_automation/utils/LogStreamServer.kt) over a WebSocket and rendered by [log_viewer.html](android/app/src/main/assets/log_viewer.html). Pointing a browser on the same network at the device opens it. Besides the live log stream it has two data tabs: **Race History** (driven by the Smart Race Solver) and **Run Analytics** (a per-run statistics dashboard).
+
+### 15.1 Race History tab
+
+This tab renders the Smart Race Solver's 72-cell calendar — see [Section 12.7](#127-race-history--seed-broadcast-calendar) for how the data is seeded and broadcast. Two display details were added since:
+
+- **Mandatory career races** ([Section 12.1](#121-when-the-solver-runs)) render in amber with a pin marker so they stand out from solver-chosen races, and their tooltip labels them as forced career races.
+- Each race's **running style** (captured during the Career → Race History scrape) is appended to the per-cell tooltip alongside the track, distance, and fan reward.
+
+The whole panel hides itself when the Smart Race Solver is disabled.
+
+### 15.2 Run Analytics dashboard
+
+The analytics tab is a live, per-run statistics dashboard. A [RunAnalytics.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/RunAnalytics.kt) singleton accumulates the run as it happens:
+
+- **Per-turn records** — turn number and date label, the five stats, energy, mood, fan count, skill points, the action taken that turn, and (on training turns) the trained stat, its stat gains, and the failure chance.
+- **Per-race records** — turn, race name, grade, surface, distance, fans awarded, whether the trainee won, and whether the race was mandatory.
+
+The bot feeds these in from the turn loop ([Campaign.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/Campaign.kt) / [Trackblazer.kt](android/app/src/main/java/com/steve1316/uma_android_automation/bot/campaigns/Trackblazer.kt)) and from the race solver's commit step. After each turn boundary `RunAnalytics` serializes the entire run to a JSON snapshot that `LogStreamServer` broadcasts; the latest snapshot is cached and replayed to any browser that connects mid-run, so a refresh paints the current state immediately.
+
+The dashboard groups roughly twenty charts into four areas:
+
+| Area | Charts |
+|------|--------|
+| **Trainee** | Hero card (name, scenario, date, turn progress, current stats, a "Start fresh" button to discard the saved run), stats radar, stat-growth line, stat-composition area |
+| **Training** | Training-focus distribution, total and cumulative stat gains, skill points over time, failure chance over time and its distribution, energy-vs-failure scatter, gains per turn |
+| **Racing** | Win-rate gauge, races by grade, wins/losses by grade, race-results timeline, races by surface and by distance, fans over time and fans per race |
+| **Per-year & cadence** | Action mix by year, overall action distribution, mood distribution, energy & mood over time |
+
+Every chart has an info button explaining what it shows and a button to export its data as CSV. On a restart the dashboard resumes a matching saved run (same scenario and trainee, same-or-later turn) and keeps the elapsed-runtime timer running rather than starting over.
