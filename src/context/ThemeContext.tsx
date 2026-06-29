@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
 import { useColorScheme } from "react-native"
+import { colorScheme } from "nativewind"
 import { THEME } from "../lib/theme"
 
 type Theme = "light" | "dark"
@@ -49,14 +50,13 @@ interface ThemeProviderProps {
  */
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     const systemColorScheme = useColorScheme()
-    const [theme, setTheme] = useState<Theme>("light")
+    // Seed the theme from the OS scheme once. RN 0.85 added "unspecified" to ColorSchemeName, which we treat as no preference (default to light).
+    const [theme, setTheme] = useState<Theme>(() => (systemColorScheme === "dark" ? "dark" : "light"))
 
-    // Initialize theme based on system preference. RN 0.85 added "unspecified" to ColorSchemeName, which we treat as no preference and leave the default.
+    // Keep NativeWind's color scheme in lockstep with the in-app theme so className surfaces (e.g. bg-popover) match the JS color tokens.
     useEffect(() => {
-        if (systemColorScheme === "light" || systemColorScheme === "dark") {
-            setTheme(systemColorScheme)
-        }
-    }, [systemColorScheme])
+        colorScheme.set(theme)
+    }, [theme])
 
     /**
      * Toggles between light and dark themes.

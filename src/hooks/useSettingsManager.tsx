@@ -133,6 +133,11 @@ export const useSettingsManager = () => {
      * @returns A promise that resolves when the settings are saved.
      */
     const saveSettingsImmediate = useCallback(async (newSettings?: Settings) => {
+        // Skip auto/background saves until the initial load completes.
+        if (!hasLoadedRef.current && !newSettings) {
+            return
+        }
+
         const endTiming = startTiming("settings_manager_save_settings_immediate", "settings")
 
         setIsSaving(true)
@@ -140,6 +145,8 @@ export const useSettingsManager = () => {
         try {
             // Read from the ref to always get the latest settings.
             const localSettings: Settings = newSettings ? newSettings : settingsRef.current
+            // Ensure the DB is open before writing. initialize() is idempotent and awaits any in-flight init.
+            await databaseManager.initialize()
             await databaseManager.saveSettingsBatch(convertSettingsToBatch(localSettings))
             lastSavedSettingsRef.current = localSettings
             endTiming({ status: "success", hasNewSettings: !!newSettings, immediate: true })
