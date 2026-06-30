@@ -221,6 +221,18 @@ export const turnDateLabel = (turnInYear: number): string => {
     return `${half} ${month}`
 }
 
+/**
+ * Full "Year Month Phase" label for an absolute 1-indexed career turn (1-72). Junior is turns 1-24, Classic 25-48, Senior 49-72.
+ * Example: turn 60 returns "Senior Late Jun".
+ *
+ * @param turn The absolute 1-indexed career turn number (1-72).
+ * @returns The "Junior/Classic/Senior Early/Late <Month>" label.
+ */
+export const formatCareerTurn = (turn: number): string => {
+    const yearName = turn <= 24 ? "Junior" : turn <= 48 ? "Classic" : "Senior"
+    return `${yearName} ${turnDateLabel((turn - 1) % 24)}`
+}
+
 const RACE_NAME_ABBREVIATIONS: Record<string, string> = {
     "Hanshin Juvenile Fillies": "Hanshin Juv. F.",
     "Mile Championship": "Mile Champ.",
