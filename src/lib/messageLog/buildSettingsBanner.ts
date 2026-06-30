@@ -1,5 +1,7 @@
 import { Settings } from "../../context/BotStateContext"
 import { SCORING_CONSTANTS_CATALOG } from "../training/scoringConstantsCatalog"
+import { formatCareerTurn } from "../solver/constants"
+import { DATING_SCHEDULE_PRESETS } from "../datingSchedule"
 
 /**
  * Parse `raw` as JSON, returning `fallback` (and adopting its type) when `raw` is empty or malformed.
@@ -237,6 +239,7 @@ ${longTargetsString}${formatAdvancedScoringSection(settings.training)}
 🌀 Enable Swipe-Based Scrolling: ${settings.general.enableSwipeBasedScrolling ? "✅" : "❌"}
 🛑 Stop Before Finals: ${settings.general.enableStopBeforeFinals ? "✅" : "❌"}
 🛑 Stop At Date: ${settings.general.enableStopAtDate ? `✅ (${settings.general.stopAtDates.join(", ")})` : "❌"}
+📅 Dating Schedule: ${settings.general.enableDatingSchedule ? `✅ (${DATING_SCHEDULE_PRESETS[settings.general.datingSchedulePreset]?.label ?? "Custom"} | Recreation: ${settings.general.recreationTurns.map(formatCareerTurn).join(", ") || "none"} | Pure Passion: ${settings.general.purePassionTurn > 0 ? formatCareerTurn(settings.general.purePassionTurn) : "none"} | Outings: ${settings.general.recreationTotalOutings})` : "❌"}
 ⏰ Wait Delay: ${settings.general.waitDelay}s
 ⏰ Dialog Wait Delay: ${settings.general.dialogWaitDelay}s
 

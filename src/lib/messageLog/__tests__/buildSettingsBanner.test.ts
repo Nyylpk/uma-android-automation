@@ -4,7 +4,7 @@ import { buildSettingsBanner } from "../buildSettingsBanner"
 /**
  * Recursive proxy that returns sensible defaults for any property access. Any property reads as `0` when
  * coerced to a number, `""` when coerced to a string, `false` when coerced to boolean, and `[]` / `{}` for
- * the array/object methods this banner builder calls (`length`, `join`, `Object.keys`). Avoids hand-rolling
+ * the array/object methods this banner builder calls (`length`, `join`, `map`, `Object.keys`). Avoids hand-rolling
  * the full `Settings` shape just for a banner regression check.
  *
  * @returns A proxy object usable as a `Settings`-shaped stub.
@@ -14,6 +14,7 @@ const makeStubSettings = (): Settings => {
         get(_target, prop) {
             if (prop === "length") return 0
             if (prop === "join") return () => ""
+            if (prop === "map") return () => []
             if (prop === "split") return () => []
             if (prop === "trim") return () => ""
             if (prop === Symbol.toPrimitive) return () => 0
