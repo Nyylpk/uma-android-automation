@@ -1277,6 +1277,13 @@ class Trackblazer(game: Game) : Campaign(game) {
             return MainScreenAction.TRAIN
         }
 
+        // A pinned recreation outing outranks every action below here - scheduled (in-game agenda) races, Smart Race Solver races, and the low-energy guard.
+        // Only mandatory career-goal races outrank it (deferred to inside shouldDoRecreationToday). Pinned turns never fall in Summer, so this sits just below Summer / Finale training.
+        if (shouldDoRecreationToday()) {
+            decisionTracer.recordActionChoice(MainScreenAction.DATE, "Dating schedule (Trackblazer): pinned recreation turn ${date.day}")
+            return MainScreenAction.DATE
+        }
+
         // Avoid racing and training analysis at low energy with 3+ consecutive races to prevent
         // -30 stat penalty. Energy items were already attempted in onMainScreenEntry().
         // A Good-Luck Charm in inventory is not a justification to enter training here: the
