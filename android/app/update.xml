@@ -1,28 +1,23 @@
 <AppUpdater>
   <update>
-    <latestVersion>5.8.0</latestVersion>
+    <latestVersion>5.8.1</latestVersion>
     <url>https://github.com/steve1316/uma-android-automation/releases</url>
     <releaseNotes>
-v5.8.0 - Changelog
+v5.8.1 - Changelog
+
+> **Note:** No changes have been made to accomodate the patch on 2026-07-01 yet.
 
 New
 ---
-- Add an analytics dashboard to the `Remote Log Viewer` that charts various statistics from the run.
-- Add a `Maximum Extra Races` slider to the `Smart Race Solver` page that caps how many extra races the solver can schedule beyond the mandatory ones.
-- Add a `Maximum Consecutive Races` cap to the `Smart Race Solver` page to control the solver from scheduling too many races in a row.
-- Add an internal storage fallback to the first-run setup so it can proceed when no document picker is available.
+- Add a `Support Card Dating Schedule` that runs support-card recreation outings on a calendar of pinned turns, holding the final date for the `Pure Passion` buff and prioritizing outings over scheduled and `Smart Race Solver` races. New options for this have been added to the `Settings` page.
 
 Adjustments
 ---
-- Update Automation Library version to `2.5.8` to fix a rare concurrency crash with Tesseract OCR.
-- Reorganize the `Smart Race Solver` settings into a `General` section.
-- Make the `Scenario Overrides Settings` sections collapsible.
+- Update game data up to `Heirs to the Throne 2026-06-25`.
 
 Fixes
 ---
-- Fix the `Smart Race Solver` tapping the wrong same-track race by telling them apart by fan count.
-- Fix mandatory races like the Debut Race not being retried whenever possible.
-- Fix `Prioritize Skill Hints` executing trainings without properly checking the failure chance.
+- Possible fix to `Database not initialized` crash.
 
     </releaseNotes>
   </update>
