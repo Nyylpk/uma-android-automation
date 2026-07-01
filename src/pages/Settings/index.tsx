@@ -1,7 +1,7 @@
 import { useMemo, useContext, useEffect, useState, useRef, useCallback } from "react"
 import { SearchPageProvider } from "../../context/SearchPageContext"
 import { BotMetaContext, GeneralMiscContext } from "../../context/BotStateContext"
-import { InteractionManager, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
+import { Dimensions, InteractionManager, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import { Snackbar } from "react-native-paper"
 import { useNavigation } from "@react-navigation/native"
 import { Ionicons } from "@react-native-vector-icons/ionicons"
@@ -12,17 +12,73 @@ import CustomSlider from "../../components/CustomSlider"
 import CustomButton from "../../components/CustomButton"
 import PageHeader from "../../components/PageHeader"
 import { Row } from "../../components/ui/row"
+import { Switch } from "../../components/ui/switch"
 import { Section } from "../../components/ui/section"
 import WarningContainer from "../../components/WarningContainer"
+import InfoContainer from "../../components/InfoContainer"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../../components/ui/alert-dialog"
 import SearchableItem from "../../components/SearchableItem"
 import ToggleSetting from "../../components/ToggleSetting"
+import SeasonCalendar, { useSeasonCalendarStyles } from "../../components/SeasonCalendar"
+import { Popover, PopoverContent, PopoverTrigger, usePopoverRootContext } from "../../components/ui/popover"
+import { formatCareerTurn, turnDateLabel } from "../../lib/solver/constants"
+import { DATING_SCHEDULE_CUSTOM, DATING_SCHEDULE_PRESETS } from "../../lib/datingSchedule"
 import { useSettings } from "../../context/SettingsContext"
 import { useSettingsFileManager } from "../../hooks/useSettingsFileManager"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
 import { TYPE } from "../../lib/type"
 import { SPACING } from "../../lib/spacing"
 import { RADII } from "../../lib/radii"
+
+/** Preset options for the recreation dating-schedule selector, plus a Custom entry for hand-editing the calendar. */
+const datingPresetOptions = [...Object.entries(DATING_SCHEDULE_PRESETS).map(([value, preset]) => ({ label: preset.label, value })), { label: "Custom", value: DATING_SCHEDULE_CUSTOM }]
+
+/** Props for RecreationDateActions. */
+interface RecreationDateActionsProps {
+    /** The career turn (1-72) this popover is acting on. */
+    turn: number
+    /** Whether this turn is currently pinned as a regular recreation date. */
+    isRecreation: boolean
+    /** Whether this turn is currently the single Pure Passion final date. */
+    isPurePassion: boolean
+    /** Marks the turn as a regular recreation date, or clears it when toggled off. */
+    onMark: (turn: number) => void
+    /** Sets the turn as the single Pure Passion final date. */
+    onSetPurePassion: (turn: number) => void
+    /** Clears the turn from whichever role it currently holds. */
+    onClear: (turn: number) => void
+}
+
+/**
+ * The recreation-cell popover body: one switch pins the turn as a regular Recreation date and one marks it as the single Pure Passion final date.
+ * Only one turn can be the Pure Passion date, so toggling it on moves it here off any other turn. Reads the popover root context so each toggle also dismisses the popover.
+ * @param turn The career turn this popover is acting on.
+ * @param isRecreation Whether this turn is currently pinned as a regular recreation date.
+ * @param isPurePassion Whether this turn is currently the single Pure Passion final date.
+ * @param onMark Marks the turn as a regular recreation date.
+ * @param onSetPurePassion Sets the turn as the single Pure Passion final date.
+ * @param onClear Clears the turn from whichever role it currently holds.
+ * @returns The rendered switch rows.
+ */
+function RecreationDateActions({ turn, isRecreation, isPurePassion, onMark, onSetPurePassion, onClear }: RecreationDateActionsProps) {
+    const { onOpenChange } = usePopoverRootContext()
+    // Toggling a role on applies it; toggling off clears the turn. Either way the popover dismisses.
+    const toggleRole = (value: boolean, apply: (turn: number) => void) => {
+        if (value) apply(turn)
+        else onClear(turn)
+        onOpenChange(false)
+    }
+    return (
+        <>
+            <Row title="Recreation date" right={<Switch checked={isRecreation} onCheckedChange={(value) => toggleRole(value, onMark)} />} />
+            <Row
+                title="Pure Passion final date"
+                description="Only one date can trigger Pure Passion."
+                right={<Switch checked={isPurePassion} onCheckedChange={(value) => toggleRole(value, onSetPurePassion)} />}
+            />
+        </>
+    )
+}
 
 /**
  * The main Settings page of the application.
@@ -35,7 +91,10 @@ const Settings = () => {
 
     const { defaultSettings } = useContext(BotMetaContext)
     const { general, misc, updateGeneral, updateMisc } = useContext(GeneralMiscContext)
+    const calStyles = useSeasonCalendarStyles()
     const { colors } = useTheme()
+    // Width for the recreation-cell popovers, computed once instead of per calendar cell.
+    const recreationPopoverStyle = useMemo(() => ({ width: Math.min(280, Dimensions.get("window").width - 24) }), [])
     const navigation = useNavigation()
 
     const { openDataDirectory, resetSettings } = useSettings()
@@ -87,6 +146,7 @@ const Settings = () => {
                 dateRemoveButton: { padding: SPACING.xs, borderRadius: 999, overflow: "hidden" as const },
                 dateSelectorRow: { flexDirection: "row" },
                 dateSelectorCell: { flex: 1 },
+                resetLink: { ...TYPE.caption, color: colors.brand, fontWeight: "600" as const },
             }),
         [colors]
     )
@@ -223,13 +283,134 @@ const Settings = () => {
         )
     }
 
+    const handleDatingPresetChange = useCallback(
+        (preset: string) => {
+            const selected = DATING_SCHEDULE_PRESETS[preset]
+            if (selected) {
+                updateGeneral({
+                    datingSchedulePreset: preset,
+                    recreationTurns: [...selected.recreationTurns],
+                    purePassionTurn: selected.purePassionTurn,
+                    recreationTotalOutings: selected.totalOutings,
+                })
+            } else {
+                updateGeneral({ datingSchedulePreset: DATING_SCHEDULE_CUSTOM, recreationTurns: [], purePassionTurn: -1 })
+            }
+        },
+        [updateGeneral]
+    )
+
+    const handleMarkRecreationTurn = useCallback(
+        (turn: number) => {
+            updateGeneral((prev) => ({
+                ...prev,
+                datingSchedulePreset: DATING_SCHEDULE_CUSTOM,
+                recreationTurns: prev.recreationTurns.includes(turn) ? prev.recreationTurns : [...prev.recreationTurns, turn].sort((a, b) => a - b),
+                purePassionTurn: prev.purePassionTurn === turn ? -1 : prev.purePassionTurn,
+            }))
+        },
+        [updateGeneral]
+    )
+
+    const handleSetPurePassionTurn = useCallback(
+        (turn: number) => {
+            updateGeneral((prev) => ({ ...prev, datingSchedulePreset: DATING_SCHEDULE_CUSTOM, purePassionTurn: turn, recreationTurns: prev.recreationTurns.filter((t) => t !== turn) }))
+        },
+        [updateGeneral]
+    )
+
+    const handleClearRecreationTurn = useCallback(
+        (turn: number) => {
+            updateGeneral((prev) => ({
+                ...prev,
+                datingSchedulePreset: DATING_SCHEDULE_CUSTOM,
+                recreationTurns: prev.recreationTurns.filter((t) => t !== turn),
+                purePassionTurn: prev.purePassionTurn === turn ? -1 : prev.purePassionTurn,
+            }))
+        },
+        [updateGeneral]
+    )
+
+    const resetDatingSchedule = useCallback(() => {
+        updateGeneral({
+            datingSchedulePreset: defaultSettings.general.datingSchedulePreset,
+            recreationTurns: [...defaultSettings.general.recreationTurns],
+            purePassionTurn: defaultSettings.general.purePassionTurn,
+            recreationTotalOutings: defaultSettings.general.recreationTotalOutings,
+        })
+    }, [updateGeneral, defaultSettings])
+
+    /** Shared "Reset" pressable used in a section label's right slot. */
+    const makeResetLink = (onPress: () => void) => (
+        <Pressable onPress={onPress} android_ripple={{ color: colors.ripple, foreground: true }} hitSlop={8}>
+            <Text style={styles.resetLink}>Reset</Text>
+        </Pressable>
+    )
+
     const renderMiscSettings = () => {
+        const renderRecreationPopover = (turn: number) => {
+            const isRecreation = general.recreationTurns.includes(turn)
+            const isPurePassion = general.purePassionTurn === turn
+            return (
+                <View style={{ gap: SPACING.sm }}>
+                    <Text style={styles.dateTitle}>{formatCareerTurn(turn)}</Text>
+                    <RecreationDateActions
+                        turn={turn}
+                        isRecreation={isRecreation}
+                        isPurePassion={isPurePassion}
+                        onMark={handleMarkRecreationTurn}
+                        onSetPurePassion={handleSetPurePassionTurn}
+                        onClear={handleClearRecreationTurn}
+                    />
+                </View>
+            )
+        }
+
+        // A turn set as the Pure Passion final date shows the amber "mandatory" border and the Pure Passion marker. A plain recreation turn shows the brand border and the recreation marker.
+        const renderRecreationCell = (turn: number, turnInYear: number) => {
+            const isRecreation = general.recreationTurns.includes(turn)
+            const isPurePassion = general.purePassionTurn === turn
+            return (
+                <View key={turn} style={calStyles.calendarCellWrapper}>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Pressable
+                                style={[calStyles.calendarCell, isRecreation && calStyles.calendarCellLocked, isPurePassion && calStyles.calendarCellMandatory]}
+                                android_ripple={{ color: colors.ripple, foreground: true }}
+                            >
+                                <Text style={calStyles.calendarCellEmpty}>{isPurePassion ? "✨" : isRecreation ? "📅" : "—"}</Text>
+                            </Pressable>
+                        </PopoverTrigger>
+                        <PopoverContent side="top" align="center" insets={{ top: 60, bottom: 60, left: 12, right: 12 }} className="p-3" style={recreationPopoverStyle}>
+                            {renderRecreationPopover(turn)}
+                        </PopoverContent>
+                    </Popover>
+                    <Text style={calStyles.calendarDateLabel}>
+                        {isPurePassion ? "✨ " : isRecreation ? "📅 " : ""}
+                        {turnDateLabel(turnInYear)}
+                    </Text>
+                </View>
+            )
+        }
+
         return (
             <View>
                 <Section label="MISC">
-                    <ToggleSetting id="settings-stop-before-finals" title="Stop before Finals" description="Pause to buy skills before the final races" checked={general.enableStopBeforeFinals} onCheckedChange={(checked) => updateGeneral({ enableStopBeforeFinals: checked })} />
+                    <ToggleSetting
+                        id="settings-stop-before-finals"
+                        title="Stop before Finals"
+                        description="Pause to buy skills before the final races"
+                        checked={general.enableStopBeforeFinals}
+                        onCheckedChange={(checked) => updateGeneral({ enableStopBeforeFinals: checked })}
+                    />
 
-                    <ToggleSetting id="settings-stop-at-date" title="Stop at Date" description="Stop on one or more specified dates" checked={general.enableStopAtDate} onCheckedChange={(checked) => updateGeneral({ enableStopAtDate: checked })} />
+                    <ToggleSetting
+                        id="settings-stop-at-date"
+                        title="Stop at Date"
+                        description="Stop on one or more specified dates"
+                        checked={general.enableStopAtDate}
+                        onCheckedChange={(checked) => updateGeneral({ enableStopAtDate: checked })}
+                    />
 
                     {general.enableStopAtDate && (
                         <SearchableItem id="settings-target-dates" title="Target Dates" description="Stops the bot on the specified dates." parentId="settings-stop-at-date">
@@ -302,11 +483,112 @@ const Settings = () => {
                         </SearchableItem>
                     )}
 
-                    <ToggleSetting id="settings-claw-machine-attempt" title="Enable Claw Machine Attempt" description="Attempt to complete the claw machine instead of stopping" checked={general.enableClawMachineAttempt} onCheckedChange={(checked) => updateGeneral({ enableClawMachineAttempt: checked })} />
+                    <ToggleSetting
+                        id="settings-claw-machine-attempt"
+                        title="Enable Claw Machine Attempt"
+                        description="Attempt to complete the claw machine instead of stopping"
+                        checked={general.enableClawMachineAttempt}
+                        onCheckedChange={(checked) => updateGeneral({ enableClawMachineAttempt: checked })}
+                    />
 
-                    <ToggleSetting id="settings-enable-swipe-based-scrolling" title="Enable Swipe-Based Scrolling" description="Scroll lists by swiping instead of detecting the in-game scrollbar. Enable this if the bot cannot scroll lists normally. This may or may not work depending on the device." checked={general.enableSwipeBasedScrolling} onCheckedChange={(checked) => updateGeneral({ enableSwipeBasedScrolling: checked })} />
+                    <ToggleSetting
+                        id="settings-enable-swipe-based-scrolling"
+                        title="Enable Swipe-Based Scrolling"
+                        description="Scroll lists by swiping instead of detecting the in-game scrollbar. Enable this if the bot cannot scroll lists normally. This may or may not work depending on the device."
+                        checked={general.enableSwipeBasedScrolling}
+                        onCheckedChange={(checked) => updateGeneral({ enableSwipeBasedScrolling: checked })}
+                    />
 
-                    <ToggleSetting id="settings-enable-settings-display" title="Enable Settings Display in Message Log" description="Show current bot configuration in the message log" checked={misc.enableSettingsDisplay} onCheckedChange={(checked) => updateMisc({ enableSettingsDisplay: checked })} />
+                    <ToggleSetting
+                        id="settings-enable-settings-display"
+                        title="Enable Settings Display in Message Log"
+                        description="Show current bot configuration in the message log"
+                        checked={misc.enableSettingsDisplay}
+                        onCheckedChange={(checked) => updateMisc({ enableSettingsDisplay: checked })}
+                    />
+                </Section>
+
+                <Section label="SUPPORT CARD DATING" labelRight={makeResetLink(resetDatingSchedule)}>
+                    <ToggleSetting
+                        id="settings-dating-schedule"
+                        title="Support Card Dating Schedule"
+                        description="On a pinned turn the bot does a support-card recreation outing over every other action, including scheduled races (your in-game racing agenda or the Smart Race Solver). Only mandatory career-goal races take priority."
+                        checked={general.enableDatingSchedule}
+                        onCheckedChange={(checked) => updateGeneral({ enableDatingSchedule: checked })}
+                    />
+
+                    {general.enableDatingSchedule && (
+                        <>
+                            <ToggleSetting
+                                id="settings-recreation-catch-up"
+                                title="Catch Up On Missed Dates"
+                                description="If a scheduled outing gets skipped (e.g. a mandatory race lands on it), make it up on the next available turn instead of losing it."
+                                checked={general.enableRecreationCatchUp}
+                                onCheckedChange={(checked) => updateGeneral({ enableRecreationCatchUp: checked })}
+                            />
+
+                            <SearchableItem
+                                id="settings-dating-preset"
+                                title="Schedule Preset"
+                                description="Pick an optimized preset (Pure Passion timed for a summer camp) or Custom to hand-pick turns on the calendar below."
+                                parentId="settings-dating-schedule"
+                            >
+                                <View style={{ padding: SPACING.md, paddingBottom: 0 }}>
+                                    <CustomSelect
+                                        placeholder="Preset"
+                                        width="100%"
+                                        options={datingPresetOptions}
+                                        value={general.datingSchedulePreset}
+                                        onValueChange={(value) => handleDatingPresetChange(value || DATING_SCHEDULE_CUSTOM)}
+                                    />
+                                </View>
+                                {general.purePassionTurn > 0 && (
+                                    <View style={{ paddingHorizontal: SPACING.md }}>
+                                        <InfoContainer>
+                                            Pure Passion activates when you complete the Heir to the Throne's final recreation date. For about 3 turns, Friendship Training occurs on a facility
+                                            regardless of bond. This preset pins one date per outing and holds the final one for Senior June Late, so those turns land on Senior Summer Training where
+                                            the gains matter most.
+                                        </InfoContainer>
+                                    </View>
+                                )}
+                            </SearchableItem>
+
+                            <SearchableItem
+                                id="settings-recreation-calendar"
+                                title="Recreation Calendar"
+                                description="Tap a turn to mark it as a Recreation date or the single Pure Passion date (editing switches the preset to Custom). Pre-Debut and Summer turns are unavailable."
+                                parentId="settings-dating-schedule"
+                            >
+                                <View style={{ paddingHorizontal: SPACING.md }}>
+                                    <SeasonCalendar renderCell={renderRecreationCell} deps={[general.recreationTurns, general.purePassionTurn]} />
+                                </View>
+                            </SearchableItem>
+
+                            <SearchableItem
+                                id="settings-recreation-total-outings"
+                                title="Total Recreation Outings"
+                                description="Number of outings in your support card's recreation chain. Team Sirius = 7, Heirs to the Throne = 4. Read from the game automatically when possible; this is the fallback. Used to hold the final outing for the Pure Passion turn."
+                                parentId="settings-dating-schedule"
+                            >
+                                <View style={{ padding: SPACING.md }}>
+                                    <CustomSlider
+                                        searchId="settings-recreation-total-outings"
+                                        value={general.recreationTotalOutings}
+                                        placeholder={defaultSettings.general.recreationTotalOutings}
+                                        onValueChange={(value) => updateGeneral({ recreationTotalOutings: value })}
+                                        onSlidingComplete={(value) => updateGeneral({ recreationTotalOutings: value })}
+                                        min={1}
+                                        max={10}
+                                        step={1}
+                                        label="Total Recreation Outings"
+                                        showValue={true}
+                                        showLabels={true}
+                                        description="Team Sirius = 7, Heirs to the Throne = 4. Pin enough Recreation dates before the Pure Passion date."
+                                    />
+                                </View>
+                            </SearchableItem>
+                        </>
+                    )}
                 </Section>
 
                 <Section label="WAIT DELAY">

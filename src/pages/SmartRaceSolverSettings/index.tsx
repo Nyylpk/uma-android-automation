@@ -14,11 +14,11 @@ import {
     OPTIMIZE_MODE_PRESETS,
     OptimizeModeKey,
     RaceEntry,
+    formatCareerTurn,
     shortenRaceName,
     TRAIN_LOCK_SENTINEL,
     turnDateLabel,
     WeightsMap,
-    YEAR_LABELS,
 } from "../../lib/solver/constants"
 import {
     charactersForEpithet,
@@ -46,6 +46,7 @@ import PageHeader from "../../components/PageHeader"
 import { usePerformanceLogging } from "../../hooks/usePerformanceLogging"
 import SearchableItem from "../../components/SearchableItem"
 import ToggleSetting from "../../components/ToggleSetting"
+import SeasonCalendar, { useSeasonCalendarStyles } from "../../components/SeasonCalendar"
 import CustomSlider from "../../components/CustomSlider"
 import { useNavigation, useFocusEffect } from "@react-navigation/native"
 import { AptitudeRow, EpithetChip } from "./components/Helpers"
@@ -778,67 +779,6 @@ const SmartRaceSolverSettings = () => {
                     borderRadius: RADII.pill,
                 },
                 countBadgeText: { ...TYPE.monoLabel, color: colors.onBrand, fontSize: 9 },
-                yearCard: {
-                    marginVertical: 8,
-                    padding: 12,
-                    borderWidth: 1,
-                    borderColor: colors.borderHair,
-                    borderRadius: 8,
-                    backgroundColor: colors.bg,
-                },
-                yearCardTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginBottom: 6 },
-                calendarRow: { flexDirection: "row", alignItems: "stretch", paddingVertical: 4 },
-                calendarCellWrapper: { flex: 1, marginHorizontal: 3, alignItems: "stretch" },
-                calendarCell: {
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    paddingVertical: 6,
-                    paddingHorizontal: 4,
-                    borderRadius: 6,
-                    borderWidth: 1,
-                    borderColor: colors.borderHair,
-                    backgroundColor: colors.surface,
-                    minHeight: 56,
-                },
-                calendarCellRace: {
-                    backgroundColor: colors.surface,
-                },
-                calendarBadge: {
-                    minWidth: 30,
-                    height: 18,
-                    borderRadius: 3,
-                    paddingHorizontal: 4,
-                    marginBottom: 4,
-                    alignItems: "center",
-                    justifyContent: "center",
-                },
-                calendarBadgeText: { color: "#fff", fontSize: 10, fontWeight: "700" },
-                calendarRaceName: { fontSize: 10, color: colors.text, fontWeight: "600", textAlign: "center" },
-                calendarCellEmpty: { fontSize: 11, color: colors.textMuted, textAlign: "center" },
-                calendarCellPreDebut: {
-                    backgroundColor: colors.surfaceRaised,
-                    borderColor: colors.borderHair,
-                    borderStyle: "dashed",
-                    opacity: 0.6,
-                },
-                calendarCellPreDebutText: {
-                    fontSize: 10,
-                    color: colors.textMuted,
-                    fontStyle: "italic",
-                    fontWeight: "600",
-                    textAlign: "center",
-                },
-                calendarDateLabel: { fontSize: 10, color: colors.textMuted, textAlign: "center", marginTop: 3 },
-                calendarCellLocked: {
-                    borderWidth: 2,
-                    borderColor: colors.brand,
-                },
-                calendarCellMandatory: {
-                    borderWidth: 2,
-                    borderColor: "#f59e0b",
-                    backgroundColor: "rgba(245, 158, 11, 0.12)",
-                },
                 popoverColumn: { flexShrink: 1 },
                 popoverHeader: { flexShrink: 0 },
                 popoverBodyScroll: { flexShrink: 1, marginTop: 4 },
@@ -892,15 +832,6 @@ const SmartRaceSolverSettings = () => {
                     borderWidth: 2,
                     backgroundColor: colors.surfaceRaised,
                 },
-                calendarCellHighlighted: {
-                    borderColor: "#ca8a04",
-                    borderWidth: 3,
-                    shadowColor: "#facc15",
-                    shadowOpacity: 0.9,
-                    shadowRadius: 6,
-                    shadowOffset: { width: 0, height: 0 },
-                    elevation: 4,
-                },
                 epithetCardName: { fontSize: 13, fontWeight: "700", color: colors.text, marginBottom: 2 },
                 epithetCardReward: { fontSize: 11, color: colors.text, marginBottom: 1 },
                 epithetCardCondition: { fontSize: 11, color: colors.textMuted, fontStyle: "italic" },
@@ -921,6 +852,8 @@ const SmartRaceSolverSettings = () => {
         [colors]
     )
 
+    const calStyles = useSeasonCalendarStyles()
+
     // //////////////////////////////////////////////////////////////////////////////////////////////////
     // //////////////////////////////////////////////////////////////////////////////////////////////////
     // Helpers
@@ -936,9 +869,7 @@ const SmartRaceSolverSettings = () => {
      * @returns The popover body element.
      */
     const renderPopoverBody = (turn: number, entry: ScheduleEntry | undefined) => {
-        const turnYearOffset = (turn - 1) % 24
-        const yearName = turn <= 24 ? "Junior" : turn <= 48 ? "Classic" : "Senior"
-        const fullDateLabel = `${yearName} ${turnDateLabel(turnYearOffset)}`
+        const fullDateLabel = formatCareerTurn(turn)
         const isRace = entry?.type === "Race"
         const race = isRace && entry?.raceKey ? racesByKey[entry.raceKey] : undefined
         // Only list epithets this race actually contributes to: drop ones whose required count is already satisfied earlier in the schedule.
@@ -1037,7 +968,7 @@ const SmartRaceSolverSettings = () => {
                                             android_ripple={{ color: colors.ripple, foreground: true }}
                                         >
                                             <View style={[styles.popoverAltBadge, { backgroundColor: altColor }]}>
-                                                <Text style={styles.calendarBadgeText}>{alt.grade.replace("PRE_OP", "Pre").replace("PRE-OP", "Pre")}</Text>
+                                                <Text style={calStyles.calendarBadgeText}>{alt.grade.replace("PRE_OP", "Pre").replace("PRE-OP", "Pre")}</Text>
                                             </View>
                                             <View style={{ flex: 1 }}>
                                                 <Text style={styles.popoverAltName}>{alt.name}</Text>
@@ -1100,47 +1031,34 @@ const SmartRaceSolverSettings = () => {
         const color = isRace ? (GRADE_COLORS[entry.grade ?? ""] ?? colors.brand) : null
         const shortRaceName = isRace ? shortenRaceName(entry.name ?? entry.raceKey ?? "") : ""
         const dateLabel = turnDateLabel(turnInYear)
-        const isPreDebut = turn <= 13
-        const isSummerBlocked = !weights.allowSummerRacing && ((turn >= 37 && turn <= 40) || (turn >= 61 && turn <= 64))
         const isLocked = manualLocks[String(turn)] != null
         const isMandatory = isRace && entry?.mandatory === true
         const highlightHit = isRace && contributingTurnsForHighlight.has(turn)
 
-        if (isPreDebut || isSummerBlocked) {
-            return (
-                <View key={turn} style={styles.calendarCellWrapper}>
-                    <View style={[styles.calendarCell, styles.calendarCellPreDebut]}>
-                        <Text style={styles.calendarCellPreDebutText}>{isPreDebut ? "Pre-Debut" : "Summer"}</Text>
-                    </View>
-                    <Text style={styles.calendarDateLabel}>{dateLabel}</Text>
-                </View>
-            )
-        }
-
         const cellInner = isRace ? (
             <>
-                <View style={[styles.calendarBadge, { backgroundColor: color! }]}>
-                    <Text style={styles.calendarBadgeText}>{(entry.grade ?? "").replace("PRE_OP", "Pre").replace("FINALE", "Fin").replace("MAIDEN", "Mdn").replace("DEBUT", "Dbt")}</Text>
+                <View style={[calStyles.calendarBadge, { backgroundColor: color! }]}>
+                    <Text style={calStyles.calendarBadgeText}>{(entry.grade ?? "").replace("PRE_OP", "Pre").replace("FINALE", "Fin").replace("MAIDEN", "Mdn").replace("DEBUT", "Dbt")}</Text>
                 </View>
-                <Text style={styles.calendarRaceName} numberOfLines={2} ellipsizeMode="tail">
+                <Text style={calStyles.calendarRaceName} numberOfLines={2} ellipsizeMode="tail">
                     {shortRaceName}
                 </Text>
             </>
         ) : (
-            <Text style={styles.calendarCellEmpty}>{entry?.type === "Rest" ? "Rest" : "—"}</Text>
+            <Text style={calStyles.calendarCellEmpty}>{entry?.type === "Rest" ? "Rest" : "—"}</Text>
         )
 
         return (
-            <View key={turn} style={styles.calendarCellWrapper}>
+            <View key={turn} style={calStyles.calendarCellWrapper}>
                 <Popover>
                     <PopoverTrigger asChild>
                         <Pressable
                             style={[
-                                styles.calendarCell,
-                                isRace && styles.calendarCellRace,
-                                isMandatory && styles.calendarCellMandatory,
-                                isLocked && styles.calendarCellLocked,
-                                highlightHit && styles.calendarCellHighlighted,
+                                calStyles.calendarCell,
+                                isRace && calStyles.calendarCellRace,
+                                isMandatory && calStyles.calendarCellMandatory,
+                                isLocked && calStyles.calendarCellLocked,
+                                highlightHit && calStyles.calendarCellHighlighted,
                             ]}
                             android_ripple={{ color: colors.ripple, foreground: true }}
                         >
@@ -1158,7 +1076,7 @@ const SmartRaceSolverSettings = () => {
                         {renderPopoverBody(turn, entry)}
                     </PopoverContent>
                 </Popover>
-                <Text style={styles.calendarDateLabel}>
+                <Text style={calStyles.calendarDateLabel}>
                     {isMandatory ? "📌 " : isLocked ? "🔒 " : ""}
                     {dateLabel}
                 </Text>
@@ -1195,33 +1113,6 @@ const SmartRaceSolverSettings = () => {
         if (!ep) return new Set<number>()
         return turnsContributingToEpithet(ep, preview, racesByKey)
     }, [highlightedEpithet, preview, racesByKey])
-
-    /**
-     * Render one year's 4x6 calendar card.
-     *
-     * @param year The year descriptor (heading name and the absolute turn number of the
-     *   top-left cell).
-     * @returns The rendered year card.
-     */
-    const renderYearCard = (year: { name: string; startTurn: number }) => {
-        const rows: number[][] = []
-        for (let r = 0; r < 6; r++) rows.push([0, 1, 2, 3].map((c) => r * 4 + c))
-        return (
-            <View key={year.name} style={styles.yearCard}>
-                <Text style={styles.yearCardTitle}>{year.name} Year</Text>
-                {rows.map((row, ridx) => (
-                    <View key={`row-${ridx}`} style={styles.calendarRow}>
-                        {row.map((turnInYear) => renderCalendarCell(year.startTurn + turnInYear, turnInYear))}
-                    </View>
-                ))}
-            </View>
-        )
-    }
-
-    // Memoized 72-cell grid: rebuild only when the preview, locks, summer-blackout weight, or highlight change.
-    // Other settings refresh inside popovers when next opened.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    const calendarYearCards = useMemo(() => YEAR_LABELS.map(renderYearCard), [preview, manualLocks, weights.allowSummerRacing, highlightedEpithet, contributingTurnsForHighlight])
 
     // //////////////////////////////////////////////////////////////////////////////////////////////////
     // //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1287,7 +1178,15 @@ const SmartRaceSolverSettings = () => {
 
                         {enableSmartRaceSolver && (
                             <Section label="General" collapsible defaultOpen={true}>
-                                <ToggleSetting id="disable-schedule-replan-on-race-loss" title="Disable Schedule Re-Plan Upon Race Loss" description="When a race is lost, keep the original schedule instead of re-planning the remaining turns. The loss is still recorded; epithets that depended on the lost race won't be re-routed." condition={enableSmartRaceSolver} parentId="enable-smart-race-solver" checked={disableScheduleReplanOnRaceLoss} onCheckedChange={(checked) => updateRacingSetting("disableScheduleReplanOnRaceLoss", checked)} />
+                                <ToggleSetting
+                                    id="disable-schedule-replan-on-race-loss"
+                                    title="Disable Schedule Re-Plan Upon Race Loss"
+                                    description="When a race is lost, keep the original schedule instead of re-planning the remaining turns. The loss is still recorded; epithets that depended on the lost race won't be re-routed."
+                                    condition={enableSmartRaceSolver}
+                                    parentId="enable-smart-race-solver"
+                                    checked={disableScheduleReplanOnRaceLoss}
+                                    onCheckedChange={(checked) => updateRacingSetting("disableScheduleReplanOnRaceLoss", checked)}
+                                />
 
                                 <View style={{ paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm }}>
                                     <CustomSlider
@@ -1813,7 +1712,11 @@ const SmartRaceSolverSettings = () => {
                                                     </View>
                                                 </View>
                                             )}
-                                            {calendarYearCards}
+                                            <SeasonCalendar
+                                                allowSummer={weights.allowSummerRacing}
+                                                renderCell={renderCalendarCell}
+                                                deps={[preview, manualLocks, highlightedEpithet, contributingTurnsForHighlight]}
+                                            />
                                         </View>
                                     </SearchableItem>
                                 </Section>

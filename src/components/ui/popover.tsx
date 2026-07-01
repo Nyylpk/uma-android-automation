@@ -11,6 +11,8 @@ const Popover = PopoverPrimitive.Root
 
 const PopoverTrigger = PopoverPrimitive.Trigger
 
+const usePopoverRootContext = PopoverPrimitive.useRootContext
+
 const FullWindowOverlay = Platform.OS === "ios" ? RNFullWindowOverlay : React.Fragment
 
 function PopoverContent({
@@ -74,4 +76,4 @@ function PopoverContent({
     )
 }
 
-export { Popover, PopoverContent, PopoverTrigger }
+export { Popover, PopoverContent, PopoverTrigger, usePopoverRootContext }

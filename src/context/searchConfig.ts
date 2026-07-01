@@ -23,6 +23,42 @@ const searchConfig: SearchOption[] = [
         page: "SettingsMain",
     },
     {
+        id: "settings-dating-schedule",
+        title: "Support Card Dating Schedule",
+        description:
+            "On a pinned turn the bot does a support-card recreation outing over every other action, including scheduled races (in-game racing agenda or Smart Race Solver). Only mandatory career-goal races take priority.",
+        page: "SettingsMain",
+    },
+    {
+        id: "settings-recreation-catch-up",
+        title: "Catch Up On Missed Dates",
+        description: "If a scheduled outing gets skipped (e.g. a mandatory race lands on it), make it up on the next available turn instead of losing it.",
+        page: "SettingsMain",
+        parentId: "settings-dating-schedule",
+    },
+    {
+        id: "settings-dating-preset",
+        title: "Schedule Preset",
+        description: "Pick an optimized preset (Pure Passion timed for a summer camp) or Custom to hand-pick turns on the recreation calendar.",
+        page: "SettingsMain",
+        parentId: "settings-dating-schedule",
+    },
+    {
+        id: "settings-recreation-calendar",
+        title: "Recreation Calendar",
+        description: "Tap a turn to mark it as a Recreation date or the single Pure Passion date (editing switches the preset to Custom). Pre-Debut and Summer turns are unavailable.",
+        page: "SettingsMain",
+        parentId: "settings-dating-schedule",
+    },
+    {
+        id: "settings-recreation-total-outings",
+        title: "Total Recreation Outings",
+        description:
+            "Number of outings in your support card's recreation chain. Team Sirius = 7, Heirs to the Throne = 4. Read from the game automatically when possible; this is the fallback. Used to hold the final outing for the Pure Passion turn.",
+        page: "SettingsMain",
+        parentId: "settings-dating-schedule",
+    },
+    {
         id: "settings-claw-machine-attempt",
         title: "Enable Claw Machine Attempt",
         description: "Attempt to complete the claw machine instead of stopping",
@@ -496,7 +532,8 @@ const searchConfig: SearchOption[] = [
     {
         id: "disable-schedule-replan-on-race-loss",
         title: "Disable Schedule Re-Plan Upon Race Loss",
-        description: "When a race is lost, keep the original schedule instead of re-planning the remaining turns. The loss is still recorded; epithets that depended on the lost race won't be re-routed.",
+        description:
+            "When a race is lost, keep the original schedule instead of re-planning the remaining turns. The loss is still recorded; epithets that depended on the lost race won't be re-routed.",
         page: "SmartRaceSolverSettings",
         parentId: "enable-smart-race-solver",
     },
@@ -832,8 +869,7 @@ const searchConfig: SearchOption[] = [
     {
         id: "trackblazer-skip-coaching-megaphone-below-gain",
         title: "Trackblazer Skip Coaching Megaphone Below Main Stat Gain",
-        description:
-            "Skip the Coaching Megaphone (+20% for 4 turns) when the selected training's main stat gain is below this value. 0 = always allowed.",
+        description: "Skip the Coaching Megaphone (+20% for 4 turns) when the selected training's main stat gain is below this value. 0 = always allowed.",
         page: "ScenarioOverridesSettings",
     },
     {

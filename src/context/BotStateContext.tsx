@@ -1,5 +1,6 @@
 import { createContext, useState, useMemo, useCallback, useContext } from "react"
 import { startTiming } from "../lib/performanceLogger"
+import { DATING_SCHEDULE_PRESETS } from "../lib/datingSchedule"
 import { skillPlanSettingsPages } from "../pages/SkillPlanSettings/config"
 
 /**
@@ -40,6 +41,12 @@ export interface Settings {
         enableStopBeforeFinals: boolean
         enableStopAtDate: boolean
         stopAtDates: string[]
+        enableDatingSchedule: boolean
+        enableRecreationCatchUp: boolean
+        datingSchedulePreset: string
+        recreationTurns: number[]
+        purePassionTurn: number
+        recreationTotalOutings: number
         waitDelay: number
         dialogWaitDelay: number
     }
@@ -246,6 +253,12 @@ export const defaultSettings: Settings = {
         enableStopBeforeFinals: false,
         enableStopAtDate: false,
         stopAtDates: ["Senior January Early"],
+        enableDatingSchedule: false,
+        enableRecreationCatchUp: true,
+        datingSchedulePreset: "siriusSenior",
+        recreationTurns: [...DATING_SCHEDULE_PRESETS.siriusSenior.recreationTurns],
+        purePassionTurn: DATING_SCHEDULE_PRESETS.siriusSenior.purePassionTurn,
+        recreationTotalOutings: DATING_SCHEDULE_PRESETS.siriusSenior.totalOutings,
         waitDelay: 0.5,
         dialogWaitDelay: 0.5,
     },
