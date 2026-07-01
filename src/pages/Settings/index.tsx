@@ -519,6 +519,14 @@ const Settings = () => {
 
                     {general.enableDatingSchedule && (
                         <>
+                            <ToggleSetting
+                                id="settings-recreation-catch-up"
+                                title="Catch Up On Missed Dates"
+                                description="If a scheduled outing gets skipped (e.g. a mandatory race lands on it), make it up on the next available turn instead of losing it."
+                                checked={general.enableRecreationCatchUp}
+                                onCheckedChange={(checked) => updateGeneral({ enableRecreationCatchUp: checked })}
+                            />
+
                             <SearchableItem
                                 id="settings-dating-preset"
                                 title="Schedule Preset"

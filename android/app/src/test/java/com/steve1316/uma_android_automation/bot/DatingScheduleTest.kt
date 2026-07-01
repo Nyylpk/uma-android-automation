@@ -89,4 +89,62 @@ class DatingScheduleTest {
             assertFalse(DatingSchedule.shouldHoldFinalOuting(4, 5, true))
         }
     }
+
+    @Nested
+    @DisplayName("isBehindSchedule()")
+    inner class IsBehindScheduleTests {
+        @Test
+        fun `on track when every due turn has an outing`() {
+            assertFalse(DatingSchedule.isBehindSchedule(currentTurn = 44, recreationTurns = setOf(35, 43, 52, 58), outingsStarted = 2))
+        }
+
+        @Test
+        fun `behind when a due turn was missed`() {
+            assertTrue(DatingSchedule.isBehindSchedule(currentTurn = 44, recreationTurns = setOf(35, 43, 52, 58), outingsStarted = 1))
+        }
+
+        @Test
+        fun `not behind before the first pinned turn`() {
+            assertFalse(DatingSchedule.isBehindSchedule(currentTurn = 30, recreationTurns = setOf(35, 43, 52, 58), outingsStarted = 0))
+        }
+
+        @Test
+        fun `not behind when caught up exactly on a pinned turn`() {
+            assertFalse(DatingSchedule.isBehindSchedule(currentTurn = 52, recreationTurns = setOf(35, 43, 52, 58), outingsStarted = 3))
+        }
+
+        @Test
+        fun `behind when several later turns are missed`() {
+            assertTrue(DatingSchedule.isBehindSchedule(currentTurn = 58, recreationTurns = setOf(35, 43, 52, 58), outingsStarted = 2))
+        }
+    }
+
+    @Nested
+    @DisplayName("isScheduleAbandoned()")
+    inner class IsScheduleAbandonedTests {
+        @Test
+        fun `abandoned once past the pure passion turn with the chain incomplete`() {
+            assertTrue(DatingSchedule.isScheduleAbandoned(purePassionTurn = 60, currentTurn = 61, chainComplete = false))
+        }
+
+        @Test
+        fun `not abandoned on the pure passion turn itself`() {
+            assertFalse(DatingSchedule.isScheduleAbandoned(purePassionTurn = 60, currentTurn = 60, chainComplete = false))
+        }
+
+        @Test
+        fun `not abandoned before the pure passion turn`() {
+            assertFalse(DatingSchedule.isScheduleAbandoned(purePassionTurn = 60, currentTurn = 58, chainComplete = false))
+        }
+
+        @Test
+        fun `not abandoned when the chain is already complete`() {
+            assertFalse(DatingSchedule.isScheduleAbandoned(purePassionTurn = 60, currentTurn = 61, chainComplete = true))
+        }
+
+        @Test
+        fun `Sirius is never abandoned without a pure passion turn`() {
+            assertFalse(DatingSchedule.isScheduleAbandoned(purePassionTurn = -1, currentTurn = 70, chainComplete = false))
+        }
+    }
 }

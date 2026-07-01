@@ -42,4 +42,30 @@ object DatingSchedule {
     fun shouldHoldFinalOuting(outingsStarted: Int, totalOutings: Int, allowFinalOuting: Boolean): Boolean {
         return !allowFinalOuting && outingsStarted >= totalOutings - 1
     }
+
+    /**
+     * Whether the bot has fallen behind the schedule - fewer outings started than the number of regular pinned turns already due. Drives the optional catch-up
+     * behavior, where a missed outing (a race pre-empted its pinned turn, or recreation was unavailable) is made up on the next available turn.
+     *
+     * @param currentTurn The current 1-indexed career turn (1-72).
+     * @param recreationTurns The set of turns pinned for regular recreation outings (excludes the Pure Passion turn).
+     * @param outingsStarted The number of outings already started this run, kept in sync with the in-game progress.
+     * @return True if fewer outings have started than the number of pinned turns whose turn has passed or is today.
+     */
+    fun isBehindSchedule(currentTurn: Int, recreationTurns: Set<Int>, outingsStarted: Int): Boolean {
+        return outingsStarted < recreationTurns.count { it <= currentTurn }
+    }
+
+    /**
+     * Whether the schedule should be abandoned because the Pure Passion window has passed with the chain unfinished. Once abandoned, recreation drops back to the
+     * regular opportunistic logic (finish the chain during rest / mood recovery) instead of holding or forcing outings. Only applies when a Pure Passion turn is set.
+     *
+     * @param purePassionTurn The single turn pinned for the final outing / Pure Passion activation, or a non-positive value when unset (e.g. Team Sirius).
+     * @param currentTurn The current 1-indexed career turn (1-72).
+     * @param chainComplete Whether the recreation chain has already been completed.
+     * @return True once the current turn is past the Pure Passion turn and the chain is still incomplete.
+     */
+    fun isScheduleAbandoned(purePassionTurn: Int, currentTurn: Int, chainComplete: Boolean): Boolean {
+        return purePassionTurn > 0 && currentTurn > purePassionTurn && !chainComplete
+    }
 }

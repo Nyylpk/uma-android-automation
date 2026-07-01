@@ -30,6 +30,13 @@ const searchConfig: SearchOption[] = [
         page: "SettingsMain",
     },
     {
+        id: "settings-recreation-catch-up",
+        title: "Catch Up On Missed Dates",
+        description: "If a scheduled outing gets skipped (e.g. a mandatory race lands on it), make it up on the next available turn instead of losing it.",
+        page: "SettingsMain",
+        parentId: "settings-dating-schedule",
+    },
+    {
         id: "settings-dating-preset",
         title: "Schedule Preset",
         description: "Pick an optimized preset (Pure Passion timed for a summer camp) or Custom to hand-pick turns on the recreation calendar.",

@@ -173,6 +173,9 @@ abstract class Campaign(game: Game) : Task(game) {
     /** Whether the support-card recreation ("dating") schedule is enabled. */
     protected val enableDatingSchedule: Boolean = SettingsHelper.getBooleanSetting("general", "enableDatingSchedule", false)
 
+    /** Whether a scheduled recreation outing that got pre-empted (a race, or recreation not yet available) should be made up on the next available turn. */
+    protected val enableRecreationCatchUp: Boolean = SettingsHelper.getBooleanSetting("general", "enableRecreationCatchUp", true)
+
     /** The set of 1-indexed career turns (1-72) pinned for regular recreation outings. */
     protected val recreationTurns: Set<Int> =
         run {
@@ -190,7 +193,7 @@ abstract class Campaign(game: Game) : Task(game) {
     /** The total outings in the active support card's recreation chain (Team Sirius 7, Heirs to the Throne 5). */
     protected val recreationTotalOutings: Int = SettingsHelper.getIntSetting("general", "recreationTotalOutings", 7)
 
-    /** Whether a recreation date event has been completed today. */
+    /** Whether the recreation chain is complete for this run - no more dates are available. Latched true once done (from the in-game complete label) and never reset. */
     protected var recreationDateCompleted: Boolean = false
 
     /** The number of recreation outings actually started this run. Used to hold the final outing for the Pure Passion turn. */
@@ -1221,9 +1224,10 @@ abstract class Campaign(game: Game) : Task(game) {
 
         // First, try to handle recreation date which also recovers energy if a date is available.
         // Skip recreation date if it's already completed (will only be used for mood recovery).
-        // With the dating schedule on, a pending date is reserved for the schedule and trainee recreation does not restore energy, so skip straight to resting.
+        // While the schedule is active, a pending date is reserved for it and trainee recreation does not restore energy, so skip straight to resting.
+        // Once the schedule is abandoned, resting here advances the date chain again.
         if (
-            !enableDatingSchedule &&
+            !isScheduleActive() &&
             !recreationDateCompleted &&
             IconRecreationDate.check(game.imageUtils, sourceBitmap = sourceBitmap) &&
             handleRecreationDate(recoverMoodIfCompleted = false)
@@ -1298,7 +1302,7 @@ abstract class Campaign(game: Game) : Task(game) {
 
             // Check if a date is available.
             if (!recreationDateCompleted && IconRecreationDate.check(game.imageUtils, sourceBitmap = sourceBitmap)) {
-                if (handleRecreationDate(recoverMoodIfCompleted = true, doDateRecreation = !enableDatingSchedule)) {
+                if (handleRecreationDate(recoverMoodIfCompleted = true, doDateRecreation = !isScheduleActive())) {
                     MessageLog.v(TAG, "[MOOD] Successfully recovered mood via recreation date.")
                 }
             } else {
@@ -1346,8 +1350,12 @@ abstract class Campaign(game: Game) : Task(game) {
      * @return True if the bot should perform a recreation outing this turn.
      */
     open fun shouldDoRecreationToday(sourceBitmap: Bitmap? = null): Boolean {
-        if (!enableDatingSchedule || recreationDateCompleted) return false
-        if (!DatingSchedule.isPinnedRecreationTurn(date.day, recreationTurns, purePassionTurn)) return false
+        if (!isScheduleActive() || recreationDateCompleted) return false
+        // Do an outing on a pinned turn, or - when catch-up is on - on any turn where a missed outing has left us behind schedule.
+        val pinnedOrBehind =
+            DatingSchedule.isPinnedRecreationTurn(date.day, recreationTurns, purePassionTurn) ||
+                (enableRecreationCatchUp && DatingSchedule.isBehindSchedule(date.day, recreationTurns, recreationOutingsStarted))
+        if (!pinnedOrBehind) return false
         // If only the final outing remains and this is not the Pure Passion turn, hold it: spend the turn on a normal action instead of opening the recreation.
         if (DatingSchedule.shouldHoldFinalOuting(recreationOutingsStarted, recreationTotalOutingsKnown, allowFinalOutingNow())) return false
         val bitmap = sourceBitmap ?: game.imageUtils.getSourceBitmap()
@@ -1411,6 +1419,9 @@ abstract class Campaign(game: Game) : Task(game) {
 
     /** Whether the final chain outing may be taken right now - only on the Pure Passion turn (or when the schedule or Pure Passion turn is off). */
     private fun allowFinalOutingNow(): Boolean = DatingSchedule.allowFinalOuting(enableDatingSchedule, purePassionTurn, date.day)
+
+    /** Whether the recreation schedule is actively driving decisions: enabled and not abandoned (the Pure Passion window has not passed with the chain unfinished). */
+    private fun isScheduleActive(): Boolean = enableDatingSchedule && !DatingSchedule.isScheduleAbandoned(purePassionTurn, date.day, recreationDateCompleted)
 
     /**
      * Handles the Recreation date event if detected on the screen.
